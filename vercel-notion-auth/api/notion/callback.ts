@@ -20,17 +20,20 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     `);
   }
 
-  // Redirect to the iOS app with the code
   const appURL = `finally://oauth-callback?code=${code}`;
 
+  // Use JavaScript redirect — Safari blocks meta refresh and 302 to custom schemes
   return res.status(200).send(`
     <html>
       <head>
-        <meta http-equiv="refresh" content="0;url=${appURL}">
+        <title>Redirecting to Finally...</title>
       </head>
       <body style="font-family:system-ui;text-align:center;padding:60px">
         <h2>Redirecting to Finally...</h2>
-        <p>If the app doesn't open, <a href="${appURL}">tap here</a>.</p>
+        <p>If the app doesn't open automatically, <a id="link" href="${appURL}">tap here to open Finally</a>.</p>
+        <script>
+          window.location.href = "${appURL}";
+        </script>
       </body>
     </html>
   `);
