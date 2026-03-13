@@ -1,0 +1,83 @@
+name: Finally
+options:
+  bundleIdPrefix: com.kaungzinye
+  deploymentTarget:
+    iOS: "17.0"
+  xcodeVersion: "15.0"
+
+settings:
+  base:
+    DEVELOPMENT_TEAM: GN4UMU6766
+    CODE_SIGN_STYLE: Automatic
+
+targets:
+  Finally:
+    type: application
+    platform: iOS
+    sources:
+      - Finally
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.kaungzinye.finally
+        INFOPLIST_VALUES: >-
+          CFBundleDisplayName=Finally
+          CFBundleShortVersionString=1.0
+          CFBundleVersion=1
+          UILaunchScreen_Generation=YES
+          UIUserInterfaceStyle=Automatic
+        CODE_SIGN_ENTITLEMENTS: Finally/Finally.entitlements
+    entitlements:
+      path: Finally/Finally.entitlements
+      properties:
+        com.apple.security.application-groups:
+          - group.com.kaungzinye.finally
+    info:
+      path: Finally/Info.plist
+      properties:
+        CFBundleURLTypes:
+          - CFBundleURLSchemes:
+              - finally
+            CFBundleURLName: com.kaungzinye.finally
+        UIBackgroundModes:
+          - fetch
+        BGTaskSchedulerPermittedIdentifiers:
+          - com.kaungzinye.finally.refresh
+    dependencies:
+      - target: FinallyWidgetExtension
+        embed: true
+
+  FinallyWidgetExtension:
+    type: app-extension
+    platform: iOS
+    sources:
+      - FinallyWidget
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.kaungzinye.finally.widget
+        CODE_SIGN_ENTITLEMENTS: FinallyWidget/FinallyWidget.entitlements
+        GENERATE_INFOPLIST_FILE: YES
+        MARKETING_VERSION: "1.0"
+        CURRENT_PROJECT_VERSION: "1"
+        INFOPLIST_KEY_CFBundleDisplayName: Finally Widget
+        INFOPLIST_KEY_NSExtension_NSExtensionPointIdentifier: com.apple.widgetkit-extension
+    entitlements:
+      path: FinallyWidget/FinallyWidget.entitlements
+      properties:
+        com.apple.security.application-groups:
+          - group.com.kaungzinye.finally
+    info:
+      path: FinallyWidget/Info.plist
+      properties:
+        CFBundleDisplayName: Finally Widget
+        CFBundleShortVersionString: "1.0"
+        CFBundleVersion: "1"
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.widgetkit-extension
+
+  FinallyTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - FinallyTests
+    dependencies:
+      - target: Finally
