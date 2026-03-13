@@ -1,0 +1,21 @@
+# macOS
+.DS_Store
+
+# Xcode
+*.xcodeproj/xcuserdata/
+*.xcodeproj/project.xcworkspace/xcuserdata/
+DerivedData/
+*.ipa
+*.dSYM.zip
+*.dSYM
+
+# Vercel
+vercel-notion-auth/node_modules/
+vercel-notion-auth/.vercel/
+
+# Specify
+.specify/
+
+# Misc
+*.swp
+*~
