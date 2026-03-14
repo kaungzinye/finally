@@ -1,0 +1,64 @@
+import SwiftUI
+import SwiftData
+
+struct UpcomingView: View {
+    @Query(
+        filter: #Predicate<TaskItem> { task in
+            task.statusRaw != "Done" && task.isDeleted == false && task.dueDate != nil
+        },
+        sort: \TaskItem.dueDate
+    )
+    private var upcomingTasks: [TaskItem]
+    @Environment(SyncService.self) private var syncService
+    @Environment(\.modelContext) private var modelContext
+
+    @State private var selectedTask: TaskItem?
+
+    private var groupedByDate: [(String, [TaskItem])] {
+        let formatter = DateFormatter()
+        formatter.dateStyle = .medium
+
+        let grouped = Dictionary(grouping: upcomingTasks) { task -> String in
+            guard let date = task.dueDate else { return "No Date" }
+            return formatter.string(from: date)
+        }
+
+        return grouped.sorted { lhs, rhs in
+            let lhsDate = lhs.value.first?.dueDate ?? .distantFuture
+            let rhsDate = rhs.value.first?.dueDate ?? .distantFuture
+            return lhsDate < rhsDate
+        }
+    }
+
+    var body: some View {
+        NavigationStack {
+            List {
+                ForEach(groupedByDate, id: \.0) { dateString, tasks in
+                    Section(dateString) {
+                        ForEach(tasks, id: \.notionPageId) { task in
+                            TaskRowView(task: task)
+                                .contentShape(Rectangle())
+                                .onTapGesture { selectedTask = task }
+                        }
+                    }
+                }
+            }
+            .navigationTitle("Upcoming")
+            .refreshable {
+                await syncService.syncOnLaunch(modelContext: modelContext)
+            }
+            .overlay {
+                if upcomingTasks.isEmpty {
+                    ContentUnavailableView(
+                        "No upcoming tasks",
+                        systemImage: "calendar",
+                        description: Text("Tasks with due dates will appear here")
+                    )
+                }
+            }
+            .sheet(item: $selectedTask) { task in
+                TaskDetailView(task: task)
+            }
+        }
+    }
+}

@@ -29,6 +29,7 @@ struct FinallyApp: App {
                 } else if needsDatabaseSetup {
                     DatabasePickerView(onComplete: {
                         needsDatabaseSetup = false
+                        Task { await triggerSync() }
                     })
                 } else {
                     ContentView()
@@ -37,6 +38,7 @@ struct FinallyApp: App {
             .environment(router)
             .environment(syncService)
             .environment(networkService)
+            .tint(Color(.label))
             .preferredColorScheme(colorScheme)
             .onOpenURL { url in
                 router.handleURL(url)
@@ -52,6 +54,9 @@ struct FinallyApp: App {
             }
             .onReceive(NotificationCenter.default.publisher(for: .notionSessionExpired)) { _ in
                 handleSessionExpired()
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .notionDatabasesReset)) { _ in
+                needsDatabaseSetup = true
             }
             .task {
                 await checkSession()
@@ -86,10 +91,16 @@ struct FinallyApp: App {
         let hasLocalSession = !sessions.isEmpty
         hasSession = token != nil && hasLocalSession
 
+        print("[FinallyApp] checkSession: token=\(token != nil), sessions=\(sessions.count), hasSession=\(hasSession)")
+
         // Check if database IDs are configured
         if let session = sessions.first, session.tasksDatabaseId.isEmpty {
             needsDatabaseSetup = true
+            print("[FinallyApp] needsDatabaseSetup=true (tasksDatabaseId is empty)")
         }
+
+        print("[FinallyApp] Final state: isLoading=false, hasSession=\(hasSession), needsDatabaseSetup=\(needsDatabaseSetup)")
+        print("[FinallyApp] Will show: \(!hasSession ? "NotionConnectView" : needsDatabaseSetup ? "DatabasePickerView" : "ContentView")")
 
         isLoading = false
 
@@ -121,6 +132,12 @@ struct FinallyApp: App {
         }
         hasSession = false
         router.showReauthPrompt = true
+    }
+
+    @MainActor
+    private func triggerSync() async {
+        let context = ModelContext(appContainer)
+        await syncService.syncOnLaunch(modelContext: context)
     }
 
     private func runIncrementalSyncIfPossible() async {

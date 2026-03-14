@@ -2,8 +2,12 @@ import Foundation
 import SwiftData
 
 extension ModelContainer {
-    /// Creates a shared ModelContainer using the App Group container for cross-target data sharing.
+    private static var _shared: ModelContainer?
+
+    /// Returns a shared ModelContainer singleton using the App Group container for cross-target data sharing.
     static func shared() throws -> ModelContainer {
+        if let existing = _shared { return existing }
+
         let schema = Schema([
             TaskItem.self,
             ProjectItem.self,
@@ -11,9 +15,12 @@ extension ModelContainer {
             UserSession.self,
         ])
 
-        let storeURL = FileManager.default
-            .containerURL(forSecurityApplicationGroupIdentifier: AppConstants.appGroupID)!
-            .appendingPathComponent("Finally.store")
+        let storeURL: URL
+        if let groupURL = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: AppConstants.appGroupID) {
+            storeURL = groupURL.appendingPathComponent("Finally.store")
+        } else {
+            storeURL = URL.applicationSupportDirectory.appendingPathComponent("Finally.store")
+        }
 
         let config = ModelConfiguration(
             "Finally",
@@ -22,6 +29,8 @@ extension ModelContainer {
             allowsSave: true
         )
 
-        return try ModelContainer(for: schema, configurations: [config])
+        let container = try ModelContainer(for: schema, configurations: [config])
+        _shared = container
+        return container
     }
 }

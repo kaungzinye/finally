@@ -1,4 +1,5 @@
 import Foundation
+import UIKit
 import AuthenticationServices
 import SwiftData
 
@@ -6,8 +7,6 @@ import SwiftData
 final class NotionAuthService: NSObject {
     var isAuthenticating = false
     var errorMessage: String?
-
-    private var presentationAnchor: ASPresentationAnchor?
 
     // MARK: - OAuth URL
 
@@ -24,8 +23,10 @@ final class NotionAuthService: NSObject {
 
     // MARK: - Start OAuth Flow
 
+    /// Presents an in-app auth sheet via ASWebAuthenticationSession.
+    /// Notion auth → Vercel callback → finally:// redirect → session intercepts → token exchange.
     @MainActor
-    func startOAuthFlow(anchor: ASPresentationAnchor, modelContext: ModelContext) async -> Bool {
+    func startOAuthFlow(modelContext: ModelContext) async -> Bool {
         guard let url = buildAuthorizationURL() else {
             errorMessage = "Failed to build authorization URL."
             return false
@@ -48,23 +49,18 @@ final class NotionAuthService: NSObject {
                         continuation.resume(throwing: AuthError.noCallback)
                     }
                 }
-                self.presentationAnchor = anchor
                 session.presentationContextProvider = self
                 session.prefersEphemeralWebBrowserSession = false
                 session.start()
             }
 
             guard let code = extractAuthCode(from: callbackURL) else {
-                errorMessage = "Could not extract authorization code."
+                errorMessage = "No authorization code in callback."
                 isAuthenticating = false
                 return false
             }
 
-            let tokenResponse = try await exchangeCodeForToken(code: code)
-            try storeSession(tokenResponse: tokenResponse, modelContext: modelContext)
-
-            isAuthenticating = false
-            return true
+            return await completeOAuth(withCode: code, modelContext: modelContext)
         } catch let error as ASWebAuthenticationSessionError where error.code == .canceledLogin {
             isAuthenticating = false
             return false
@@ -109,6 +105,7 @@ final class NotionAuthService: NSObject {
             isAuthenticating = false
             return true
         } catch {
+            print("[OAuth] completeOAuth error: \(error)")
             errorMessage = error.localizedDescription
             isAuthenticating = false
             return false
@@ -125,6 +122,7 @@ final class NotionAuthService: NSObject {
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.httpBody = try JSONSerialization.data(withJSONObject: ["code": code])
 
+        print("[OAuth] POST \(url) with code: \(code.prefix(10))...")
         let (data, response) = try await URLSession.shared.data(for: request)
 
         guard let httpResponse = response as? HTTPURLResponse else {
@@ -132,6 +130,8 @@ final class NotionAuthService: NSObject {
         }
 
         guard (200...299).contains(httpResponse.statusCode) else {
+            let body = String(data: data, encoding: .utf8) ?? "no body"
+            print("[OAuth] Token exchange failed: HTTP \(httpResponse.statusCode) — \(body)")
             throw AuthError.tokenExchangeFailed
         }
 
@@ -140,20 +140,28 @@ final class NotionAuthService: NSObject {
 
     // MARK: - Store Session
 
+    @MainActor
     func storeSession(tokenResponse: TokenResponse, modelContext: ModelContext) throws {
         try KeychainHelper.saveNotionToken(tokenResponse.accessToken)
 
-        let existing = try modelContext.fetch(FetchDescriptor<UserSession>())
+        print("[OAuth] Saving session for workspace: \(tokenResponse.workspaceName)")
+
+        let container = try ModelContainer.shared()
+        let context = ModelContext(container)
+        context.autosaveEnabled = false
+
+        let existing = try context.fetch(FetchDescriptor<UserSession>())
         for session in existing {
-            modelContext.delete(session)
+            context.delete(session)
         }
 
         let session = UserSession(
             workspaceId: tokenResponse.workspaceId,
             workspaceName: tokenResponse.workspaceName
         )
-        modelContext.insert(session)
-        try modelContext.save()
+        context.insert(session)
+        try context.save()
+        print("[OAuth] Session saved successfully")
     }
 
     // MARK: - Errors
@@ -177,6 +185,10 @@ final class NotionAuthService: NSObject {
 
 extension NotionAuthService: ASWebAuthenticationPresentationContextProviding {
     func presentationAnchor(for session: ASWebAuthenticationSession) -> ASPresentationAnchor {
-        presentationAnchor ?? ASPresentationAnchor()
+        guard let scene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+              let window = scene.windows.first else {
+            return ASPresentationAnchor()
+        }
+        return window
     }
 }

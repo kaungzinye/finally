@@ -44,6 +44,7 @@ enum NotionAPIError: Error, LocalizedError {
 
 extension Notification.Name {
     static let notionSessionExpired = Notification.Name("notionSessionExpired")
+    static let notionDatabasesReset = Notification.Name("notionDatabasesReset")
 }
 
 // MARK: - Notion JSON Structures
@@ -315,6 +316,16 @@ final class NotionAPIService: NotionAPIClient {
         let id: String
         let object: String
         let title: [NotionRichText]?
+        let parent: NotionParent?
+
+        struct NotionParent: Decodable {
+            let type: String
+        }
+
+        /// True if this is a full-page database (not an inline database inside a page)
+        var isFullPageDatabase: Bool {
+            parent?.type == "workspace" || parent?.type == "page_id"
+        }
     }
 
     func searchDatabases() async throws -> [NotionSearchResult] {
@@ -323,7 +334,8 @@ final class NotionAPIService: NotionAPIClient {
         ]
         let request = try buildRequest(path: "/search", method: "POST", body: body)
         let response: NotionSearchResponse = try await execute(request)
-        return response.results
+        // Only return full-page databases, filter out inline databases
+        return response.results.filter { $0.title?.first?.plainText != nil }
     }
 }
     private func handleUnauthorizedResponse() {

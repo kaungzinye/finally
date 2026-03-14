@@ -28,23 +28,32 @@ final class SyncService {
     // MARK: - Sync On Launch
 
     func syncOnLaunch(modelContext: ModelContext) async {
-        guard let session = fetchSession(modelContext: modelContext) else { return }
+        guard let session = fetchSession(modelContext: modelContext) else {
+            print("[Sync] No session found, skipping sync")
+            return
+        }
 
+        print("[Sync] Starting sync. tasksDb=\(session.tasksDatabaseId), projectsDb=\(session.projectsDatabaseId), lastFullSync=\(String(describing: session.lastFullSyncAt))")
         isSyncing = true
         lastError = nil
 
         do {
-            let shouldFullSync = session.lastFullSyncAt == nil ||
+            // Also force full sync if no tasks exist locally
+            let taskCount = (try? modelContext.fetchCount(FetchDescriptor<TaskItem>())) ?? 0
+            let shouldFullSync = taskCount == 0 || session.lastFullSyncAt == nil ||
                 (session.lastFullSyncAt?.timeIntervalSinceNow ?? 0) < -Double(AppConstants.fullSyncIntervalHours * 3600)
 
             if shouldFullSync {
+                print("[Sync] Running full sync")
                 try await fullSync(session: session, modelContext: modelContext)
+                print("[Sync] Full sync complete")
             } else {
+                print("[Sync] Running incremental sync")
                 try await incrementalSync(session: session, modelContext: modelContext)
+                print("[Sync] Incremental sync complete")
             }
-        } catch let error as NotionAPIError {
-            lastError = error.localizedDescription
         } catch {
+            print("[Sync] Error: \(error)")
             lastError = error.localizedDescription
         }
 
@@ -64,11 +73,13 @@ final class SyncService {
 
         if !session.projectsDatabaseId.isEmpty {
             let projectPages = try await api.queryAllPages(databaseId: session.projectsDatabaseId, filter: filter, sorts: nil)
+            print("[Sync] Incremental: fetched \(projectPages.count) updated projects")
             upsertProjects(projectPages, mappings: session.propertyMappings, modelContext: modelContext)
         }
 
         if !session.tasksDatabaseId.isEmpty {
             let taskPages = try await api.queryAllPages(databaseId: session.tasksDatabaseId, filter: filter, sorts: nil)
+            print("[Sync] Incremental: fetched \(taskPages.count) updated tasks")
             upsertTasks(taskPages, mappings: session.propertyMappings, modelContext: modelContext)
         }
 
@@ -80,23 +91,35 @@ final class SyncService {
 
     func fullSync(session: UserSession, modelContext: ModelContext) async throws {
         if !session.projectsDatabaseId.isEmpty {
+            print("[Sync] Fetching projects from DB: \(session.projectsDatabaseId)")
             let allProjectPages = try await api.queryAllPages(databaseId: session.projectsDatabaseId, filter: nil, sorts: nil)
+            print("[Sync] Fetched \(allProjectPages.count) project pages from Notion")
             let remoteProjectIds = Set(allProjectPages.map(\.id))
 
             upsertProjects(allProjectPages, mappings: session.propertyMappings, modelContext: modelContext)
             deleteStaleItems(ProjectItem.self, remoteIds: remoteProjectIds, modelContext: modelContext)
+        } else {
+            print("[Sync] No projects DB configured, skipping")
         }
 
         if !session.tasksDatabaseId.isEmpty {
+            print("[Sync] Fetching tasks from DB: \(session.tasksDatabaseId)")
             let allTaskPages = try await api.queryAllPages(databaseId: session.tasksDatabaseId, filter: nil, sorts: nil)
+            print("[Sync] Fetched \(allTaskPages.count) task pages from Notion")
             let remoteTaskIds = Set(allTaskPages.map(\.id))
 
             upsertTasks(allTaskPages, mappings: session.propertyMappings, modelContext: modelContext)
             deleteStaleItems(TaskItem.self, remoteIds: remoteTaskIds, modelContext: modelContext)
+
+            let localCount = (try? modelContext.fetchCount(FetchDescriptor<TaskItem>())) ?? 0
+            print("[Sync] Local task count after upsert: \(localCount)")
+        } else {
+            print("[Sync] No tasks DB configured, skipping")
         }
 
         session.lastFullSyncAt = Date()
         try modelContext.save()
+        print("[Sync] Full sync saved successfully")
     }
 
     // MARK: - Push Dirty Changes
@@ -179,13 +202,19 @@ final class SyncService {
             // Status
             if let statusProp = page.properties[mappings.taskStatusProperty],
                let statusName = statusProp.status?.name {
-                task.status = TaskStatus(rawValue: statusName) ?? .notStarted
+                let mapped = TaskStatus.fromNotionOption(statusName) ?? TaskStatus(rawValue: statusName) ?? .notStarted
+                print("[Sync] Task '\(title)' status: '\(statusName)' → \(mapped.rawValue)")
+                task.status = mapped
+            } else {
+                print("[Sync] Task '\(title)' NO STATUS FOUND. Property key: '\(mappings.taskStatusProperty)', available keys: \(Array(page.properties.keys))")
             }
 
             // Due Date
             if let dateProp = page.properties[mappings.taskDueDateProperty],
                let dateStr = dateProp.date?.start {
-                task.dueDate = parseDate(dateStr)
+                let parsed = parseDate(dateStr)
+                print("[Sync] Task '\(title)' due: '\(dateStr)' → \(String(describing: parsed))")
+                task.dueDate = parsed
             } else {
                 task.dueDate = nil
             }

@@ -40,7 +40,7 @@ enum TaskPriority: String, Codable, CaseIterable {
         switch self {
         case .urgent: return .red
         case .high: return .orange
-        case .medium: return .blue
+        case .medium: return .yellow
         case .low: return .secondary
         }
     }
