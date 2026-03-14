@@ -12,36 +12,56 @@ struct TaskRowView: View {
     @State private var showRecurrencePicker = false
 
     var body: some View {
-        HStack(spacing: 12) {
-            // Checkbox — left side
-            Button {
-                let generator = UIImpactFeedbackGenerator(style: .light)
-                generator.impactOccurred()
+        VStack(alignment: .leading, spacing: 6) {
+            // Line 1: Checkbox + Title + Project
+            HStack(spacing: 8) {
+                // Checkbox — left side
+                Button {
+                    let generator = UIImpactFeedbackGenerator(style: .light)
+                    generator.impactOccurred()
 
-                withAnimation(.snappy) {
-                    let recycled = task.complete()
-                    if recycled {
-                        NotificationService.shared.rescheduleAllReminders(modelContext: modelContext)
-                    } else {
-                        NotificationService.shared.cancelRemindersForTask(task)
+                    withAnimation(.snappy) {
+                        let recycled = task.complete()
+                        if recycled {
+                            NotificationService.shared.rescheduleAllReminders(modelContext: modelContext)
+                        } else {
+                            NotificationService.shared.cancelRemindersForTask(task)
+                        }
+                    }
+                } label: {
+                    Image(systemName: task.status == .done ? "checkmark.circle.fill" : "circle")
+                        .font(.title3)
+                        .foregroundStyle(task.status == .done ? .green : .secondary)
+                }
+                .buttonStyle(.plain)
+
+                // Title
+                Text(task.title)
+                    .lineLimit(1)
+                    .strikethrough(task.status == .done)
+                    .foregroundStyle(task.status == .done ? .secondary : .primary)
+                    .opacity(task.status == .done ? 0.6 : 1.0)
+
+                Spacer(minLength: 0)
+
+                // Project with icon — right side
+                Button { showProjectPicker = true } label: {
+                    HStack(spacing: 3) {
+                        if let emoji = task.project?.iconEmoji {
+                            Text(emoji)
+                                .font(.caption)
+                        }
+                        Text(task.project?.title ?? "Inbox")
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                            .lineLimit(1)
+                            .frame(maxWidth: 50, alignment: .trailing)
                     }
                 }
-            } label: {
-                Image(systemName: task.status == .done ? "checkmark.circle.fill" : "circle")
-                    .font(.title3)
-                    .foregroundStyle(task.status == .done ? .green : .secondary)
+                .buttonStyle(.plain)
             }
-            .buttonStyle(.plain)
 
-            // Title — single line, truncates
-            Text(task.title)
-                .lineLimit(1)
-                .strikethrough(task.status == .done)
-                .foregroundStyle(task.status == .done ? .secondary : .primary)
-                .opacity(task.status == .done ? 0.6 : 1.0)
-                .frame(maxWidth: 100, alignment: .leading)
-
-            // Properties bar — all in one line
+            // Line 2: Properties bar
             HStack(spacing: 6) {
                 // Due date
                 Button { showDatePicker = true } label: {
@@ -100,27 +120,12 @@ struct TaskRowView: View {
                             }
                         }
                         .font(.caption2)
+                        .lineLimit(1)
                     }
                     .buttonStyle(.plain)
                 }
 
                 Spacer(minLength: 0)
-
-                // Project with icon
-                Button { showProjectPicker = true } label: {
-                    HStack(spacing: 3) {
-                        if let emoji = task.project?.iconEmoji {
-                            Text(emoji)
-                                .font(.caption)
-                        }
-                        Text(task.project?.title ?? "Inbox")
-                            .font(.caption2)
-                            .foregroundStyle(.secondary)
-                            .lineLimit(1)
-                            .frame(maxWidth: 50, alignment: .trailing)
-                    }
-                }
-                .buttonStyle(.plain)
 
                 // Recurrence
                 if task.recurrence != .none {
@@ -132,7 +137,6 @@ struct TaskRowView: View {
                     .buttonStyle(.plain)
                 }
             }
-            .lineLimit(1)
         }
         .padding(.vertical, 8)
         .contentShape(Rectangle())
