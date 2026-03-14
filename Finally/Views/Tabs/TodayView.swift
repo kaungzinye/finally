@@ -13,6 +13,7 @@ struct TodayView: View {
     @Environment(\.modelContext) private var modelContext
 
     @State private var selectedTask: TaskItem?
+    @State private var expandedSections: Set<String> = ["Today"]
 
     private var overdueTasks: [TaskItem] {
         nonDoneTasks.filter { $0.isOverdue }
@@ -26,20 +27,60 @@ struct TodayView: View {
         NavigationStack {
             List {
                 if !overdueTasks.isEmpty {
-                    Section("Overdue") {
-                        ForEach(overdueTasks, id: \.notionPageId) { task in
+                    Section {
+                        if expandedSections.contains("Overdue") {
+                            ForEach(overdueTasks, id: \.notionPageId) { task in
+                                TaskRowView(task: task)
+                                    .contentShape(Rectangle())
+                                    .onTapGesture { selectedTask = task }
+                            }
+                        }
+                    } header: {
+                        Button {
+                            withAnimation {
+                                if expandedSections.contains("Overdue") {
+                                    expandedSections.remove("Overdue")
+                                } else {
+                                    expandedSections.insert("Overdue")
+                                }
+                            }
+                        } label: {
+                            HStack {
+                                Image(systemName: expandedSections.contains("Overdue") ? "chevron.down" : "chevron.right")
+                                    .font(.caption)
+                                Text("Overdue")
+                            }
+                            .foregroundStyle(.primary)
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+                Section {
+                    if expandedSections.contains("Today") {
+                        ForEach(todayTasks, id: \.notionPageId) { task in
                             TaskRowView(task: task)
                                 .contentShape(Rectangle())
                                 .onTapGesture { selectedTask = task }
                         }
                     }
-                }
-                Section("Today") {
-                    ForEach(todayTasks, id: \.notionPageId) { task in
-                        TaskRowView(task: task)
-                            .contentShape(Rectangle())
-                            .onTapGesture { selectedTask = task }
+                } header: {
+                    Button {
+                        withAnimation {
+                            if expandedSections.contains("Today") {
+                                expandedSections.remove("Today")
+                            } else {
+                                expandedSections.insert("Today")
+                            }
+                        }
+                    } label: {
+                        HStack {
+                            Image(systemName: expandedSections.contains("Today") ? "chevron.down" : "chevron.right")
+                                .font(.caption)
+                            Text("Today")
+                        }
+                        .foregroundStyle(.primary)
                     }
+                    .buttonStyle(.plain)
                 }
             }
             .navigationTitle("Today")

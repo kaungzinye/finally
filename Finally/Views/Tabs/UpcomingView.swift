@@ -8,11 +8,16 @@ struct UpcomingView: View {
         },
         sort: \TaskItem.dueDate
     )
-    private var upcomingTasks: [TaskItem]
+    private var allFutureTasks: [TaskItem]
     @Environment(SyncService.self) private var syncService
     @Environment(\.modelContext) private var modelContext
 
     @State private var selectedTask: TaskItem?
+    @State private var expandedSections: Set<String> = []
+
+    private var upcomingTasks: [TaskItem] {
+        allFutureTasks.filter { $0.dueDate ?? .distantFuture > Date() }
+    }
 
     private var groupedByDate: [(String, [TaskItem])] {
         let formatter = DateFormatter()
@@ -34,12 +39,32 @@ struct UpcomingView: View {
         NavigationStack {
             List {
                 ForEach(groupedByDate, id: \.0) { dateString, tasks in
-                    Section(dateString) {
-                        ForEach(tasks, id: \.notionPageId) { task in
-                            TaskRowView(task: task)
-                                .contentShape(Rectangle())
-                                .onTapGesture { selectedTask = task }
+                    Section {
+                        if expandedSections.contains(dateString) {
+                            ForEach(tasks, id: \.notionPageId) { task in
+                                TaskRowView(task: task)
+                                    .contentShape(Rectangle())
+                                    .onTapGesture { selectedTask = task }
+                            }
                         }
+                    } header: {
+                        Button {
+                            withAnimation {
+                                if expandedSections.contains(dateString) {
+                                    expandedSections.remove(dateString)
+                                } else {
+                                    expandedSections.insert(dateString)
+                                }
+                            }
+                        } label: {
+                            HStack {
+                                Image(systemName: expandedSections.contains(dateString) ? "chevron.down" : "chevron.right")
+                                    .font(.caption)
+                                Text(dateString)
+                            }
+                            .foregroundStyle(.primary)
+                        }
+                        .buttonStyle(.plain)
                     }
                 }
             }
