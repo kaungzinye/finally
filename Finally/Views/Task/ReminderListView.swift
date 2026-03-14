@@ -18,36 +18,57 @@ struct ReminderListView: View {
     ]
 
     var body: some View {
-        Section("Reminders") {
-            ForEach(task.reminders, id: \.id) { reminder in
-                HStack {
-                    Image(systemName: "bell")
-                        .foregroundStyle(.orange)
-                    Text(reminder.label)
-                    Spacer()
-                    if reminder.isScheduled {
-                        Image(systemName: "checkmark.circle.fill")
-                            .font(.caption)
-                            .foregroundStyle(.green)
+        NavigationStack {
+            List {
+                Section("Reminders") {
+                    if task.reminders.isEmpty {
+                        Text("No reminders set")
+                            .foregroundStyle(.secondary)
+                    } else {
+                        ForEach(task.reminders, id: \.id) { reminder in
+                            HStack {
+                                VStack(alignment: .leading, spacing: 4) {
+                                    HStack(spacing: 6) {
+                                        Image(systemName: "bell")
+                                            .foregroundStyle(.orange)
+                                        Text(reminder.label)
+                                    }
+                                    if let fireDate = reminder.fireDate {
+                                        Text(fireDate.formatted(date: .omitted, time: .shortened))
+                                            .font(.caption)
+                                            .foregroundStyle(.secondary)
+                                    }
+                                }
+                                Spacer()
+                                if reminder.isScheduled {
+                                    Image(systemName: "checkmark.circle.fill")
+                                        .font(.caption)
+                                        .foregroundStyle(.green)
+                                }
+                            }
+                        }
+                        .onDelete { indexSet in
+                            for index in indexSet {
+                                let reminder = task.reminders[index]
+                                UNUserNotificationCenter.current()
+                                    .removePendingNotificationRequests(withIdentifiers: [reminder.notificationId])
+                                modelContext.delete(reminder)
+                            }
+                            NotificationService.shared.rescheduleAllReminders(modelContext: modelContext)
+                        }
+                    }
+
+                    Button {
+                        showAddReminder = true
+                    } label: {
+                        Label("Add Reminder", systemImage: "plus.circle")
                     }
                 }
             }
-            .onDelete { indexSet in
-                for index in indexSet {
-                    let reminder = task.reminders[index]
-                    UNUserNotificationCenter.current()
-                        .removePendingNotificationRequests(withIdentifiers: [reminder.notificationId])
-                    modelContext.delete(reminder)
-                }
-                NotificationService.shared.rescheduleAllReminders(modelContext: modelContext)
-            }
-
-            Button {
-                showAddReminder = true
-            } label: {
-                Label("Add Reminder", systemImage: "plus.circle")
-            }
+            .navigationTitle("Reminders")
+            .navigationBarTitleDisplayMode(.inline)
         }
+        .presentationDetents([.medium, .large])
         .sheet(isPresented: $showAddReminder) {
             addReminderSheet
         }

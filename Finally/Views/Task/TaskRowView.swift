@@ -10,6 +10,29 @@ struct TaskRowView: View {
     @State private var showTagPicker = false
     @State private var showProjectPicker = false
     @State private var showRecurrencePicker = false
+    @State private var showReminderPicker = false
+
+    private var formattedDueDate: String {
+        guard let dueDate = task.dueDate else { return "—" }
+
+        let calendar = Calendar.current
+        if calendar.isDateInToday(dueDate) {
+            return "Today"
+        } else if calendar.isDateInTomorrow(dueDate) {
+            return "Tomorrow"
+        } else if calendar.isDateInYesterday(dueDate) {
+            return "Yesterday"
+        } else {
+            let daysFromNow = calendar.dateComponents([.day], from: calendar.startOfDay(for: Date()), to: dueDate).day ?? 0
+            if daysFromNow > 0 && daysFromNow <= 6 {
+                let formatter = DateFormatter()
+                formatter.dateFormat = "EEEE"
+                return formatter.string(from: dueDate)
+            } else {
+                return dueDate.formatted(.dateTime.month(.abbreviated).day())
+            }
+        }
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
@@ -65,16 +88,9 @@ struct TaskRowView: View {
             HStack(spacing: 6) {
                 // Due date
                 Button { showDatePicker = true } label: {
-                    Group {
-                        if let dueDate = task.dueDate {
-                            Text(dueDate.formatted(.dateTime.month(.abbreviated).day()))
-                                .foregroundStyle(task.isOverdue ? .red : .secondary)
-                        } else {
-                            Text("—")
-                                .foregroundStyle(.tertiary)
-                        }
-                    }
-                    .font(.caption2)
+                    Text(formattedDueDate)
+                        .foregroundStyle(task.isOverdue ? .red : .secondary)
+                        .font(.caption2)
                 }
                 .buttonStyle(.plain)
 
@@ -94,7 +110,7 @@ struct TaskRowView: View {
                 .buttonStyle(.plain)
 
                 // Reminders
-                Button { } label: {
+                Button { showReminderPicker = true } label: {
                     if !task.reminders.isEmpty {
                         Image(systemName: "bell.fill")
                             .foregroundStyle(.orange)
@@ -139,6 +155,9 @@ struct TaskRowView: View {
             }
         }
         .padding(.vertical, 8)
+        .padding(.horizontal, 4)
+        .background(Color(.systemGray6))
+        .cornerRadius(8)
         .contentShape(Rectangle())
         .swipeActions(edge: .leading) {
             Button {
@@ -157,6 +176,14 @@ struct TaskRowView: View {
             }
             .tint(.green)
         }
+        .swipeActions(edge: .trailing) {
+            Button {
+                showDatePicker = true
+            } label: {
+                Label("Reschedule", systemImage: "calendar")
+            }
+            .tint(.orange)
+        }
         .sheet(isPresented: $showDatePicker) {
             DatePickerSheet(selectedDate: dueDateBinding)
         }
@@ -171,6 +198,9 @@ struct TaskRowView: View {
         }
         .sheet(isPresented: $showRecurrencePicker) {
             RecurrencePicker(selection: recurrenceBinding)
+        }
+        .sheet(isPresented: $showReminderPicker) {
+            ReminderListView(task: task)
         }
     }
 
