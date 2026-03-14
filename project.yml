@@ -4,6 +4,25 @@ options:
   deploymentTarget:
     iOS: "17.0"
   xcodeVersion: "15.0"
+  defaultConfig: Debug
+schemes:
+  Finally:
+    build:
+      targets:
+        Finally: all
+        FinallyTests: [test]
+    run:
+      config: Debug
+    test:
+      config: Debug
+      targets:
+        - FinallyTests
+    profile:
+      config: Release
+    analyze:
+      config: Debug
+    archive:
+      config: Release
 
 settings:
   base:
@@ -26,11 +45,6 @@ targets:
           UILaunchScreen_Generation=YES
           UIUserInterfaceStyle=Automatic
         CODE_SIGN_ENTITLEMENTS: Finally/Finally.entitlements
-    entitlements:
-      path: Finally/Finally.entitlements
-      properties:
-        com.apple.security.application-groups:
-          - group.com.kaungzinye.finally
     info:
       path: Finally/Info.plist
       properties:
@@ -42,6 +56,16 @@ targets:
           - fetch
         BGTaskSchedulerPermittedIdentifiers:
           - com.kaungzinye.finally.refresh
+        UILaunchScreen: {}
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait
+          - UIInterfaceOrientationLandscapeLeft
+          - UIInterfaceOrientationLandscapeRight
+        UISupportedInterfaceOrientations~ipad:
+          - UIInterfaceOrientationPortrait
+          - UIInterfaceOrientationPortraitUpsideDown
+          - UIInterfaceOrientationLandscapeLeft
+          - UIInterfaceOrientationLandscapeRight
     dependencies:
       - target: FinallyWidgetExtension
         embed: true
@@ -60,11 +84,6 @@ targets:
         CURRENT_PROJECT_VERSION: "1"
         INFOPLIST_KEY_CFBundleDisplayName: Finally Widget
         INFOPLIST_KEY_NSExtension_NSExtensionPointIdentifier: com.apple.widgetkit-extension
-    entitlements:
-      path: FinallyWidget/FinallyWidget.entitlements
-      properties:
-        com.apple.security.application-groups:
-          - group.com.kaungzinye.finally
     info:
       path: FinallyWidget/Info.plist
       properties:
