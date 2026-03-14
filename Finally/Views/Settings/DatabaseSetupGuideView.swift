@@ -13,7 +13,7 @@ struct DatabaseSetupGuideView: View {
 
             Section("Tasks Database (Required)") {
                 propertyRow(name: "Name", type: "Title", required: true, note: "Task name (auto-created)")
-                propertyRow(name: "Status", type: "Status", required: true, note: "Options: Not Started, In Progress, Done")
+                propertyRow(name: "Status", type: "Status", required: true, note: "Options: Not Started, In Progress, Complete")
                 propertyRow(name: "Due Date", type: "Date", required: true, note: "Task deadline")
                 propertyRow(name: "Priority", type: "Select", required: false, note: "Options: Urgent, High, Medium, Low")
                 propertyRow(name: "Tags", type: "Multi-select", required: false, note: "Custom tags for filtering")

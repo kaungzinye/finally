@@ -5,7 +5,7 @@ import SwiftUI
 enum TaskStatus: String, Codable, CaseIterable {
     case notStarted = "Not started"
     case inProgress = "In progress"
-    case done = "Done"
+    case done = "Complete"
 
     /// Map from Notion status group name to TaskStatus
     static func fromNotionGroup(_ group: String) -> TaskStatus? {

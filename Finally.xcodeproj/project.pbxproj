@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		052CF12915DE19D4E836E671 /* TaskStatusMappingUnitTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5433380C376ADA260E8BAFA3 /* TaskStatusMappingUnitTests.swift */; };
 		10B3C0F097CEDFDC88AF04A1 /* PriorityPicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2BB0C1AC47E9326D0A6E9F36 /* PriorityPicker.swift */; };
 		1462F1EB97E6FA5647BE0E69 /* TaskItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = E3DCE4B37409BDE28BFD5686 /* TaskItem.swift */; };
 		14783BBA2AA4669DF1A810EA /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9B179DAFF77F711BB646D68B /* ContentView.swift */; };
@@ -102,6 +103,7 @@
 		33A9FE20A98C304B52360113 /* NavigationRouter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NavigationRouter.swift; sourceTree = "<group>"; };
 		42B3711F01223345C22AC39D /* SyncServiceNotionMappingIntegrationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SyncServiceNotionMappingIntegrationTests.swift; sourceTree = "<group>"; };
 		44FC30A47CA1D9B4F15234D2 /* TaskDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskDetailView.swift; sourceTree = "<group>"; };
+		5433380C376ADA260E8BAFA3 /* TaskStatusMappingUnitTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskStatusMappingUnitTests.swift; sourceTree = "<group>"; };
 		57297B6B182C9224FF27FA72 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		5DF9E28C5C320BE1EE73448A /* Enums.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Enums.swift; sourceTree = "<group>"; };
 		6195045508D41FC6C8438C7F /* SyncService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SyncService.swift; sourceTree = "<group>"; };
@@ -310,6 +312,7 @@
 			children = (
 				6BE4BD53E8A06D86F228E95E /* NotionDataShapeUnitTests.swift */,
 				695A63457914D18721BF9D98 /* SchemaValidatorUnitTests.swift */,
+				5433380C376ADA260E8BAFA3 /* TaskStatusMappingUnitTests.swift */,
 			);
 			path = Unit;
 			sourceTree = "<group>";
@@ -467,6 +470,7 @@
 				AA82CDE694D91D5E61C9CBDE /* RecurrenceTests.swift in Sources */,
 				B2F654397FD23CCA177DA1AE /* SchemaValidatorUnitTests.swift in Sources */,
 				5BFF0F024F1538934C7D9EFC /* SyncServiceNotionMappingIntegrationTests.swift in Sources */,
+				052CF12915DE19D4E836E671 /* TaskStatusMappingUnitTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

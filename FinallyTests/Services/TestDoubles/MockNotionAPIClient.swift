@@ -58,14 +58,38 @@ enum NotionTestFactory {
         )
     }
 
+    static func makeStatusOption(
+        id: String,
+        name: String,
+        color: String? = nil
+    ) -> NotionSelectOption {
+        NotionSelectOption(id: id, name: name, color: color)
+    }
+
+    static func makeStatusGroup(
+        id: String,
+        name: String,
+        optionIds: [String]
+    ) -> NotionStatusGroup {
+        NotionStatusGroup(id: id, name: name, optionIds: optionIds)
+    }
+
+    static func makeStatusSchema(
+        options: [NotionSelectOption],
+        groups: [NotionStatusGroup]? = nil
+    ) -> NotionStatusSchema {
+        NotionStatusSchema(options: options, groups: groups)
+    }
+
     static func schema(
         id: String = UUID().uuidString,
-        type: String
+        type: String,
+        statusSchema: NotionStatusSchema? = nil
     ) -> NotionPropertySchema {
         NotionPropertySchema(
             id: id,
             type: type,
-            status: type == "status" ? NotionStatusSchema(options: [], groups: nil) : nil,
+            status: type == "status" ? (statusSchema ?? NotionStatusSchema(options: [], groups: nil)) : nil,
             select: type == "select" ? NotionSelectSchema(options: []) : nil,
             multiSelect: type == "multi_select" ? NotionSelectSchema(options: []) : nil,
             relation: type == "relation" ? NotionRelationSchema(databaseId: "rel-db") : nil
@@ -83,6 +107,7 @@ enum NotionTestFactory {
     static func propertyValue(
         type: String,
         title: [NotionRichText]? = nil,
+        statusId: String? = nil,
         statusName: String? = nil,
         dateStart: String? = nil,
         selectName: String? = nil,
@@ -92,7 +117,7 @@ enum NotionTestFactory {
         NotionPropertyValue(
             type: type,
             title: title,
-            status: statusName.map { NotionStatusValue(name: $0) },
+            status: statusName.map { NotionStatusValue(id: statusId, name: $0) },
             date: dateStart.map { NotionDateValue(start: $0, end: nil) },
             select: selectName.map { NotionSelectOption(id: nil, name: $0, color: nil) },
             multiSelect: multiSelectNames?.map { NotionSelectOption(id: nil, name: $0, color: nil) },

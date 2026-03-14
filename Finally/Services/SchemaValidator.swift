@@ -42,6 +42,7 @@ final class SchemaValidator {
         if let explicitStatusProp = property(named: "Status", in: database.properties) {
             if explicitStatusProp.value.type == "status" {
                 mappings.taskStatusProperty = explicitStatusProp.key
+                mappings.taskStatusSchema = explicitStatusProp.value.status
             } else {
                 result.issues.append(.init(
                     propertyName: explicitStatusProp.key,
@@ -51,11 +52,12 @@ final class SchemaValidator {
             }
         } else if let statusProp = database.properties.first(where: { $0.value.type == "status" }) {
             mappings.taskStatusProperty = statusProp.key
+            mappings.taskStatusSchema = statusProp.value.status
         } else {
             result.issues.append(.init(
                 propertyName: "Status",
                 expectedType: "status",
-                message: "Add a Status property with options: Not Started, In Progress, Done"
+                message: "Add a Status property with options: Not Started, In Progress, Complete"
             ))
         }
 

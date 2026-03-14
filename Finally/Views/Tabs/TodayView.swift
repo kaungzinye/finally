@@ -4,7 +4,7 @@ import SwiftData
 struct TodayView: View {
     @Query(
         filter: #Predicate<TaskItem> { task in
-            task.statusRaw != "Done" && task.isDeleted == false
+            task.statusRaw != "Complete" && task.isDeleted == false
         },
         sort: \TaskItem.dueDate
     )

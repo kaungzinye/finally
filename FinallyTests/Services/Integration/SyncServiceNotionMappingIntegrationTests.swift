@@ -198,6 +198,103 @@ final class SyncServiceNotionMappingIntegrationTests: XCTestCase {
         XCTAssertNil(task.project)
     }
 
+
+    func testFullSync_WhenStatusUsesCustomCompleteGroupOption_MapsTaskToDone() async throws {
+        let mock = MockNotionAPIClient()
+        let syncService = SyncService(api: mock)
+        let context = try makeInMemoryContext()
+
+        let statusSchema = NotionTestFactory.makeStatusSchema(
+            options: [
+                NotionTestFactory.makeStatusOption(id: "todo-1", name: "Queued"),
+                NotionTestFactory.makeStatusOption(id: "progress-1", name: "Reviewing"),
+                NotionTestFactory.makeStatusOption(id: "done-1", name: "Verified")
+            ],
+            groups: [
+                NotionTestFactory.makeStatusGroup(id: "group-1", name: "To-do", optionIds: ["todo-1"]),
+                NotionTestFactory.makeStatusGroup(id: "group-2", name: "In progress", optionIds: ["progress-1"]),
+                NotionTestFactory.makeStatusGroup(id: "group-3", name: "Complete", optionIds: ["done-1"])
+            ]
+        )
+
+        let session = UserSession(workspaceId: "ws-1", workspaceName: "Workspace")
+        session.tasksDatabaseId = "tasks-db"
+        session.propertyMappings = PropertyMappings(taskStatusSchema: statusSchema)
+        context.insert(session)
+
+        mock.queryAllPagesResult["tasks-db"] = [
+            NotionTestFactory.page(
+                id: "task-1",
+                properties: [
+                    "Name": NotionTestFactory.propertyValue(
+                        type: "title",
+                        title: [NotionRichText(plainText: "Custom done state")]
+                    ),
+                    "Status": NotionTestFactory.propertyValue(type: "status", statusId: "done-1", statusName: "Verified"),
+                    "Due Date": NotionTestFactory.propertyValue(type: "date", dateStart: "2026-03-21")
+                ]
+            )
+        ]
+
+        try await syncService.fullSync(session: session, modelContext: context)
+
+        let tasks = try context.fetch(FetchDescriptor<TaskItem>())
+        XCTAssertEqual(tasks.count, 1)
+        XCTAssertEqual(tasks.first?.status, .done)
+    }
+
+
+    func testFullSync_WhenExistingSessionLacksSchema_RefreshesAndMapsEmojiCompleteStatus() async throws {
+        let mock = MockNotionAPIClient()
+        let syncService = SyncService(api: mock)
+        let context = try makeInMemoryContext()
+
+        let statusSchema = NotionTestFactory.makeStatusSchema(
+            options: [
+                NotionTestFactory.makeStatusOption(id: "todo-1", name: "To Do"),
+                NotionTestFactory.makeStatusOption(id: "progress-1", name: "Doing"),
+                NotionTestFactory.makeStatusOption(id: "done-1", name: "✅")
+            ],
+            groups: [
+                NotionTestFactory.makeStatusGroup(id: "group-1", name: "To-do", optionIds: ["todo-1"]),
+                NotionTestFactory.makeStatusGroup(id: "group-2", name: "In progress", optionIds: ["progress-1"]),
+                NotionTestFactory.makeStatusGroup(id: "group-3", name: "Complete", optionIds: ["done-1"])
+            ]
+        )
+        mock.retrieveDatabaseQueue = [
+            NotionTestFactory.makeDatabase(properties: [
+                "Name": NotionTestFactory.schema(type: "title"),
+                "Status": NotionTestFactory.schema(type: "status", statusSchema: statusSchema),
+                "Due Date": NotionTestFactory.schema(type: "date")
+            ])
+        ]
+
+        let session = UserSession(workspaceId: "ws-1", workspaceName: "Workspace")
+        session.tasksDatabaseId = "tasks-db"
+        session.propertyMappings = PropertyMappings()
+        context.insert(session)
+
+        mock.queryAllPagesResult["tasks-db"] = [
+            NotionTestFactory.page(
+                id: "task-1",
+                properties: [
+                    "Name": NotionTestFactory.propertyValue(
+                        type: "title",
+                        title: [NotionRichText(plainText: "Emoji complete")]
+                    ),
+                    "Status": NotionTestFactory.propertyValue(type: "status", statusName: "✅"),
+                    "Due Date": NotionTestFactory.propertyValue(type: "date", dateStart: "2026-03-21")
+                ]
+            )
+        ]
+
+        try await syncService.fullSync(session: session, modelContext: context)
+
+        let task = try XCTUnwrap(try context.fetch(FetchDescriptor<TaskItem>()).first)
+        XCTAssertEqual(task.status, .done)
+        XCTAssertEqual(session.propertyMappings.taskStatusSchema?.preferredOptionName(for: .done), "✅")
+    }
+
     private func makeInMemoryContext() throws -> ModelContext {
         let schema = Schema([
             TaskItem.self,

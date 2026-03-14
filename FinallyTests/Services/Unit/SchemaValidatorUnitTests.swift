@@ -28,6 +28,37 @@ final class SchemaValidatorUnitTests: XCTestCase {
         XCTAssertEqual(mappings.taskRecurrenceProperty, "Recurrence")
     }
 
+
+    func testValidateTasksDatabase_PersistsStatusSchemaForLaterMapping() async throws {
+        let mock = MockNotionAPIClient()
+        let statusSchema = NotionTestFactory.makeStatusSchema(
+            options: [
+                NotionTestFactory.makeStatusOption(id: "todo-1", name: "Queued"),
+                NotionTestFactory.makeStatusOption(id: "progress-1", name: "Reviewing"),
+                NotionTestFactory.makeStatusOption(id: "done-1", name: "Completed")
+            ],
+            groups: [
+                NotionTestFactory.makeStatusGroup(id: "group-1", name: "To-do", optionIds: ["todo-1"]),
+                NotionTestFactory.makeStatusGroup(id: "group-2", name: "In progress", optionIds: ["progress-1"]),
+                NotionTestFactory.makeStatusGroup(id: "group-3", name: "Complete", optionIds: ["done-1"])
+            ]
+        )
+        mock.retrieveDatabaseQueue = [
+            NotionTestFactory.makeDatabase(properties: [
+                "Name": NotionTestFactory.schema(type: "title"),
+                "Status": NotionTestFactory.schema(type: "status", statusSchema: statusSchema),
+                "Due Date": NotionTestFactory.schema(type: "date")
+            ])
+        ]
+
+        let validator = SchemaValidator(api: mock)
+        let (result, mappings) = try await validator.validateTasksDatabase(id: "tasks-db")
+
+        XCTAssertTrue(result.isValid)
+        XCTAssertEqual(mappings.taskStatusSchema?.preferredOptionName(for: .done), "Completed")
+        XCTAssertEqual(mappings.taskStatus(for: NotionStatusValue(id: "done-1", name: "Completed")), .done)
+    }
+
     func testValidateTasksDatabase_WhenStatusTypeIsWrong_ReturnsExplicitMismatchError() async throws {
         let mock = MockNotionAPIClient()
         mock.retrieveDatabaseQueue = [

@@ -211,7 +211,7 @@ final class BackendDataFlowIntegrationTests: XCTestCase {
                         type: "title",
                         title: [NotionRichText(plainText: "Remote changed title")]
                     ),
-                    "Status": NotionTestFactory.propertyValue(type: "status", statusName: "Done"),
+                    "Status": NotionTestFactory.propertyValue(type: "status", statusName: "Complete"),
                     "Due Date": NotionTestFactory.propertyValue(type: "date", dateStart: "2026-03-22"),
                 ]
             )
@@ -230,6 +230,53 @@ final class BackendDataFlowIntegrationTests: XCTestCase {
         let titleArray = titlePayload?["title"] as? [[String: Any]]
         let textObj = titleArray?.first?["text"] as? [String: Any]
         XCTAssertEqual(textObj?["content"] as? String, "Local draft title")
+    }
+
+
+    func testPushDirtyChanges_WhenStatusSchemaUsesCompletedOption_SendsThatOptionName() async throws {
+        let mock = MockNotionAPIClient()
+        let syncService = SyncService(api: mock)
+        let context = try makeInMemoryContext()
+
+        let statusSchema = NotionTestFactory.makeStatusSchema(
+            options: [
+                NotionTestFactory.makeStatusOption(id: "todo-1", name: "Queued"),
+                NotionTestFactory.makeStatusOption(id: "progress-1", name: "Working"),
+                NotionTestFactory.makeStatusOption(id: "done-1", name: "Completed")
+            ],
+            groups: [
+                NotionTestFactory.makeStatusGroup(id: "group-1", name: "To-do", optionIds: ["todo-1"]),
+                NotionTestFactory.makeStatusGroup(id: "group-2", name: "In progress", optionIds: ["progress-1"]),
+                NotionTestFactory.makeStatusGroup(id: "group-3", name: "Complete", optionIds: ["done-1"])
+            ]
+        )
+        mock.retrieveDatabaseQueue = [
+            NotionTestFactory.makeDatabase(properties: [
+                "Name": NotionTestFactory.schema(type: "title"),
+                "Status": NotionTestFactory.schema(type: "status", statusSchema: statusSchema),
+                "Due Date": NotionTestFactory.schema(type: "date")
+            ])
+        ]
+
+        let session = UserSession(workspaceId: "ws-1", workspaceName: "Workspace")
+        session.tasksDatabaseId = "tasks-db"
+        session.propertyMappings = PropertyMappings()
+        context.insert(session)
+
+        let task = TaskItem(notionPageId: "task-1", title: "Ship release")
+        task.status = .done
+        task.isDirty = true
+        task.lastSyncedAt = Date(timeIntervalSince1970: 1_700_000_000)
+        context.insert(task)
+        try context.save()
+
+        try await syncService.pushDirtyChanges(session: session, modelContext: context)
+
+        let properties = try XCTUnwrap(mock.updatedPages.first?.properties)
+        let statusProperty = try XCTUnwrap(properties[session.propertyMappings.taskStatusProperty] as? [String: Any])
+        let statusPayload = try XCTUnwrap(statusProperty["status"] as? [String: Any])
+        XCTAssertEqual(statusPayload["name"] as? String, "Completed")
+        XCTAssertEqual(session.propertyMappings.taskStatusSchema?.preferredOptionName(for: .done), "Completed")
     }
 
     private func makeInMemoryContext() throws -> ModelContext {

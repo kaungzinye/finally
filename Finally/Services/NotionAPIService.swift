@@ -99,8 +99,16 @@ struct NotionRichText: Decodable {
     }
 }
 
-struct NotionStatusValue: Decodable {
+struct NotionStatusValue: Codable {
+    let id: String?
     let name: String
+    let color: String?
+
+    init(id: String? = nil, name: String, color: String? = nil) {
+        self.id = id
+        self.name = name
+        self.color = color
+    }
 }
 
 struct NotionDateValue: Decodable {
@@ -108,7 +116,7 @@ struct NotionDateValue: Decodable {
     let end: String?
 }
 
-struct NotionSelectOption: Decodable {
+struct NotionSelectOption: Codable {
     let id: String?
     let name: String
     let color: String?
@@ -140,12 +148,12 @@ struct NotionPropertySchema: Decodable {
     }
 }
 
-struct NotionStatusSchema: Decodable {
+struct NotionStatusSchema: Codable {
     let options: [NotionSelectOption]
     let groups: [NotionStatusGroup]?
 }
 
-struct NotionStatusGroup: Decodable {
+struct NotionStatusGroup: Codable {
     let id: String
     let name: String
     let optionIds: [String]?

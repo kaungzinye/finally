@@ -137,7 +137,7 @@ struct TaskRowView: View {
                     }
                 }
             } label: {
-                Label("Done", systemImage: "checkmark")
+                Label("Complete", systemImage: "checkmark")
             }
             .tint(.green)
         }

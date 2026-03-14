@@ -4,7 +4,7 @@ import SwiftData
 struct UpcomingView: View {
     @Query(
         filter: #Predicate<TaskItem> { task in
-            task.statusRaw != "Done" && task.isDeleted == false && task.dueDate != nil
+            task.statusRaw != "Complete" && task.isDeleted == false && task.dueDate != nil
         },
         sort: \TaskItem.dueDate
     )

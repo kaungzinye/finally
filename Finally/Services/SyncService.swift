@@ -71,16 +71,23 @@ final class SyncService {
             "last_edited_time": ["after": isoDate]
         ]
 
+        var mappings = session.propertyMappings
+        mappings = try await refreshTaskStatusSchemaIfNeeded(
+            session: session,
+            currentMappings: mappings,
+            forceRefresh: !session.tasksDatabaseId.isEmpty
+        )
+
         if !session.projectsDatabaseId.isEmpty {
             let projectPages = try await api.queryAllPages(databaseId: session.projectsDatabaseId, filter: filter, sorts: nil)
             print("[Sync] Incremental: fetched \(projectPages.count) updated projects")
-            upsertProjects(projectPages, mappings: session.propertyMappings, modelContext: modelContext)
+            upsertProjects(projectPages, mappings: mappings, modelContext: modelContext)
         }
 
         if !session.tasksDatabaseId.isEmpty {
             let taskPages = try await api.queryAllPages(databaseId: session.tasksDatabaseId, filter: filter, sorts: nil)
             print("[Sync] Incremental: fetched \(taskPages.count) updated tasks")
-            upsertTasks(taskPages, mappings: session.propertyMappings, modelContext: modelContext)
+            upsertTasks(taskPages, mappings: mappings, modelContext: modelContext)
         }
 
         session.lastFullSyncAt = Date()
@@ -90,13 +97,20 @@ final class SyncService {
     // MARK: - Full Sync
 
     func fullSync(session: UserSession, modelContext: ModelContext) async throws {
+        var mappings = session.propertyMappings
+        mappings = try await refreshTaskStatusSchemaIfNeeded(
+            session: session,
+            currentMappings: mappings,
+            forceRefresh: !session.tasksDatabaseId.isEmpty
+        )
+
         if !session.projectsDatabaseId.isEmpty {
             print("[Sync] Fetching projects from DB: \(session.projectsDatabaseId)")
             let allProjectPages = try await api.queryAllPages(databaseId: session.projectsDatabaseId, filter: nil, sorts: nil)
             print("[Sync] Fetched \(allProjectPages.count) project pages from Notion")
             let remoteProjectIds = Set(allProjectPages.map(\.id))
 
-            upsertProjects(allProjectPages, mappings: session.propertyMappings, modelContext: modelContext)
+            upsertProjects(allProjectPages, mappings: mappings, modelContext: modelContext)
             deleteStaleItems(ProjectItem.self, remoteIds: remoteProjectIds, modelContext: modelContext)
         } else {
             print("[Sync] No projects DB configured, skipping")
@@ -108,7 +122,7 @@ final class SyncService {
             print("[Sync] Fetched \(allTaskPages.count) task pages from Notion")
             let remoteTaskIds = Set(allTaskPages.map(\.id))
 
-            upsertTasks(allTaskPages, mappings: session.propertyMappings, modelContext: modelContext)
+            upsertTasks(allTaskPages, mappings: mappings, modelContext: modelContext)
             deleteStaleItems(TaskItem.self, remoteIds: remoteTaskIds, modelContext: modelContext)
 
             let localCount = (try? modelContext.fetchCount(FetchDescriptor<TaskItem>())) ?? 0
@@ -128,7 +142,13 @@ final class SyncService {
         let descriptor = FetchDescriptor<TaskItem>(predicate: #Predicate { $0.isDirty == true })
         let dirtyTasks = (try? modelContext.fetch(descriptor)) ?? []
 
-        let mappings = session.propertyMappings
+        var mappings = session.propertyMappings
+        mappings = try await refreshTaskStatusSchemaIfNeeded(
+            for: dirtyTasks,
+            session: session,
+            currentMappings: mappings,
+            forceRefresh: false
+        )
 
         for task in dirtyTasks {
             let properties = buildNotionProperties(for: task, mappings: mappings)
@@ -201,9 +221,9 @@ final class SyncService {
 
             // Status
             if let statusProp = page.properties[mappings.taskStatusProperty],
-               let statusName = statusProp.status?.name {
-                let mapped = TaskStatus.fromNotionOption(statusName) ?? TaskStatus(rawValue: statusName) ?? .notStarted
-                print("[Sync] Task '\(title)' status: '\(statusName)' → \(mapped.rawValue)")
+               let notionStatus = statusProp.status {
+                let mapped = mappings.taskStatus(for: notionStatus) ?? .notStarted
+                print("[Sync] Task '\(title)' status: '\(notionStatus.name)' → \(mapped.rawValue)")
                 task.status = mapped
             } else {
                 print("[Sync] Task '\(title)' NO STATUS FOUND. Property key: '\(mappings.taskStatusProperty)', available keys: \(Array(page.properties.keys))")
@@ -281,7 +301,7 @@ final class SyncService {
 
         // Status
         props[mappings.taskStatusProperty] = [
-            "status": ["name": task.statusRaw]
+            "status": ["name": mappings.notionStatusName(for: task.status)]
         ]
 
         // Due Date
@@ -333,6 +353,37 @@ final class SyncService {
     private func fetchSession(modelContext: ModelContext) -> UserSession? {
         let descriptor = FetchDescriptor<UserSession>()
         return (try? modelContext.fetch(descriptor))?.first
+    }
+
+    private func refreshTaskStatusSchemaIfNeeded(
+        for tasks: [TaskItem] = [],
+        session: UserSession,
+        currentMappings: PropertyMappings,
+        forceRefresh: Bool
+    ) async throws -> PropertyMappings {
+        guard !session.tasksDatabaseId.isEmpty else { return currentMappings }
+
+        let needsRefresh = forceRefresh || currentMappings.taskStatusSchema == nil || tasks.contains {
+            currentMappings.taskStatusSchema?.hasOption(for: $0.status) != true
+        }
+
+        guard needsRefresh,
+              let statusSchema = try await fetchTaskStatusSchema(
+                  databaseId: session.tasksDatabaseId,
+                  propertyName: currentMappings.taskStatusProperty
+              ) else {
+            return currentMappings
+        }
+
+        var updatedMappings = currentMappings
+        updatedMappings.taskStatusSchema = statusSchema
+        session.propertyMappings = updatedMappings
+        return updatedMappings
+    }
+
+    private func fetchTaskStatusSchema(databaseId: String, propertyName: String) async throws -> NotionStatusSchema? {
+        let database = try await api.retrieveDatabase(id: databaseId)
+        return database.properties[propertyName]?.status
     }
 
     private func extractTitle(from page: NotionPage, propertyName: String) -> String {
