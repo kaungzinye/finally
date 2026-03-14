@@ -13,96 +13,7 @@ struct TaskRowView: View {
 
     var body: some View {
         HStack(spacing: 12) {
-            // Task content
-            VStack(alignment: .leading, spacing: 6) {
-                // Title
-                Text(task.title)
-                    .lineLimit(2)
-                    .strikethrough(task.status == .done)
-                    .foregroundStyle(task.status == .done ? .secondary : .primary)
-                    .opacity(task.status == .done ? 0.6 : 1.0)
-
-                // Properties bar
-                HStack(spacing: 8) {
-                    // Due date — fixed width
-                    Button { showDatePicker = true } label: {
-                        Group {
-                            if let dueDate = task.dueDate {
-                                Text(dueDate.formatted(.dateTime.month(.abbreviated).day()))
-                                    .foregroundStyle(task.isOverdue ? .red : .secondary)
-                            } else {
-                                Text("No date")
-                                    .foregroundStyle(.tertiary)
-                            }
-                        }
-                        .font(.caption)
-                        .frame(width: 52, alignment: .leading)
-                    }
-                    .buttonStyle(.plain)
-
-                    // Priority — fixed width icon
-                    Button { showPriorityPicker = true } label: {
-                        Group {
-                            if let priority = task.priority {
-                                Image(systemName: priority.icon)
-                                    .foregroundStyle(priority.color)
-                            } else {
-                                Image(systemName: "flag")
-                                    .foregroundStyle(.tertiary)
-                            }
-                        }
-                        .font(.caption)
-                        .frame(width: 16)
-                    }
-                    .buttonStyle(.plain)
-
-                    // Tags — fill middle
-                    Button { showTagPicker = true } label: {
-                        HStack(spacing: 4) {
-                            if task.tags.isEmpty {
-                                Text("No tags")
-                                    .foregroundStyle(.tertiary)
-                            } else {
-                                ForEach(task.tags.prefix(3), id: \.self) { tag in
-                                    Text(tag)
-                                        .padding(.horizontal, 5)
-                                        .padding(.vertical, 1)
-                                        .background(.quaternary)
-                                        .clipShape(Capsule())
-                                        .foregroundStyle(.secondary)
-                                }
-                            }
-                        }
-                        .font(.caption2)
-                        .lineLimit(1)
-                    }
-                    .buttonStyle(.plain)
-
-                    Spacer(minLength: 0)
-
-                    // Project
-                    Button { showProjectPicker = true } label: {
-                        Text(task.project?.title ?? "Inbox")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                            .lineLimit(1)
-                            .frame(maxWidth: 60, alignment: .trailing)
-                    }
-                    .buttonStyle(.plain)
-
-                    // Recurrence
-                    if task.recurrence != .none {
-                        Button { showRecurrencePicker = true } label: {
-                            Image(systemName: "repeat")
-                                .font(.caption)
-                                .foregroundStyle(.green)
-                        }
-                        .buttonStyle(.plain)
-                    }
-                }
-            }
-
-            // Checkbox — right side
+            // Checkbox — left side
             Button {
                 let generator = UIImpactFeedbackGenerator(style: .light)
                 generator.impactOccurred()
@@ -121,8 +32,109 @@ struct TaskRowView: View {
                     .foregroundStyle(task.status == .done ? .green : .secondary)
             }
             .buttonStyle(.plain)
+
+            // Title — single line, truncates
+            Text(task.title)
+                .lineLimit(1)
+                .strikethrough(task.status == .done)
+                .foregroundStyle(task.status == .done ? .secondary : .primary)
+                .opacity(task.status == .done ? 0.6 : 1.0)
+                .frame(maxWidth: 100, alignment: .leading)
+
+            // Properties bar — all in one line
+            HStack(spacing: 6) {
+                // Due date
+                Button { showDatePicker = true } label: {
+                    Group {
+                        if let dueDate = task.dueDate {
+                            Text(dueDate.formatted(.dateTime.month(.abbreviated).day()))
+                                .foregroundStyle(task.isOverdue ? .red : .secondary)
+                        } else {
+                            Text("—")
+                                .foregroundStyle(.tertiary)
+                        }
+                    }
+                    .font(.caption2)
+                }
+                .buttonStyle(.plain)
+
+                // Priority
+                Button { showPriorityPicker = true } label: {
+                    Group {
+                        if let priority = task.priority {
+                            Image(systemName: priority.icon)
+                                .foregroundStyle(priority.color)
+                        } else {
+                            Image(systemName: "flag")
+                                .foregroundStyle(.tertiary)
+                        }
+                    }
+                    .font(.caption)
+                }
+                .buttonStyle(.plain)
+
+                // Reminders
+                Button { } label: {
+                    if !task.reminders.isEmpty {
+                        Image(systemName: "bell.fill")
+                            .foregroundStyle(.orange)
+                    } else {
+                        Image(systemName: "bell")
+                            .foregroundStyle(.tertiary)
+                    }
+                }
+                .font(.caption)
+                .buttonStyle(.plain)
+
+                // Tags — only show if not empty
+                if !task.tags.isEmpty {
+                    Button { showTagPicker = true } label: {
+                        HStack(spacing: 4) {
+                            ForEach(task.tags.prefix(2), id: \.self) { tag in
+                                Text(tag)
+                                    .padding(.horizontal, 4)
+                                    .padding(.vertical, 1)
+                                    .background(.quaternary)
+                                    .clipShape(Capsule())
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
+                        .font(.caption2)
+                    }
+                    .buttonStyle(.plain)
+                }
+
+                Spacer(minLength: 0)
+
+                // Project with icon
+                Button { showProjectPicker = true } label: {
+                    HStack(spacing: 3) {
+                        if let emoji = task.project?.iconEmoji {
+                            Text(emoji)
+                                .font(.caption)
+                        }
+                        Text(task.project?.title ?? "Inbox")
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                            .lineLimit(1)
+                            .frame(maxWidth: 50, alignment: .trailing)
+                    }
+                }
+                .buttonStyle(.plain)
+
+                // Recurrence
+                if task.recurrence != .none {
+                    Button { showRecurrencePicker = true } label: {
+                        Image(systemName: "repeat")
+                            .font(.caption2)
+                            .foregroundStyle(.green)
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            .lineLimit(1)
         }
-        .padding(.vertical, 4)
+        .padding(.vertical, 8)
         .contentShape(Rectangle())
         .swipeActions(edge: .leading) {
             Button {
