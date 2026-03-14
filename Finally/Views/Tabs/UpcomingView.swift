@@ -81,6 +81,21 @@ struct UpcomingView: View {
                     )
                 }
             }
+            .overlay(alignment: .top) {
+                if syncService.isSyncing {
+                    HStack(spacing: 8) {
+                        ProgressView()
+                            .scaleEffect(0.8, anchor: .center)
+                        Text("Syncing...")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                        Spacer()
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 8)
+                    .background(.ultraThinMaterial)
+                }
+            }
             .sheet(item: $selectedTask) { task in
                 TaskDetailView(task: task)
             }
