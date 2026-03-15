@@ -36,7 +36,7 @@ struct TaskRowView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
-            // Line 1: Checkbox + Title + Project
+            // Line 1: Checkbox + (optional breadcrumb) + Title + Project
             HStack(spacing: 8) {
                 // Checkbox — left side
                 Button {
@@ -57,6 +57,18 @@ struct TaskRowView: View {
                         .foregroundStyle(task.status == .done ? .green : .secondary)
                 }
                 .buttonStyle(.plain)
+
+                // Inline breadcrumb for sub-tasks
+                if task.isSubtask, let parentTitle = task.parent?.title {
+                    HStack(spacing: 2) {
+                        Image(systemName: "arrow.turn.down.right")
+                        Text(parentTitle)
+                            .lineLimit(1)
+                    }
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+                    .frame(maxWidth: 60)
+                }
 
                 // Title
                 Text(task.title)
@@ -86,10 +98,10 @@ struct TaskRowView: View {
 
             // Line 2: Properties bar
             HStack(spacing: 6) {
-                // Due date
+                // Due date — orange when in active window, red when overdue
                 Button { showDatePicker = true } label: {
                     Text(formattedDueDate)
-                        .foregroundStyle(task.isOverdue ? .red : .secondary)
+                        .foregroundStyle(task.isOverdue ? .red : (task.isInActiveWindow ? .orange : .secondary))
                         .font(.caption2)
                 }
                 .buttonStyle(.plain)
@@ -122,17 +134,19 @@ struct TaskRowView: View {
                 .font(.caption)
                 .buttonStyle(.plain)
 
-                // Tags — only show if not empty
+                // Tags — only show if not empty, with Notion colors
                 if !task.tags.isEmpty {
                     Button { showTagPicker = true } label: {
                         HStack(spacing: 4) {
-                            ForEach(task.tags.prefix(2), id: \.self) { tag in
+                            ForEach(Array(task.tags.prefix(2).enumerated()), id: \.offset) { index, tag in
+                                let colorName = index < task.tagColors.count ? task.tagColors[index] : "default"
+                                let tagColor = NotionColor.swiftUIColor(for: colorName)
                                 Text(tag)
                                     .padding(.horizontal, 4)
                                     .padding(.vertical, 1)
-                                    .background(.quaternary)
+                                    .background(tagColor.opacity(0.15))
                                     .clipShape(Capsule())
-                                    .foregroundStyle(.secondary)
+                                    .foregroundStyle(tagColor)
                             }
                         }
                         .font(.caption2)
@@ -142,6 +156,18 @@ struct TaskRowView: View {
                 }
 
                 Spacer(minLength: 0)
+
+                // Subtask progress
+                if task.hasSubtasks {
+                    let progress = task.subtaskProgress
+                    HStack(spacing: 2) {
+                        Image(systemName: "list.bullet")
+                            .font(.caption2)
+                        Text("\(progress.done)/\(progress.total)")
+                            .font(.caption2)
+                    }
+                    .foregroundStyle(progress.done == progress.total ? .green : .secondary)
+                }
 
                 // Recurrence
                 if task.recurrence != .none {
@@ -154,10 +180,9 @@ struct TaskRowView: View {
                 }
             }
         }
+        .frame(minHeight: 52)
         .padding(.vertical, 8)
         .padding(.horizontal, 4)
-        .background(Color(.systemGray6))
-        .cornerRadius(8)
         .contentShape(Rectangle())
         .swipeActions(edge: .leading) {
             Button {

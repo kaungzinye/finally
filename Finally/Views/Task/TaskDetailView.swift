@@ -12,6 +12,7 @@ struct TaskDetailView: View {
     @State private var showTagPicker = false
     @State private var showProjectPicker = false
     @State private var showRecurrencePicker = false
+    @State private var newSubtaskTitle = ""
 
     @State private var editedTitle: String = ""
     @State private var editedDueDate: Date?
@@ -27,6 +28,21 @@ struct TaskDetailView: View {
                 Section {
                     TextField("Task name", text: $editedTitle)
                         .font(.title3)
+                }
+
+                // Status
+                Section("Status") {
+                    Picker("Status", selection: Binding(
+                        get: { task.status },
+                        set: { newStatus in
+                            task.status = newStatus
+                            task.isDirty = true
+                        }
+                    )) {
+                        ForEach(TaskStatus.allCases, id: \.self) { status in
+                            Text(status.rawValue).tag(status)
+                        }
+                    }
                 }
 
                 // Properties
@@ -112,25 +128,83 @@ struct TaskDetailView: View {
                     }
                 }
 
-                // Status
-                Section("Status") {
-                    Picker("Status", selection: Binding(
-                        get: { task.status },
-                        set: { newStatus in
-                            task.status = newStatus
-                            task.isDirty = true
+                // Reminders (inline)
+                ReminderSectionContent(task: task)
+
+                // Sub-tasks (only for non-subtask tasks)
+                if !task.isSubtask {
+                    Section("Sub-tasks") {
+                        // Progress
+                        if task.hasSubtasks {
+                            let progress = task.subtaskProgress
+                            HStack {
+                                ProgressView(value: Double(progress.done), total: Double(progress.total))
+                                    .tint(progress.done == progress.total ? .green : .blue)
+                                Text("\(progress.done)/\(progress.total)")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
                         }
-                    )) {
-                        ForEach(TaskStatus.allCases, id: \.self) { status in
-                            Text(status.rawValue).tag(status)
+
+                        // Subtask list
+                        let sortedSubtasks = task.subtasks.sorted { $0.sortIndex < $1.sortIndex }
+                        ForEach(sortedSubtasks, id: \.notionPageId) { subtask in
+                            HStack(spacing: 10) {
+                                Button {
+                                    withAnimation {
+                                        subtask.status = subtask.status == .done ? .notStarted : .done
+                                        if subtask.status == .done {
+                                            SubtaskScheduler.autoLevel(parent: task, completedSubtask: subtask)
+                                        }
+                                    }
+                                } label: {
+                                    Image(systemName: subtask.status == .done ? "checkmark.circle.fill" : "circle")
+                                        .foregroundStyle(subtask.status == .done ? .green : .secondary)
+                                }
+
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(subtask.title)
+                                        .strikethrough(subtask.status == .done)
+                                        .foregroundStyle(subtask.status == .done ? .secondary : .primary)
+                                    if let suggested = subtask.suggestedDate {
+                                        Text(suggested.formatted(date: .abbreviated, time: .omitted))
+                                            .font(.caption2)
+                                            .foregroundStyle(suggested < Calendar.current.startOfDay(for: Date()) && subtask.status != .done ? .red : .secondary)
+                                    }
+                                }
+
+                                Spacer()
+                            }
+                        }
+                        .onDelete { indexSet in
+                            let sorted = task.subtasks.sorted { $0.sortIndex < $1.sortIndex }
+                            for index in indexSet {
+                                modelContext.delete(sorted[index])
+                            }
+                            SubtaskScheduler.distributeSubtaskDates(parent: task)
+                        }
+                        .onMove { from, to in
+                            var sorted = task.subtasks.sorted { $0.sortIndex < $1.sortIndex }
+                            sorted.move(fromOffsets: from, toOffset: to)
+                            for (i, subtask) in sorted.enumerated() {
+                                subtask.sortIndex = i
+                            }
+                            SubtaskScheduler.distributeSubtaskDates(parent: task)
+                        }
+
+                        // Add subtask
+                        HStack {
+                            Image(systemName: "plus.circle")
+                                .foregroundStyle(.blue)
+                            TextField("Add sub-task...", text: $newSubtaskTitle)
+                                .onSubmit {
+                                    addSubtask()
+                                }
                         }
                     }
                 }
-
-                // Reminders
-                ReminderListView(task: task)
             }
-            .navigationTitle("Task Details")
+            .navigationTitle("Edit Task")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
@@ -171,6 +245,23 @@ struct TaskDetailView: View {
         }
     }
 
+    private func addSubtask() {
+        let title = newSubtaskTitle.trimmingCharacters(in: .whitespaces)
+        guard !title.isEmpty else { return }
+
+        let subtask = TaskItem(notionPageId: UUID().uuidString, title: title)
+        subtask.parentId = task.notionPageId
+        subtask.parent = task
+        subtask.isLocalOnly = true
+        subtask.sortIndex = task.subtasks.count
+        modelContext.insert(subtask)
+
+        newSubtaskTitle = ""
+
+        // Recalculate dates after adding
+        SubtaskScheduler.distributeSubtaskDates(parent: task)
+    }
+
     private func saveChanges() {
         let dueDateChanged = task.dueDate != editedDueDate
 
@@ -185,6 +276,10 @@ struct TaskDetailView: View {
         // Reschedule reminders if due date changed
         if dueDateChanged {
             NotificationService.shared.rescheduleAllReminders(modelContext: modelContext)
+            // Redistribute subtask dates if parent deadline changed
+            if task.hasSubtasks {
+                SubtaskScheduler.distributeSubtaskDates(parent: task)
+            }
         }
 
         // Push in background

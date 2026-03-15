@@ -16,9 +16,16 @@ struct UpcomingView: View {
     @State private var expandedSections: Set<String> = []
     @State private var isSelectionMode = false
     @State private var selectedTasks: Set<String> = []
+    @State private var showSearch = false
+    @State private var showSortConfig = false
+    @AppStorage("sortStack") private var sortStackJSON: String = SortStack.default.jsonString
+
+    private var sortStack: SortStack {
+        SortStack.from(sortStackJSON)
+    }
 
     private var upcomingTasks: [TaskItem] {
-        allFutureTasks.filter { $0.dueDate ?? .distantFuture > Date() }
+        allFutureTasks.filter { ($0.dueDate ?? .distantFuture) > Date() && !$0.isSubtask }
     }
 
     private var groupedByDate: [(String, [TaskItem])] {
@@ -34,6 +41,8 @@ struct UpcomingView: View {
             let lhsDate = lhs.value.first?.dueDate ?? .distantFuture
             let rhsDate = rhs.value.first?.dueDate ?? .distantFuture
             return lhsDate < rhsDate
+        }.map { (key, tasks) in
+            (key, sortStack.sorted(tasks))
         }
     }
 
@@ -44,32 +53,7 @@ struct UpcomingView: View {
                     Section {
                         if expandedSections.contains(dateString) {
                             ForEach(tasks, id: \.notionPageId) { task in
-                                ZStack(alignment: .leading) {
-                                    if isSelectionMode && selectedTasks.contains(task.notionPageId) {
-                                        Color.blue.opacity(0.1)
-                                    }
-                                    TaskRowView(task: task)
-                                }
-                                .contentShape(Rectangle())
-                                .onTapGesture {
-                                    if isSelectionMode {
-                                        if selectedTasks.contains(task.notionPageId) {
-                                            selectedTasks.remove(task.notionPageId)
-                                        } else {
-                                            selectedTasks.insert(task.notionPageId)
-                                        }
-                                    } else {
-                                        selectedTask = task
-                                    }
-                                }
-                                .onLongPressGesture {
-                                    let generator = UIImpactFeedbackGenerator(style: .heavy)
-                                    generator.impactOccurred()
-                                    withAnimation {
-                                        isSelectionMode = true
-                                        selectedTasks.insert(task.notionPageId)
-                                    }
-                                }
+                                taskRow(task)
                             }
                         }
                     } header: {
@@ -124,6 +108,18 @@ struct UpcomingView: View {
                             .disabled(selectedTasks.isEmpty)
                         }
                     }
+                } else {
+                    ToolbarItem(placement: .topBarTrailing) {
+                        HStack(spacing: 12) {
+                            Button { showSortConfig = true } label: {
+                                Image(systemName: "arrow.up.arrow.down")
+                            }
+
+                            Button { showSearch = true } label: {
+                                Image(systemName: "magnifyingglass")
+                            }
+                        }
+                    }
                 }
             }
             .overlay {
@@ -154,8 +150,52 @@ struct UpcomingView: View {
                 TaskDetailView(task: task)
                     .presentationDetents([.fraction(0.8)])
             }
+            .sheet(isPresented: $showSearch) {
+                SearchFilterView()
+            }
+            .sheet(isPresented: $showSortConfig) {
+                SortConfigView(sortStack: Binding(
+                    get: { SortStack.from(sortStackJSON) },
+                    set: { sortStackJSON = $0.jsonString }
+                ))
+                .presentationDetents([.medium])
+            }
         }
     }
+
+    // MARK: - Reusable Row
+
+    @ViewBuilder
+    private func taskRow(_ task: TaskItem) -> some View {
+        TaskRowView(task: task)
+        .listRowBackground(
+            isSelectionMode && selectedTasks.contains(task.notionPageId)
+                ? Color.blue.opacity(0.15)
+                : Color(.systemGray6)
+        )
+        .contentShape(Rectangle())
+        .onTapGesture {
+            if isSelectionMode {
+                if selectedTasks.contains(task.notionPageId) {
+                    selectedTasks.remove(task.notionPageId)
+                } else {
+                    selectedTasks.insert(task.notionPageId)
+                }
+            } else {
+                selectedTask = task
+            }
+        }
+        .onLongPressGesture {
+            let generator = UIImpactFeedbackGenerator(style: .heavy)
+            generator.impactOccurred()
+            withAnimation {
+                isSelectionMode = true
+                selectedTasks.insert(task.notionPageId)
+            }
+        }
+    }
+
+    // MARK: - Bulk Actions
 
     private func bulkDeleteTasks() {
         let tasksToDelete = allFutureTasks.filter { selectedTasks.contains($0.notionPageId) }

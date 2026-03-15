@@ -139,7 +139,7 @@ final class SyncService {
     // MARK: - Push Dirty Changes
 
     func pushDirtyChanges(session: UserSession, modelContext: ModelContext) async throws {
-        let descriptor = FetchDescriptor<TaskItem>(predicate: #Predicate { $0.isDirty == true })
+        let descriptor = FetchDescriptor<TaskItem>(predicate: #Predicate { $0.isDirty == true && $0.isLocalOnly == false })
         let dirtyTasks = (try? modelContext.fetch(descriptor)) ?? []
 
         var mappings = session.propertyMappings
@@ -174,6 +174,7 @@ final class SyncService {
         for page in pages {
             let title = extractTitle(from: page, propertyName: mappings.projectTitleProperty)
             let editedTime = parseDate(page.lastEditedTime)
+            let emoji = page.icon?.emoji
 
             let pageId = page.id
             let descriptor = FetchDescriptor<ProjectItem>(predicate: #Predicate<ProjectItem> { item in
@@ -182,10 +183,11 @@ final class SyncService {
 
             if let existing = (try? modelContext.fetch(descriptor))?.first {
                 existing.title = title
+                existing.iconEmoji = emoji
                 existing.lastEditedTime = editedTime
                 existing.lastSyncedAt = Date()
             } else {
-                let project = ProjectItem(notionPageId: page.id, title: title)
+                let project = ProjectItem(notionPageId: page.id, title: title, iconEmoji: emoji)
                 project.lastEditedTime = editedTime
                 project.lastSyncedAt = Date()
                 modelContext.insert(project)
@@ -229,14 +231,23 @@ final class SyncService {
                 print("[Sync] Task '\(title)' NO STATUS FOUND. Property key: '\(mappings.taskStatusProperty)', available keys: \(Array(page.properties.keys))")
             }
 
-            // Due Date
+            // Due Date (with optional start date for date ranges / Notion Calendar)
             if let dateProp = page.properties[mappings.taskDueDateProperty],
                let dateStr = dateProp.date?.start {
-                let parsed = parseDate(dateStr)
-                print("[Sync] Task '\(title)' due: '\(dateStr)' → \(String(describing: parsed))")
-                task.dueDate = parsed
+                if let endStr = dateProp.date?.end {
+                    // Date range: start → startDate, end → dueDate (deadline)
+                    task.startDate = parseDate(dateStr)
+                    task.dueDate = parseDate(endStr)
+                    print("[Sync] Task '\(title)' range: '\(dateStr)' – '\(endStr)'")
+                } else {
+                    // Single date: just a due date
+                    task.dueDate = parseDate(dateStr)
+                    task.startDate = nil
+                    print("[Sync] Task '\(title)' due: '\(dateStr)' → \(String(describing: task.dueDate))")
+                }
             } else {
                 task.dueDate = nil
+                task.startDate = nil
             }
 
             // Priority
@@ -246,11 +257,12 @@ final class SyncService {
                 task.priority = TaskPriority(rawValue: priorityName)
             }
 
-            // Tags
+            // Tags (with colors)
             if let tagsKey = mappings.taskTagsProperty,
                let tagsProp = page.properties[tagsKey],
                let multiSelect = tagsProp.multiSelect {
                 task.tags = multiSelect.map(\.name)
+                task.tagColors = multiSelect.map { $0.color ?? "default" }
             }
 
             // Recurrence
@@ -283,6 +295,8 @@ final class SyncService {
         guard let locals = try? modelContext.fetch(descriptor) else { return }
 
         for item in locals {
+            // Skip local-only items (e.g., sub-tasks)
+            if let task = item as? TaskItem, task.isLocalOnly { continue }
             if !remoteIds.contains(item.notionPageId) {
                 modelContext.delete(item)
             }
@@ -304,8 +318,14 @@ final class SyncService {
             "status": ["name": mappings.notionStatusName(for: task.status)]
         ]
 
-        // Due Date
-        if let dueDate = task.dueDate {
+        // Due Date (preserve startDate for Notion Calendar round-trip)
+        if let startDate = task.startDate, let dueDate = task.dueDate {
+            let startStr = shortDateFormatter.string(from: startDate)
+            let endStr = shortDateFormatter.string(from: dueDate)
+            props[mappings.taskDueDateProperty] = [
+                "date": ["start": startStr, "end": endStr]
+            ]
+        } else if let dueDate = task.dueDate {
             let dateStr = shortDateFormatter.string(from: dueDate)
             props[mappings.taskDueDateProperty] = [
                 "date": ["start": dateStr]

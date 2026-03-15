@@ -16,13 +16,49 @@ struct TodayView: View {
     @State private var expandedSections: Set<String> = ["Today"]
     @State private var isSelectionMode = false
     @State private var selectedTasks: Set<String> = []
+    @State private var showSearch = false
+    @State private var showSortConfig = false
+    @AppStorage("sortStack") private var sortStackJSON: String = SortStack.default.jsonString
+
+    private var sortStack: SortStack {
+        get { SortStack.from(sortStackJSON) }
+    }
+
+    /// Visible tasks: hide parents with active subtasks, include subtasks with actionable suggestedDate
+    private var visibleTasks: [TaskItem] {
+        nonDoneTasks.filter { task in
+            // Hide parents that have incomplete subtasks (Trojan Horse)
+            if task.hasSubtasks && !task.allSubtasksComplete { return false }
+            return true
+        }
+    }
+
+    /// Subtasks from any parent whose suggestedDate is today or overdue
+    private var actionableSubtasks: [TaskItem] {
+        let calendar = Calendar.current
+        let endOfToday = calendar.startOfDay(for: Date().addingTimeInterval(86400))
+        return nonDoneTasks.filter { task in
+            guard task.isSubtask, let suggested = task.suggestedDate else { return false }
+            return suggested < endOfToday
+        }
+    }
 
     private var overdueTasks: [TaskItem] {
-        nonDoneTasks.filter { $0.isOverdue }
+        let parentOverdue = sortStack.sorted(visibleTasks.filter { $0.isOverdue && !$0.isSubtask })
+        let subtaskOverdue = sortStack.sorted(actionableSubtasks.filter {
+            guard let suggested = $0.suggestedDate else { return false }
+            return suggested < Calendar.current.startOfDay(for: Date())
+        })
+        return parentOverdue + subtaskOverdue
     }
 
     private var todayTasks: [TaskItem] {
-        nonDoneTasks.filter { $0.isDueToday }
+        let parentToday = sortStack.sorted(visibleTasks.filter { $0.isDueToday && !$0.isSubtask })
+        let subtaskToday = sortStack.sorted(actionableSubtasks.filter {
+            guard let suggested = $0.suggestedDate else { return false }
+            return Calendar.current.isDateInToday(suggested)
+        })
+        return parentToday + subtaskToday
     }
 
     var body: some View {
@@ -32,105 +68,25 @@ struct TodayView: View {
                     Section {
                         if expandedSections.contains("Overdue") {
                             ForEach(overdueTasks, id: \.notionPageId) { task in
-                                ZStack(alignment: .leading) {
-                                    if isSelectionMode && selectedTasks.contains(task.notionPageId) {
-                                        Color.blue.opacity(0.1)
-                                    }
-                                    TaskRowView(task: task)
-                                }
-                                .contentShape(Rectangle())
-                                .onTapGesture {
-                                    if isSelectionMode {
-                                        if selectedTasks.contains(task.notionPageId) {
-                                            selectedTasks.remove(task.notionPageId)
-                                        } else {
-                                            selectedTasks.insert(task.notionPageId)
-                                        }
-                                    } else {
-                                        selectedTask = task
-                                    }
-                                }
-                                .onLongPressGesture {
-                                    let generator = UIImpactFeedbackGenerator(style: .heavy)
-                                    generator.impactOccurred()
-                                    withAnimation {
-                                        isSelectionMode = true
-                                        selectedTasks.insert(task.notionPageId)
-                                    }
-                                }
+                                taskRow(task)
                             }
                         }
                     } header: {
-                        Button {
-                            withAnimation {
-                                if expandedSections.contains("Overdue") {
-                                    expandedSections.remove("Overdue")
-                                } else {
-                                    expandedSections.insert("Overdue")
-                                }
-                            }
-                        } label: {
-                            HStack {
-                                Image(systemName: expandedSections.contains("Overdue") ? "chevron.down" : "chevron.right")
-                                    .font(.caption)
-                                Text("Overdue")
-                            }
-                            .foregroundStyle(.primary)
-                        }
-                        .buttonStyle(.plain)
+                        collapsibleHeader("Overdue")
                     }
                 }
                 Section {
                     if expandedSections.contains("Today") {
                         ForEach(todayTasks, id: \.notionPageId) { task in
-                            ZStack(alignment: .leading) {
-                                if isSelectionMode && selectedTasks.contains(task.notionPageId) {
-                                    Color.blue.opacity(0.1)
-                                }
-                                TaskRowView(task: task)
-                            }
-                            .contentShape(Rectangle())
-                            .onTapGesture {
-                                if isSelectionMode {
-                                    if selectedTasks.contains(task.notionPageId) {
-                                        selectedTasks.remove(task.notionPageId)
-                                    } else {
-                                        selectedTasks.insert(task.notionPageId)
-                                    }
-                                } else {
-                                    selectedTask = task
-                                }
-                            }
-                            .onLongPressGesture {
-                                let generator = UIImpactFeedbackGenerator(style: .heavy)
-                                generator.impactOccurred()
-                                withAnimation {
-                                    isSelectionMode = true
-                                    selectedTasks.insert(task.notionPageId)
-                                }
-                            }
+                            taskRow(task)
                         }
                     }
                 } header: {
-                    Button {
-                        withAnimation {
-                            if expandedSections.contains("Today") {
-                                expandedSections.remove("Today")
-                            } else {
-                                expandedSections.insert("Today")
-                            }
-                        }
-                    } label: {
-                        HStack {
-                            Image(systemName: expandedSections.contains("Today") ? "chevron.down" : "chevron.right")
-                                .font(.caption)
-                            Text("Today")
-                        }
-                        .foregroundStyle(.primary)
-                    }
-                    .buttonStyle(.plain)
+                    collapsibleHeader("Today")
                 }
             }
+            .animation(.default, value: todayTasks.map(\.notionPageId))
+            .animation(.default, value: overdueTasks.map(\.notionPageId))
             .navigationTitle(isSelectionMode ? "Select Tasks (\(selectedTasks.count))" : "Today")
             .refreshable {
                 await syncService.syncOnLaunch(modelContext: modelContext)
@@ -160,6 +116,18 @@ struct TodayView: View {
                                 Image(systemName: "checkmark")
                             }
                             .disabled(selectedTasks.isEmpty)
+                        }
+                    }
+                } else {
+                    ToolbarItem(placement: .topBarTrailing) {
+                        HStack(spacing: 12) {
+                            Button { showSortConfig = true } label: {
+                                Image(systemName: "arrow.up.arrow.down")
+                            }
+
+                            Button { showSearch = true } label: {
+                                Image(systemName: "magnifyingglass")
+                            }
                         }
                     }
                 }
@@ -192,8 +160,74 @@ struct TodayView: View {
                 TaskDetailView(task: task)
                     .presentationDetents([.fraction(0.8)])
             }
+            .sheet(isPresented: $showSearch) {
+                SearchFilterView()
+            }
+            .sheet(isPresented: $showSortConfig) {
+                SortConfigView(sortStack: Binding(
+                    get: { SortStack.from(sortStackJSON) },
+                    set: { sortStackJSON = $0.jsonString }
+                ))
+                .presentationDetents([.medium])
+            }
         }
     }
+
+    // MARK: - Reusable Row
+
+    @ViewBuilder
+    private func taskRow(_ task: TaskItem) -> some View {
+        TaskRowView(task: task)
+        .listRowBackground(
+            isSelectionMode && selectedTasks.contains(task.notionPageId)
+                ? Color.blue.opacity(0.15)
+                : Color(.systemGray6)
+        )
+        .contentShape(Rectangle())
+        .onTapGesture {
+            if isSelectionMode {
+                if selectedTasks.contains(task.notionPageId) {
+                    selectedTasks.remove(task.notionPageId)
+                } else {
+                    selectedTasks.insert(task.notionPageId)
+                }
+            } else {
+                selectedTask = task
+            }
+        }
+        .onLongPressGesture {
+            let generator = UIImpactFeedbackGenerator(style: .heavy)
+            generator.impactOccurred()
+            withAnimation {
+                isSelectionMode = true
+                selectedTasks.insert(task.notionPageId)
+            }
+        }
+    }
+
+    // MARK: - Collapsible Header
+
+    private func collapsibleHeader(_ title: String) -> some View {
+        Button {
+            withAnimation {
+                if expandedSections.contains(title) {
+                    expandedSections.remove(title)
+                } else {
+                    expandedSections.insert(title)
+                }
+            }
+        } label: {
+            HStack {
+                Image(systemName: expandedSections.contains(title) ? "chevron.down" : "chevron.right")
+                    .font(.caption)
+                Text(title)
+            }
+            .foregroundStyle(.primary)
+        }
+        .buttonStyle(.plain)
+    }
+
+    // MARK: - Bulk Actions
 
     private func bulkDeleteTasks() {
         let tasksToDelete = nonDoneTasks.filter { selectedTasks.contains($0.notionPageId) }
