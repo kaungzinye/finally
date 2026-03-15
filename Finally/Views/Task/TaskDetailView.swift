@@ -20,6 +20,7 @@ struct TaskDetailView: View {
     @State private var editedTags: [String] = []
     @State private var editedProject: ProjectItem?
     @State private var editedRecurrence: Recurrence = .none
+    @State private var editedCustomRule: RecurrenceRule?
 
     var body: some View {
         NavigationStack {
@@ -122,8 +123,14 @@ struct TaskDetailView: View {
                         HStack {
                             Label("Repeat", systemImage: "repeat")
                             Spacer()
-                            Text(editedRecurrence.rawValue)
-                                .foregroundStyle(.secondary)
+                            if editedRecurrence == .custom, let rule = editedCustomRule {
+                                Text(rule.summary)
+                                    .foregroundStyle(.secondary)
+                                    .lineLimit(1)
+                            } else {
+                                Text(editedRecurrence.rawValue)
+                                    .foregroundStyle(.secondary)
+                            }
                         }
                     }
                 }
@@ -227,6 +234,7 @@ struct TaskDetailView: View {
             editedTags = task.tags
             editedProject = task.project
             editedRecurrence = task.recurrence
+            editedCustomRule = task.customRecurrenceRule
         }
         .sheet(isPresented: $showDatePicker) {
             DatePickerSheet(selectedDate: $editedDueDate)
@@ -241,7 +249,11 @@ struct TaskDetailView: View {
             ProjectPicker(selection: $editedProject)
         }
         .sheet(isPresented: $showRecurrencePicker) {
-            RecurrencePicker(selection: $editedRecurrence)
+            RecurrencePicker(
+                selection: $editedRecurrence,
+                customRule: $editedCustomRule,
+                contextDate: editedDueDate
+            )
         }
     }
 
@@ -271,6 +283,7 @@ struct TaskDetailView: View {
         task.tags = editedTags
         task.project = editedProject
         task.recurrence = editedRecurrence
+        task.customRecurrenceRule = editedCustomRule
         task.isDirty = true
 
         // Reschedule reminders if due date changed

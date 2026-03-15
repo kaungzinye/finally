@@ -13,6 +13,7 @@ struct InlineTaskCreator: View {
     @State private var tags: [String] = []
     @State private var project: ProjectItem?
     @State private var recurrence: Recurrence = .none
+    @State private var customRecurrenceRule: RecurrenceRule?
     @State private var reminderChoices: [ReminderChoice] = []
     @State private var parentTask: TaskItem?
 
@@ -146,7 +147,7 @@ struct InlineTaskCreator: View {
                         }
                         if recurrence != .none {
                             ChipView(
-                                label: recurrence.rawValue,
+                                label: recurrence == .custom ? (customRecurrenceRule?.summary ?? "Custom") : recurrence.rawValue,
                                 icon: "repeat",
                                 color: .green
                             ) { showRecurrencePicker = true }
@@ -225,7 +226,11 @@ struct InlineTaskCreator: View {
             ProjectPicker(selection: $project)
         }
         .sheet(isPresented: $showRecurrencePicker) {
-            RecurrencePicker(selection: $recurrence)
+            RecurrencePicker(
+                selection: $recurrence,
+                customRule: $customRecurrenceRule,
+                contextDate: dueDate
+            )
         }
         .sheet(isPresented: $showReminderPicker) {
             InlineReminderPicker(selectedChoices: $reminderChoices)
@@ -257,6 +262,7 @@ struct InlineTaskCreator: View {
         task.tags = tags
         task.project = project
         task.recurrence = recurrence
+        task.customRecurrenceRule = customRecurrenceRule
         task.isDirty = true
 
         // Link as subtask if parent selected
@@ -317,6 +323,7 @@ struct InlineTaskCreator: View {
         recurrence = .none
         reminderChoices = []
         parentTask = nil
+        customRecurrenceRule = nil
         nlpDetectedDate = false
         nlpDetectedPriority = false
         nlpDetectedProject = false

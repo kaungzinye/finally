@@ -58,6 +58,14 @@ struct TaskRowView: View {
                 }
                 .buttonStyle(.plain)
 
+                // Title
+                Text(task.title)
+                    .lineLimit(1)
+                    .strikethrough(task.status == .done)
+                    .foregroundStyle(task.status == .done ? .secondary : .primary)
+                    .opacity(task.status == .done ? 0.6 : 1.0)
+
+                Spacer(minLength: 0)
                 // Inline breadcrumb for sub-tasks
                 if task.isSubtask, let parentTitle = task.parent?.title {
                     HStack(spacing: 2) {
@@ -69,15 +77,6 @@ struct TaskRowView: View {
                     .foregroundStyle(.secondary)
                     .frame(maxWidth: 60)
                 }
-
-                // Title
-                Text(task.title)
-                    .lineLimit(1)
-                    .strikethrough(task.status == .done)
-                    .foregroundStyle(task.status == .done ? .secondary : .primary)
-                    .opacity(task.status == .done ? 0.6 : 1.0)
-
-                Spacer(minLength: 0)
 
                 // Project with icon — right side
                 Button { showProjectPicker = true } label: {
@@ -94,6 +93,7 @@ struct TaskRowView: View {
                     }
                 }
                 .buttonStyle(.plain)
+                .frame(maxHeight: .infinity, alignment: .center)
             }
 
             // Line 2: Properties bar
@@ -180,7 +180,7 @@ struct TaskRowView: View {
                 }
             }
         }
-        .frame(minHeight: 52)
+        .frame(minHeight: 48)
         .padding(.vertical, 8)
         .padding(.horizontal, 4)
         .contentShape(Rectangle())
@@ -222,7 +222,11 @@ struct TaskRowView: View {
             ProjectPicker(selection: projectBinding)
         }
         .sheet(isPresented: $showRecurrencePicker) {
-            RecurrencePicker(selection: recurrenceBinding)
+            RecurrencePicker(
+                selection: recurrenceBinding,
+                customRule: customRecurrenceBinding,
+                contextDate: task.dueDate
+            )
         }
         .sheet(isPresented: $showReminderPicker) {
             ReminderListView(task: task)
@@ -263,6 +267,13 @@ struct TaskRowView: View {
         Binding(
             get: { task.recurrence },
             set: { task.recurrence = $0; task.isDirty = true }
+        )
+    }
+
+    private var customRecurrenceBinding: Binding<RecurrenceRule?> {
+        Binding(
+            get: { task.customRecurrenceRule },
+            set: { task.customRecurrenceRule = $0; task.isDirty = true }
         )
     }
 }

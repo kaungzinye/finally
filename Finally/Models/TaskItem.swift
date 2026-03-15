@@ -12,6 +12,7 @@ final class TaskItem {
     var tags: [String] = []
     var tagColors: [String] = [] // Notion color names matching tags by index
     var recurrenceRaw: String = Recurrence.none.rawValue
+    var customRecurrenceJSON: String?  // JSON-encoded RecurrenceRule for .custom recurrence
     var lastEditedTime: Date?
     var lastSyncedAt: Date?
     var isDirty: Bool = false
@@ -47,6 +48,11 @@ final class TaskItem {
     var recurrence: Recurrence {
         get { Recurrence(rawValue: recurrenceRaw) ?? .none }
         set { recurrenceRaw = newValue.rawValue }
+    }
+
+    var customRecurrenceRule: RecurrenceRule? {
+        get { RecurrenceRule.from(customRecurrenceJSON) }
+        set { customRecurrenceJSON = newValue?.jsonString }
     }
 
     var isOverdue: Bool {
@@ -108,7 +114,13 @@ final class TaskItem {
     @discardableResult
     func complete() -> Bool {
         if recurrence != .none, let dueDate {
-            if let nextDate = recurrence.nextDueDate(from: dueDate) {
+            let nextDate: Date?
+            if recurrence == .custom, let rule = customRecurrenceRule {
+                nextDate = rule.nextDueDate(from: dueDate)
+            } else {
+                nextDate = recurrence.nextDueDate(from: dueDate)
+            }
+            if let nextDate {
                 self.dueDate = nextDate
                 self.status = .notStarted
                 self.isDirty = true
