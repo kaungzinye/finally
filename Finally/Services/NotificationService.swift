@@ -23,9 +23,7 @@ final class NotificationService {
     // MARK: - Schedule Reminder
 
     func scheduleReminder(for task: TaskItem, reminder: ReminderItem) {
-        guard let dueDate = task.dueDate else { return }
-
-        let fireDate = dueDate.addingTimeInterval(-Double(reminder.intervalSeconds))
+        guard let fireDate = reminder.fireDate else { return }
         guard fireDate > Date() else { return }
 
         let content = UNMutableNotificationContent()
@@ -76,12 +74,11 @@ final class NotificationService {
         var schedulable: [(ReminderItem, Date)] = []
         for reminder in allReminders {
             guard let task = reminder.task,
-                  let dueDate = task.dueDate,
-                  task.status != .done else {
+                  task.status != .done,
+                  let fireDate = reminder.fireDate else {
                 reminder.isScheduled = false
                 continue
             }
-            let fireDate = dueDate.addingTimeInterval(-Double(reminder.intervalSeconds))
             if fireDate > Date() {
                 schedulable.append((reminder, fireDate))
             } else {

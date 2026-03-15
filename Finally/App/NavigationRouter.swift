@@ -3,14 +3,14 @@ import SwiftUI
 @Observable
 final class NavigationRouter {
     enum Tab: Int, CaseIterable {
-        case inbox = 0
-        case today
+        case kanban = 0
         case upcoming
-        case search
+        case today
         case browse
+        case settings
     }
 
-    var selectedTab: Tab = .today
+    var selectedTab: Tab = .today // Default to Today tab
     var deepLinkTaskId: String?
     var showNewTaskSheet: Bool = false
     var showReauthPrompt: Bool = false

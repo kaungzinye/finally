@@ -3,7 +3,6 @@ import SwiftData
 
 struct SettingsView: View {
     @Query private var sessions: [UserSession]
-    @Query(sort: \ProjectItem.title) private var projects: [ProjectItem]
     @Environment(\.modelContext) private var modelContext
     @State private var authService = NotionAuthService()
 
@@ -17,33 +16,6 @@ struct SettingsView: View {
                         AppearanceSettingView()
                     } label: {
                         Label("Theme", systemImage: "paintbrush")
-                    }
-                }
-
-                Section("Projects") {
-                    if projects.isEmpty {
-                        Text("No projects configured")
-                            .foregroundStyle(.secondary)
-                    } else {
-                        ForEach(projects, id: \.notionPageId) { project in
-                            HStack {
-                                if let emoji = project.iconEmoji {
-                                    Text(emoji)
-                                        .font(.title3)
-                                } else {
-                                    Image(systemName: "folder")
-                                        .foregroundStyle(.secondary)
-                                }
-                                VStack(alignment: .leading, spacing: 2) {
-                                    Text(project.title)
-                                        .font(.body)
-                                    Text("\(project.tasks.count) tasks")
-                                        .font(.caption)
-                                        .foregroundStyle(.secondary)
-                                }
-                                Spacer()
-                            }
-                        }
                     }
                 }
 

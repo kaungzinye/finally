@@ -61,15 +61,22 @@ struct NotionDatabaseQueryResponse: Decodable {
     }
 }
 
+struct NotionPageIcon: Decodable {
+    let type: String
+    let emoji: String?
+}
+
 struct NotionPage: Decodable {
     let id: String
     let lastEditedTime: String
     let properties: [String: NotionPropertyValue]
+    let icon: NotionPageIcon?
 
     enum CodingKeys: String, CodingKey {
         case id
         case lastEditedTime = "last_edited_time"
         case properties
+        case icon
     }
 }
 

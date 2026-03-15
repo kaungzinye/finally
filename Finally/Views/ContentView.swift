@@ -22,17 +22,11 @@ struct ContentView: View {
                 }
 
                 TabView(selection: $router.selectedTab) {
-                    InboxView()
+                    KanbanView()
                         .tabItem {
-                            Label("Inbox", systemImage: "tray")
+                            Label("Kanban", systemImage: "square.grid.2x2")
                         }
-                        .tag(NavigationRouter.Tab.inbox)
-
-                    TodayView()
-                        .tabItem {
-                            Label("Today", systemImage: "calendar")
-                        }
-                        .tag(NavigationRouter.Tab.today)
+                        .tag(NavigationRouter.Tab.kanban)
 
                     UpcomingView()
                         .tabItem {
@@ -40,17 +34,23 @@ struct ContentView: View {
                         }
                         .tag(NavigationRouter.Tab.upcoming)
 
-                    SearchFilterView()
+                    TodayView()
                         .tabItem {
-                            Label("Search", systemImage: "magnifyingglass")
+                            Label("Today", systemImage: "calendar")
                         }
-                        .tag(NavigationRouter.Tab.search)
+                        .tag(NavigationRouter.Tab.today)
 
                     BrowseProjectsView()
                         .tabItem {
                             Label("Browse", systemImage: "folder")
                         }
                         .tag(NavigationRouter.Tab.browse)
+
+                    SettingsView()
+                        .tabItem {
+                            Label("Settings", systemImage: "gear")
+                        }
+                        .tag(NavigationRouter.Tab.settings)
                 }
             }
             .animation(.easeInOut, value: networkService.isOnline)
