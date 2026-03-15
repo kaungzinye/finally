@@ -19,3 +19,4 @@ vercel-notion-auth/.vercel/
 # Misc
 *.swp
 *~
+.vercel
