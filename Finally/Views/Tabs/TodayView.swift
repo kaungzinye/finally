@@ -63,28 +63,42 @@ struct TodayView: View {
 
     var body: some View {
         NavigationStack {
-            List {
-                if !overdueTasks.isEmpty {
-                    Section {
-                        if expandedSections.contains("Overdue") {
-                            ForEach(overdueTasks, id: \.notionPageId) { task in
-                                taskRow(task)
+            Group {
+                if syncService.isSyncing && nonDoneTasks.isEmpty {
+                    // First-load sync: replace content entirely
+                    VStack(spacing: 12) {
+                        ProgressView()
+                        Text("Syncing your tasks…")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                    }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                } else {
+                    List {
+                        if !overdueTasks.isEmpty {
+                            Section {
+                                if expandedSections.contains("Overdue") {
+                                    ForEach(overdueTasks, id: \.notionPageId) { task in
+                                        taskRow(task)
+                                    }
+                                }
+                            } header: {
+                                collapsibleHeader("Overdue")
                             }
                         }
-                    } header: {
-                        collapsibleHeader("Overdue")
-                    }
-                }
-                Section {
-                    if expandedSections.contains("Today") {
-                        ForEach(todayTasks, id: \.notionPageId) { task in
-                            taskRow(task)
+                        Section {
+                            if expandedSections.contains("Today") {
+                                ForEach(todayTasks, id: \.notionPageId) { task in
+                                    taskRow(task)
+                                }
+                            }
+                        } header: {
+                            collapsibleHeader("Today")
                         }
                     }
-                } header: {
-                    collapsibleHeader("Today")
                 }
             }
+            .listStyle(.plain)
             .animation(.default, value: todayTasks.map(\.notionPageId))
             .animation(.default, value: overdueTasks.map(\.notionPageId))
             .navigationTitle(isSelectionMode ? "Select Tasks (\(selectedTasks.count))" : "Today")
@@ -141,35 +155,20 @@ struct TodayView: View {
                     )
                 }
             }
-            .overlay(alignment: .top) {
-                if syncService.isSyncing {
-                    HStack(spacing: 8) {
-                        ProgressView()
-                            .scaleEffect(0.8, anchor: .center)
-                        Text("Syncing...")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                        Spacer()
-                    }
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 8)
-                    .background(.ultraThinMaterial)
-                }
-            }
-            .sheet(item: $selectedTask) { task in
-                TaskDetailView(task: task)
-                    .presentationDetents([.fraction(0.8)])
-            }
-            .sheet(isPresented: $showSearch) {
-                SearchFilterView()
-            }
-            .sheet(isPresented: $showSortConfig) {
-                SortConfigView(sortStack: Binding(
-                    get: { SortStack.from(sortStackJSON) },
-                    set: { sortStackJSON = $0.jsonString }
-                ))
-                .presentationDetents([.medium])
-            }
+        }
+        .sheet(item: $selectedTask) { task in
+            TaskDetailView(task: task)
+                .presentationDetents([.fraction(0.8)])
+        }
+        .sheet(isPresented: $showSearch) {
+            SearchFilterView()
+        }
+        .sheet(isPresented: $showSortConfig) {
+            SortConfigView(sortStack: Binding(
+                get: { SortStack.from(sortStackJSON) },
+                set: { sortStackJSON = $0.jsonString }
+            ))
+            .presentationDetents([.medium])
         }
     }
 
@@ -181,7 +180,7 @@ struct TodayView: View {
         .listRowBackground(
             isSelectionMode && selectedTasks.contains(task.notionPageId)
                 ? Color.blue.opacity(0.15)
-                : Color(.systemGray6)
+                : Color(.systemBackground)
         )
         .contentShape(Rectangle())
         .onTapGesture {

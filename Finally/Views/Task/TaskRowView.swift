@@ -36,7 +36,7 @@ struct TaskRowView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
-            // Line 1: Checkbox + (optional breadcrumb) + Title + Project
+            // Line 1: Checkbox + (optional breadcrumb) + Title
             HStack(spacing: 8) {
                 // Checkbox — left side
                 Button {
@@ -61,48 +61,36 @@ struct TaskRowView: View {
                 // Title
                 Text(task.title)
                     .lineLimit(1)
+                    .truncationMode(.tail)
                     .strikethrough(task.status == .done)
                     .foregroundStyle(task.status == .done ? .secondary : .primary)
                     .opacity(task.status == .done ? 0.6 : 1.0)
 
                 Spacer(minLength: 0)
+
                 // Inline breadcrumb for sub-tasks
                 if task.isSubtask, let parentTitle = task.parent?.title {
                     HStack(spacing: 2) {
                         Image(systemName: "arrow.turn.down.right")
                         Text(parentTitle)
                             .lineLimit(1)
+                            .truncationMode(.tail)
                     }
                     .font(.caption2)
                     .foregroundStyle(.secondary)
-                    .frame(maxWidth: 60)
+                    .frame(maxWidth: 80, alignment: .trailing)
                 }
-
-                // Project with icon — right side
-                Button { showProjectPicker = true } label: {
-                    HStack(spacing: 3) {
-                        if let emoji = task.project?.iconEmoji {
-                            Text(emoji)
-                                .font(.caption)
-                        }
-                        Text(task.project?.title ?? "Inbox")
-                            .font(.caption2)
-                            .foregroundStyle(.secondary)
-                            .lineLimit(1)
-                            .frame(maxWidth: 50, alignment: .trailing)
-                    }
-                }
-                .buttonStyle(.plain)
-                .frame(maxHeight: .infinity, alignment: .center)
             }
 
-            // Line 2: Properties bar
+            // Line 2: Properties bar + project on the right
             HStack(spacing: 6) {
                 // Due date — orange when in active window, red when overdue
                 Button { showDatePicker = true } label: {
                     Text(formattedDueDate)
                         .foregroundStyle(task.isOverdue ? .red : (task.isInActiveWindow ? .orange : .secondary))
                         .font(.caption2)
+                        .lineLimit(1)
+                        .truncationMode(.tail)
                 }
                 .buttonStyle(.plain)
 
@@ -147,15 +135,16 @@ struct TaskRowView: View {
                                     .background(tagColor.opacity(0.15))
                                     .clipShape(Capsule())
                                     .foregroundStyle(tagColor)
+                                    .lineLimit(1)
+                                    .truncationMode(.tail)
                             }
                         }
                         .font(.caption2)
                         .lineLimit(1)
+                        .truncationMode(.tail)
                     }
                     .buttonStyle(.plain)
                 }
-
-                Spacer(minLength: 0)
 
                 // Subtask progress
                 if task.hasSubtasks {
@@ -169,19 +158,28 @@ struct TaskRowView: View {
                     .foregroundStyle(progress.done == progress.total ? .green : .secondary)
                 }
 
-                // Recurrence
-                if task.recurrence != .none {
-                    Button { showRecurrencePicker = true } label: {
-                        Image(systemName: "repeat")
+                Spacer(minLength: 0)
+
+                // Project — right aligned within properties row
+                Button { showProjectPicker = true } label: {
+                    HStack(spacing: 3) {
+                        if let emoji = task.project?.iconEmoji {
+                            Text(emoji)
+                                .font(.caption)
+                        }
+                        Text(task.project?.title ?? "Inbox")
                             .font(.caption2)
-                            .foregroundStyle(.green)
+                            .foregroundStyle(.secondary)
+                            .lineLimit(1)
+                            .truncationMode(.tail)
                     }
-                    .buttonStyle(.plain)
+                    .frame(maxWidth: 80, alignment: .trailing)
                 }
+                .buttonStyle(.plain)
             }
         }
-        .frame(minHeight: 48)
-        .padding(.vertical, 8)
+        .frame(minHeight: 44)
+        .padding(.vertical, 2)
         .padding(.horizontal, 4)
         .contentShape(Rectangle())
         .swipeActions(edge: .leading) {

@@ -42,21 +42,37 @@ struct KanbanView: View {
 
     var body: some View {
         NavigationStack {
-            GeometryReader { geo in
-                let isLandscape = geo.size.width > geo.size.height
-                let columnWidth = isLandscape ? geo.size.width * 0.32 : geo.size.width * 0.48
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(alignment: .top, spacing: 12) {
-                        kanbanColumn("To Do", color: .blue, status: .notStarted, tasks: notStartedTasks, width: columnWidth)
-                        kanbanColumn("In Progress", color: .orange, status: .inProgress, tasks: inProgressTasks, width: columnWidth)
-                        kanbanColumn("Done", color: .green, status: .done, tasks: doneTasks, width: columnWidth)
+            Group {
+                if syncService.isSyncing && allTasks.isEmpty {
+                    // First-load sync: replace content entirely
+                    VStack(spacing: 12) {
+                        ProgressView()
+                        Text("Syncing your tasks…")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
                     }
-                    .padding(.horizontal, 16)
-                    .padding(.bottom, 20)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                } else {
+                    GeometryReader { geo in
+                        let isLandscape = geo.size.width > geo.size.height
+                        let columnWidth = isLandscape ? geo.size.width * 0.32 : geo.size.width * 0.48
+
+                        ScrollView(.horizontal, showsIndicators: false) {
+                            HStack(alignment: .top, spacing: 12) {
+                                kanbanColumn("To Do", color: .blue, status: .notStarted, tasks: notStartedTasks, width: columnWidth, isLandscape: isLandscape)
+                                kanbanColumn("In Progress", color: .orange, status: .inProgress, tasks: inProgressTasks, width: columnWidth, isLandscape: isLandscape)
+                                kanbanColumn("Done", color: .green, status: .done, tasks: doneTasks, width: columnWidth, isLandscape: isLandscape)
+                            }
+                            .padding(.horizontal, 16)
+                            .padding(.bottom, 20)
+                        }
+                    }
                 }
             }
             .navigationTitle("Board")
-            .navigationBarTitleDisplayMode(.inline)
+            .refreshable {
+                await syncService.syncOnLaunch(modelContext: modelContext)
+            }
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     HStack(spacing: 12) {
@@ -69,9 +85,6 @@ struct KanbanView: View {
                     }
                 }
             }
-            .refreshable {
-                await syncService.syncOnLaunch(modelContext: modelContext)
-            }
             .sheet(isPresented: $showSearch) {
                 SearchFilterView()
             }
@@ -80,21 +93,6 @@ struct KanbanView: View {
                     filterProjects: $filterProjects,
                     filterPriorities: $filterPriorities
                 )
-            }
-            .overlay(alignment: .top) {
-                if syncService.isSyncing {
-                    HStack(spacing: 8) {
-                        ProgressView()
-                            .scaleEffect(0.8, anchor: .center)
-                        Text("Syncing...")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                        Spacer()
-                    }
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 8)
-                    .background(.ultraThinMaterial)
-                }
             }
             .sheet(item: $selectedTask) { task in
                 TaskDetailView(task: task)
@@ -106,7 +104,7 @@ struct KanbanView: View {
     // MARK: - Column
 
     @ViewBuilder
-    private func kanbanColumn(_ title: String, color: Color, status: TaskStatus, tasks: [TaskItem], width: CGFloat) -> some View {
+    private func kanbanColumn(_ title: String, color: Color, status: TaskStatus, tasks: [TaskItem], width: CGFloat, isLandscape: Bool) -> some View {
         VStack(alignment: .leading, spacing: 0) {
             // Column header
             HStack {
@@ -131,7 +129,7 @@ struct KanbanView: View {
             ScrollView(.vertical, showsIndicators: false) {
                 LazyVStack(spacing: 8) {
                     ForEach(tasks, id: \.notionPageId) { task in
-                        kanbanCard(task)
+                                kanbanCard(task, isLandscape: isLandscape)
                             .draggable(task.notionPageId) {
                                 // Drag preview
                                 Text(task.title)
@@ -154,7 +152,8 @@ struct KanbanView: View {
             }
         }
         .frame(width: width)
-        .background(Color(.systemGray6))
+        // Column background follows app background, adapting automatically to light/dark mode
+        .background(Color(.systemBackground))
         .clipShape(RoundedRectangle(cornerRadius: 12))
         .dropDestination(for: String.self) { droppedIds, _ in
             guard let taskId = droppedIds.first,
@@ -175,7 +174,7 @@ struct KanbanView: View {
     // MARK: - Card
 
     @ViewBuilder
-    private func kanbanCard(_ task: TaskItem) -> some View {
+    private func kanbanCard(_ task: TaskItem, isLandscape: Bool) -> some View {
         VStack(alignment: .leading, spacing: 6) {
             Text(task.title)
                 .font(.subheadline)
@@ -184,47 +183,72 @@ struct KanbanView: View {
                 .strikethrough(task.status == .done)
 
             HStack(spacing: 6) {
+                // Due date — match order used in Today/Upcoming
                 if let dueDate = task.dueDate {
                     HStack(spacing: 2) {
                         Image(systemName: "calendar")
                             .font(.caption2)
                         Text(formatDate(dueDate))
                             .font(.caption2)
+                            .lineLimit(1)
+                            .truncationMode(.tail)
                     }
                     .foregroundStyle(task.isOverdue ? .red : (task.isInActiveWindow ? .orange : .secondary))
                 }
 
+                // Priority
                 if let priority = task.priority {
                     Image(systemName: priority.icon)
                         .font(.caption2)
                         .foregroundStyle(priority.color)
                 }
 
-                if let emoji = task.project?.iconEmoji {
-                    Text(emoji)
-                        .font(.caption2)
-                } else if let projectTitle = task.project?.title {
-                    Text(projectTitle)
-                        .font(.caption2)
-                        .foregroundStyle(.secondary)
-                        .lineLimit(1)
-                }
+                Spacer(minLength: 0)
 
-                Spacer()
-
-                if !task.tags.isEmpty {
-                    ForEach(Array(task.tags.prefix(1).enumerated()), id: \.offset) { index, tag in
-                        let colorName = index < task.tagColors.count ? task.tagColors[index] : "default"
-                        Text(tag)
+                // Vertical (portrait) Kanban: only show project in the trailing side
+                if !isLandscape {
+                    if let emoji = task.project?.iconEmoji {
+                        Text(emoji)
                             .font(.caption2)
-                            .foregroundStyle(NotionColor.swiftUIColor(for: colorName))
+                    } else if let projectTitle = task.project?.title {
+                        Text(projectTitle)
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                            .lineLimit(1)
+                            .truncationMode(.tail)
+                    }
+                } else {
+                    // Horizontal (landscape) Kanban: show full set of properties like Today/Upcoming
+                    HStack(spacing: 6) {
+                        if let emoji = task.project?.iconEmoji {
+                            Text(emoji)
+                                .font(.caption2)
+                        } else if let projectTitle = task.project?.title {
+                            Text(projectTitle)
+                                .font(.caption2)
+                                .foregroundStyle(.secondary)
+                                .lineLimit(1)
+                                .truncationMode(.tail)
+                        }
+
+                        if !task.tags.isEmpty {
+                            ForEach(Array(task.tags.prefix(1).enumerated()), id: \.offset) { index, tag in
+                                let colorName = index < task.tagColors.count ? task.tagColors[index] : "default"
+                                Text(tag)
+                                    .font(.caption2)
+                                    .foregroundStyle(NotionColor.swiftUIColor(for: colorName))
+                                    .lineLimit(1)
+                                    .truncationMode(.tail)
+                            }
+                        }
                     }
                 }
             }
         }
-        .padding(10)
-        .frame(maxWidth: .infinity, minHeight: 56, alignment: .leading)
-        .background(Color(.systemBackground))
+        .padding(8)
+        .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+        // Use a single adaptive system background for task rows (matches list rows)
+        .background(Color(.secondarySystemBackground))
         .clipShape(RoundedRectangle(cornerRadius: 8))
         .shadow(color: .black.opacity(0.05), radius: 2, y: 1)
         .contentShape(Rectangle())

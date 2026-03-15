@@ -48,40 +48,52 @@ struct UpcomingView: View {
 
     var body: some View {
         NavigationStack {
-            List {
-                ForEach(groupedByDate, id: \.0) { dateString, tasks in
-                    Section {
-                        if expandedSections.contains(dateString) {
-                            ForEach(tasks, id: \.notionPageId) { task in
-                                taskRow(task)
-                            }
-                        }
-                    } header: {
-                        Button {
-                            withAnimation {
-                                if expandedSections.contains(dateString) {
-                                    expandedSections.remove(dateString)
-                                } else {
-                                    expandedSections.insert(dateString)
+            if syncService.isSyncing && allFutureTasks.isEmpty {
+                // First-load sync: replace content entirely
+                VStack(spacing: 12) {
+                    ProgressView()
+                    Text("Syncing your tasks…")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .navigationTitle("Upcoming")
+            } else {
+                List {
+                    ForEach(groupedByDate, id: \.0) { dateString, tasks in
+                        Section {
+                            if expandedSections.contains(dateString) {
+                                ForEach(tasks, id: \.notionPageId) { task in
+                                    taskRow(task)
                                 }
                             }
-                        } label: {
-                            HStack {
-                                Image(systemName: expandedSections.contains(dateString) ? "chevron.down" : "chevron.right")
-                                    .font(.caption)
-                                Text(dateString)
+                        } header: {
+                            Button {
+                                withAnimation {
+                                    if expandedSections.contains(dateString) {
+                                        expandedSections.remove(dateString)
+                                    } else {
+                                        expandedSections.insert(dateString)
+                                    }
+                                }
+                            } label: {
+                                HStack {
+                                    Image(systemName: expandedSections.contains(dateString) ? "chevron.down" : "chevron.right")
+                                        .font(.caption)
+                                    Text(dateString)
+                                }
+                                .foregroundStyle(.primary)
                             }
-                            .foregroundStyle(.primary)
+                            .buttonStyle(.plain)
                         }
-                        .buttonStyle(.plain)
                     }
                 }
-            }
-            .navigationTitle(isSelectionMode ? "Select Tasks (\(selectedTasks.count))" : "Upcoming")
-            .refreshable {
-                await syncService.syncOnLaunch(modelContext: modelContext)
-            }
-            .toolbar {
+                .listStyle(.plain)
+                .navigationTitle(isSelectionMode ? "Select Tasks (\(selectedTasks.count))" : "Upcoming")
+                .refreshable {
+                    await syncService.syncOnLaunch(modelContext: modelContext)
+                }
+                .toolbar {
                 if isSelectionMode {
                     ToolbarItem(placement: .topBarLeading) {
                         Button("Cancel") {
@@ -131,21 +143,6 @@ struct UpcomingView: View {
                     )
                 }
             }
-            .overlay(alignment: .top) {
-                if syncService.isSyncing {
-                    HStack(spacing: 8) {
-                        ProgressView()
-                            .scaleEffect(0.8, anchor: .center)
-                        Text("Syncing...")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                        Spacer()
-                    }
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 8)
-                    .background(.ultraThinMaterial)
-                }
-            }
             .sheet(item: $selectedTask) { task in
                 TaskDetailView(task: task)
                     .presentationDetents([.fraction(0.8)])
@@ -160,6 +157,7 @@ struct UpcomingView: View {
                 ))
                 .presentationDetents([.medium])
             }
+            }
         }
     }
 
@@ -171,7 +169,7 @@ struct UpcomingView: View {
         .listRowBackground(
             isSelectionMode && selectedTasks.contains(task.notionPageId)
                 ? Color.blue.opacity(0.15)
-                : Color(.systemGray6)
+                : Color(.systemBackground)
         )
         .contentShape(Rectangle())
         .onTapGesture {

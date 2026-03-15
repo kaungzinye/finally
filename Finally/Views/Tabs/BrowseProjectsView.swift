@@ -41,7 +41,6 @@ struct BrowseProjectsView: View {
                         } else {
                             ForEach(inboxTasks, id: \.notionPageId) { task in
                                 TaskRowView(task: task)
-                                    .listRowBackground(Color(.systemGray6))
                                     .contentShape(Rectangle())
                                     .onTapGesture { selectedTask = task }
                             }
@@ -61,7 +60,6 @@ struct BrowseProjectsView: View {
                         } else {
                             ForEach(backlogTasks, id: \.notionPageId) { task in
                                 TaskRowView(task: task)
-                                    .listRowBackground(Color(.systemGray6))
                                     .contentShape(Rectangle())
                                     .onTapGesture { selectedTask = task }
                             }
@@ -102,6 +100,7 @@ struct BrowseProjectsView: View {
                     collapsibleHeader("Projects", icon: "folder")
                 }
             }
+            .listStyle(.plain)
             .navigationTitle("Browse")
             .navigationDestination(for: String.self) { projectId in
                 ProjectDetailView(projectId: projectId)
@@ -121,21 +120,6 @@ struct BrowseProjectsView: View {
             }
             .refreshable {
                 await syncService.syncOnLaunch(modelContext: modelContext)
-            }
-            .overlay(alignment: .top) {
-                if syncService.isSyncing {
-                    HStack(spacing: 8) {
-                        ProgressView()
-                            .scaleEffect(0.8, anchor: .center)
-                        Text("Syncing...")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                        Spacer()
-                    }
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 8)
-                    .background(.ultraThinMaterial)
-                }
             }
             .sheet(item: $selectedTask) { task in
                 TaskDetailView(task: task)
@@ -202,11 +186,11 @@ struct ProjectDetailView: View {
         List {
             ForEach(projectTasks, id: \.notionPageId) { task in
                 TaskRowView(task: task)
-                    .listRowBackground(Color(.systemGray6))
                     .contentShape(Rectangle())
                     .onTapGesture { selectedTask = task }
             }
         }
+        .listStyle(.plain)
         .navigationTitle(project?.title ?? "Project")
         .refreshable {
             await syncService.syncOnLaunch(modelContext: modelContext)
@@ -223,11 +207,16 @@ struct ProjectDetailView: View {
         .safeAreaInset(edge: .bottom) {
             if showCreator {
                 InlineTaskCreator(presetProject: project)
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
             }
         }
         .overlay(alignment: .bottomTrailing) {
             if !showCreator {
-                Button { showCreator = true } label: {
+                Button {
+                    withAnimation(.easeInOut(duration: 0.25)) {
+                        showCreator = true
+                    }
+                } label: {
                     Image(systemName: "plus")
                         .font(.title2.weight(.semibold))
                         .foregroundStyle(Color(.systemBackground))
