@@ -6,11 +6,25 @@ struct TagPicker: View {
     @Environment(\.dismiss) private var dismiss
     @Query private var tasks: [TaskItem]
 
-    @State private var newTag = ""
+    @State private var query = ""
 
     private var availableTags: [String] {
         let allTags = tasks.flatMap(\.tags)
         return Array(Set(allTags)).sorted()
+    }
+
+    private var filteredTags: [String] {
+        guard !query.trimmingCharacters(in: .whitespaces).isEmpty else {
+            return availableTags
+        }
+        let lowercasedQuery = query.lowercased()
+        return availableTags.filter { $0.lowercased().contains(lowercasedQuery) }
+    }
+
+    private var canCreateNewTag: Bool {
+        let trimmed = query.trimmingCharacters(in: .whitespaces)
+        guard !trimmed.isEmpty else { return false }
+        return !availableTags.contains { $0.caseInsensitiveCompare(trimmed) == .orderedSame }
     }
 
     var body: some View {
@@ -18,19 +32,35 @@ struct TagPicker: View {
             List {
                 Section {
                     HStack {
-                        TextField("New tag...", text: $newTag)
-                        Button("Add") {
-                            let trimmed = newTag.trimmingCharacters(in: .whitespaces)
-                            guard !trimmed.isEmpty, !selectedTags.contains(trimmed) else { return }
-                            selectedTags.append(trimmed)
-                            newTag = ""
+                        Image(systemName: "magnifyingglass")
+                            .foregroundStyle(.secondary)
+                        TextField("Search or create tag", text: $query)
+                            .textInputAutocapitalization(.words)
+                            .autocorrectionDisabled()
+                    }
+                }
+
+                if canCreateNewTag {
+                    Section {
+                        Button {
+                            let trimmed = query.trimmingCharacters(in: .whitespaces)
+                            guard !trimmed.isEmpty else { return }
+                            if !selectedTags.contains(trimmed) {
+                                selectedTags.append(trimmed)
+                            }
+                            query = ""
+                        } label: {
+                            HStack {
+                                Image(systemName: "plus.circle.fill")
+                                    .foregroundStyle(Color.accentColor)
+                                Text("Create tag \"\(query.trimmingCharacters(in: .whitespaces))\"")
+                            }
                         }
-                        .disabled(newTag.trimmingCharacters(in: .whitespaces).isEmpty)
                     }
                 }
 
                 Section("Available Tags") {
-                    ForEach(availableTags, id: \.self) { tag in
+                    ForEach(filteredTags, id: \.self) { tag in
                         Button {
                             if selectedTags.contains(tag) {
                                 selectedTags.removeAll { $0 == tag }
@@ -56,6 +86,10 @@ struct TagPicker: View {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Done") { dismiss() }
                 }
+            }
+            .onAppear {
+                // Start with an empty query so all tags show
+                query = ""
             }
         }
         .presentationDetents([.medium, .large])
