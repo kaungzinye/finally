@@ -2,8 +2,22 @@
 
 **Feature Branch**: `001-notion-task-app`
 **Created**: 2026-03-13
-**Status**: Draft
-**Input**: User description: "Build a SwiftUI iOS app called Finally that connects to Notion via OAuth, reads from Tasks and Projects databases, has Todoist-like UI with inline task creation and chip-based fields, per-task custom staggered local push notifications, recurring task support, dark/light mode following system settings, and Notion database schema validation. iPhone-only, iOS 17+."
+**Updated**: 2026-03-18
+**Status**: In Progress — Parts A–H shipped
+**Input**: User description: "Build a SwiftUI iOS app called Finally that connects to Notion via OAuth, reads from Tasks and Projects databases, has Todoist-like UI with inline task creation and chip-based fields, per-task custom staggered local push notifications, recurring task support, dark/light mode following system settings, and Notion database schema validation. iPhone-only, iOS 17+"
+
+## Shipped Parts
+
+| Part | Description | Status |
+|------|-------------|--------|
+| A | Data model, OAuth, Keychain, SwiftData schema | ✅ Done |
+| B | Notion sync (full + incremental), schema validation | ✅ Done |
+| C | Task list views (Today, Upcoming, Inbox, Browse), tab bar | ✅ Done |
+| D | Kanban board with drag-and-drop between status columns | ✅ Done |
+| E | Inline task creation, chip-based fields, NLP parsing | ✅ Done |
+| F | Task detail view, editing, recurring task completion | ✅ Done |
+| G | Reminders (local push notifications), widget extension | ✅ Done |
+| H | Sync bug fixes (5 bugs) + E2E Notion tests | ✅ Done |
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -24,9 +38,9 @@ A user opens the app for the first time and connects their Notion workspace. The
 
 ---
 
-### User Story 2 - View Tasks in Todoist-style Views (Priority: P1)
+### User Story 2 - View Tasks in Todoist-style + Board Views (Priority: P1)
 
-A user sees their Notion tasks organized in familiar views: Inbox (tasks with no project or assigned to the Inbox project), Today (tasks due today + overdue), and Upcoming (tasks grouped by date into the future). They can tap into any Project to see its tasks. Navigation uses a bottom tab bar.
+A user sees their Notion tasks organized in familiar views: Inbox (tasks with no project or assigned to the Inbox project), Today (tasks due today + overdue), Upcoming (tasks grouped by date into the future), and a Board view (Kanban-style columns by status). They can tap into any Project to see its tasks. Navigation uses a bottom tab bar.
 
 **Why this priority**: The core value proposition — seeing your Notion tasks in a clean, actionable mobile interface. Co-equal with OAuth since the app is useless without either.
 
@@ -34,17 +48,19 @@ A user sees their Notion tasks organized in familiar views: Inbox (tasks with no
 
 **Acceptance Scenarios**:
 
-1. **Given** the user has synced tasks, **When** they open the Today tab, **Then** they see overdue tasks in a separate section at the top, followed by tasks due today, sorted by priority.
+1. **Given** the user has synced tasks, **When** they open the Today tab, **Then** they see overdue tasks in a separate section at the top, followed by tasks due today, sorted by the active sort configuration (e.g., priority, date, project).
 2. **Given** the user has synced tasks, **When** they open the Upcoming tab, **Then** they see tasks grouped under date headers scrolling into the future.
 3. **Given** the user taps a project in the Browse tab, **When** the project view loads, **Then** they see only tasks linked to that project.
 4. **Given** the user has tasks with no project relation (or project set to "Inbox"), **When** they open the Inbox tab, **Then** those tasks appear here.
-5. **Given** the user pulls down on any task list, **When** the refresh completes, **Then** the latest data from Notion is displayed.
+5. **Given** the user opens the Board tab, **When** it loads, **Then** they see three columns "To Do", "In Progress", and "Done" with counts and task cards for each status.
+6. **Given** the user drags a task card from one column to another on the Board view, **When** they drop it, **Then** the task’s status updates immediately and this change syncs back to Notion.
+7. **Given** the user pulls down on any task list, **When** the refresh completes, **Then** the latest data from Notion is displayed.
 
 ---
 
 ### User Story 3 - Add and Edit Tasks Inline (Priority: P2)
 
-A user adds a new task using an inline task creation bar at the bottom of any task list (Todoist-style). They type the task name and use quick-action buttons to set due date, priority, tags, project, and recurrence. Chosen values appear as tappable chips. The task is created in the Notion Tasks database.
+A user adds a new task using an inline task creation bar at the bottom of any task list (Todoist-style). They type the task name and use quick-action buttons to set due date, priority, tags, project, and recurrence (including custom rules where supported). Chosen values appear as tappable chips. The task is created in the Notion Tasks database.
 
 **Why this priority**: Creating and editing tasks from mobile is essential for a task manager, but viewing existing tasks (P1) provides standalone value first.
 
@@ -57,9 +73,10 @@ A user adds a new task using an inline task creation bar at the bottom of any ta
 3. **Given** the user taps the priority icon, **When** they select a priority level (Urgent/High/Medium/Low), **Then** a colored chip appears (Urgent=red, High=orange, Medium=blue, Low=no color).
 4. **Given** the user taps the tags icon, **When** they select one or more tags from the multi-select picker, **Then** tag chips appear. The picker shows existing tags from the Notion database.
 5. **Given** the user taps the project icon, **When** they select a project, **Then** a project chip appears. Default is "Inbox" if unselected.
-6. **Given** the user taps the recurrence icon, **When** they select a recurrence pattern (Daily/Weekly/Monthly/Yearly), **Then** a recurrence chip appears.
+6. **Given** the user taps the recurrence icon, **When** they select a recurrence pattern (Daily/Weekly/Monthly/Yearly/Custom), **Then** a recurrence chip appears.
 7. **Given** the user submits the task, **When** creation succeeds, **Then** the task appears in the appropriate view and is created as a page in the Notion Tasks database with all selected properties.
 8. **Given** the user taps an existing task, **When** the detail view opens, **Then** all fields are displayed as tappable rows/chips that can be edited and synced back to Notion.
+9. **Given** the user has tasks with subtasks, **When** they open the detail view for a parent task, **Then** they see a subtask section where they can review nested work items associated with that task.
 
 ---
 
@@ -76,15 +93,22 @@ A user sets multiple reminders for a task at custom intervals before its due dat
 1. **Given** a task with a due date, **When** the user opens the task detail and taps "Reminders", **Then** they see a list of configured reminders and an "Add Reminder" button.
 2. **Given** the user taps "Add Reminder", **When** they configure an interval (e.g., "1 day before", "2 hours before", "30 minutes before"), **Then** a local push notification is scheduled for that time relative to the due date.
 3. **Given** a task has 3 reminders configured, **When** the due date changes, **Then** all 3 notifications are rescheduled relative to the new due date.
-4. **Given** the app is not running in the foreground, **When** a reminder time arrives, **Then** the user receives a push notification showing the task name and how long until it's due.
-5. **Given** the user taps a notification, **When** the app opens, **Then** it navigates directly to the relevant task's detail view.
-6. **Given** the user marks a task as done, **When** the task completes, **Then** all pending reminders for that task are cancelled.
+4. **Given** a task with a specific due time and a reminder set to fire 30 minutes before, **When** the notification arrives, **Then** the body reads "Due at 3:00 PM" (the actual due time, in the user's local timezone) — not the raw label "30 minutes before".
+5. **Given** a task with a date-only due date (no specific time), **When** the notification fires on that day, **Then** the body reads "Due today". If the due date is the next calendar day, the body reads "Due tomorrow". For any other date, the body shows the formatted date (e.g., "Due March 20") — never a time component.
+6. **Given** a task with an absolute-date reminder (not relative to due date) and a due date set, **When** the notification fires, **Then** the body still references the task's actual due date (e.g., "Due March 22") so the user has context without opening the app.
+7. **Given** a task with a reminder but no due date, **When** the notification fires, **Then** the notification still appears with a sensible fallback (no body text rather than crashing or showing nil).
+8. **Given** a date-only task (Notion date has no time component), **When** reminders are scheduled, **Then** they fire relative to the user's configured "Default reminder time" (e.g., 9:00 AM local time) — not midnight. Firing at 11:30 PM the night before for a "30 min before" reminder on a date-only task is not acceptable.
+9. **Given** the user opens Settings → Notifications, **When** they set "Default reminder time" to e.g. 9:00 AM, **Then** all subsequent date-only task reminders are scheduled relative to 9:00 AM local on the due date. Existing reminders are rescheduled immediately.
+10. **Given** a Notion date includes a timezone offset (e.g., "2026-03-20T15:00:00+05:30"), **When** the reminder fires, **Then** it fires at the correct local time accounting for the stored timezone — not blindly at UTC.
+11. **Given** the app is not running in the foreground, **When** a reminder time arrives, **Then** the user receives a push notification showing the task name.
+12. **Given** the user taps a notification, **When** the app opens, **Then** it navigates directly to the relevant task's detail view.
+13. **Given** the user marks a task as done, **When** the task completes, **Then** all pending reminders for that task are cancelled.
 
 ---
 
 ### User Story 5 - Complete Recurring Tasks (Priority: P3)
 
-A user marks a recurring task as complete. Instead of creating a new row in Notion, the app updates the same task's due date to the next occurrence based on the recurrence pattern (Daily/Weekly/Monthly/Yearly) and resets the status to "Not Started".
+A user marks a recurring task as complete. Instead of creating a new row in Notion, the app updates the same task's due date to the next occurrence based on the recurrence pattern (Daily/Weekly/Monthly/Yearly/Custom) and resets the status to "Not Started".
 
 **Why this priority**: Recurring tasks are a natural extension once basic task management works. P3 because it's not needed for first-use value.
 
@@ -96,8 +120,9 @@ A user marks a recurring task as complete. Instead of creating a new row in Noti
 2. **Given** a task with recurrence set to "Monthly" and due date of March 15, **When** the user marks it complete, **Then** the due date updates to April 15.
 3. **Given** a task with recurrence set to "Yearly", **When** the user marks it complete, **Then** the due date advances by one year.
 4. **Given** a task with recurrence set to "Daily", **When** the user marks it complete, **Then** the due date advances to tomorrow.
-5. **Given** a recurring task with reminders, **When** the task is completed and due date advances, **Then** reminders are rescheduled relative to the new due date.
-6. **Given** a task with no recurrence, **When** the user marks it complete, **Then** the status changes to "Done" and no date change occurs.
+5. **Given** a task with a custom recurrence rule, **When** the user marks it complete, **Then** the due date advances according to that rule and status resets to "Not Started".
+6. **Given** a recurring task with reminders, **When** the task is completed and due date advances, **Then** reminders are rescheduled relative to the new due date.
+7. **Given** a task with no recurrence, **When** the user marks it complete, **Then** the status changes to "Done" and no date change occurs.
 
 ---
 
@@ -171,16 +196,16 @@ The user adds a home screen widget showing a list of upcoming tasks with checkbo
 - **FR-001**: System MUST authenticate users via Notion OAuth (public integration flow) and securely store the access token.
 - **FR-002**: System MUST validate connected Notion databases against a minimum required schema (Tasks: title + status + date properties; Projects: title property).
 - **FR-003**: System MUST detect database properties by type (not just name) and allow user mapping when multiple properties of the same type exist.
-- **FR-004**: System MUST display tasks in four primary views: Inbox, Today (due today + overdue), Upcoming (grouped by date), and per-Project views.
-- **FR-005**: System MUST provide a bottom tab bar with tabs for: Inbox, Today, Upcoming, Search/Filters, and Browse (projects list).
+- **FR-004**: System MUST display tasks in primary views: Inbox, Today (due today + overdue), Upcoming (grouped by date), Board (Kanban by status), and per-Project views.
+- **FR-005**: System MUST provide a bottom tab bar with tabs for: Inbox, Today, Upcoming, Board, Search/Filters, and Browse (projects list).
 - **FR-006**: System MUST support inline task creation with a quick-action bar containing buttons for: due date, priority, tags, project, and recurrence.
 - **FR-007**: System MUST display selected task field values as tappable colored chips (not traditional form fields).
 - **FR-008**: Users MUST be able to create, edit, and complete tasks, with all changes synced to the Notion Tasks database.
 - **FR-009**: System MUST support per-task custom staggered local push notifications — multiple reminders per task at user-defined intervals before the due date.
 - **FR-010**: System MUST cancel pending reminders when a task is completed or deleted, and reschedule reminders when a task's due date changes.
-- **FR-011**: System MUST handle recurring tasks by updating the existing task's due date to the next occurrence (based on Daily/Weekly/Monthly/Yearly pattern) and resetting status to "Not Started" upon completion — no new rows created.
+- **FR-011**: System MUST handle recurring tasks by updating the existing task's due date to the next occurrence (based on Daily/Weekly/Monthly/Yearly/Custom pattern) and resetting status to "Not Started" upon completion — no new rows created.
 - **FR-012**: System MUST follow the iOS system appearance setting (light/dark mode) by default, with an in-app override option (System/Light/Dark).
-- **FR-013**: System MUST support swipe gestures on tasks: swipe right to complete, swipe left for more actions (reschedule, delete).
+- **FR-013**: System MUST support swipe gestures on tasks: swipe right to complete, swipe left for more actions (reschedule, delete), and multi-select bulk actions (complete/delete) in list-based views.
 - **FR-014**: System MUST paginate through all Notion API results using cursor-based pagination.
 - **FR-015**: System MUST handle offline state gracefully by displaying cached data and showing an offline indicator.
 - **FR-016**: System MUST respect the iOS 64 scheduled notification limit by prioritizing nearest due tasks and re-scheduling as slots become available.
@@ -193,12 +218,24 @@ The user adds a home screen widget showing a list of upcoming tasks with checkbo
 - **FR-023**: System MUST provide home screen widgets in all three iOS sizes (small, medium, large) showing a list of upcoming tasks with checkboxes to complete tasks directly from the widget.
 - **FR-024**: All widget sizes MUST include a "+" button in the bottom-right corner that opens the app to the task creation flow.
 - **FR-025**: Widget task completion MUST sync to Notion (marking done or advancing recurring task due date) and trigger a widget refresh.
+- **FR-026**: System MUST support parent tasks and subtasks, where subtasks can have their own suggested dates and completion status while remaining linked to a parent task.
+- **FR-027**: System MUST hide parent tasks from Today-style list views when they have incomplete subtasks, surfacing actionable subtasks instead.
+- **FR-028**: System SHOULD support a start date window for tasks, allowing Today/Board views to visually differentiate active work windows (e.g., days between start and due dates).
+- **FR-029**: Notification body MUST display the task's due time (e.g., "Due at 3:00 PM") when the task has a specific due time.
+- **FR-030**: Notification body MUST display "Due today" when the due date is the current calendar day, "Due tomorrow" when it is the next calendar day, or the formatted date (e.g., "Due March 20") for any other date — when the task has no specific time component.
+- **FR-031**: Notification body MUST NOT expose internal reminder label strings (e.g., "30 minutes before", "1 hour before") as user-visible content.
+- **FR-032**: When a task has no due date, the notification body MUST fall back gracefully (omitted or empty) rather than crashing or showing nil.
+- **FR-033**: Notification body formatting logic MUST be unit-testable with an injected clock so "today" / "tomorrow" comparisons are deterministic in tests.
+- **FR-034**: Date-only Notion dates (no time component) MUST be stored as local midnight, not UTC midnight — so a "2026-03-20" date is always March 20 in the user's timezone regardless of UTC offset.
+- **FR-035**: Reminders on date-only tasks MUST fire relative to a user-configurable "Default reminder time" (default: 9:00 AM local) rather than midnight. A "30 min before" reminder on a date-only task due March 20 with a 9:00 AM default fires at 8:30 AM, not 11:30 PM March 19.
+- **FR-036**: Settings MUST expose a "Default reminder time" picker (time-only, 15-minute increments) under a Notifications section. Changing this value MUST trigger rescheduleAllReminders so existing date-only task reminders reflect the new preference immediately.
+- **FR-037**: Date+time Notion dates with timezone offsets MUST be correctly converted to the user's local timezone when displaying and when scheduling notification triggers.
 
 ### Key Entities
 
-- **Task**: A unit of work synced from Notion. Key attributes: name (title), status (Not Started / In Progress / Done), due date, priority (Urgent / High / Medium / Low), tags (multiple), project (relation to a Project), recurrence pattern (None / Daily / Weekly / Monthly / Yearly), reminders (local, multiple per task with custom intervals).
+- **Task**: A unit of work synced from Notion. Key attributes: name (title), status (Not Started / In Progress / Done), due date, optional start date (for active work window), priority (Urgent / High / Medium / Low), tags (multiple, with optional Notion color metadata), project (relation to a Project), recurrence pattern (None / Daily / Weekly / Monthly / Yearly / Custom), reminders (local, multiple per task with custom intervals), parent/child relationships for subtasks, and a local-only sort index for ordering subtasks.
 - **Project**: A grouping of tasks, synced from Notion. Key attributes: name (title). A virtual "Inbox" project exists for unassigned tasks.
-- **Reminder**: A locally-stored notification schedule tied to a task. Key attributes: task reference, interval before due date (e.g., "30 minutes", "1 day"), scheduled notification time (computed from task due date minus interval).
+- **Reminder**: A locally-stored notification schedule tied to a task. Key attributes: task reference, interval before due date (e.g., "30 minutes", "1 day"), scheduled notification time (computed from task due date minus interval), and a flag indicating whether it is currently scheduled in the iOS notification queue.
 - **User Session**: The authenticated connection to Notion. Key attributes: access token, workspace info, selected database IDs, property mappings.
 
 ## Success Criteria *(mandatory)*
@@ -224,7 +261,7 @@ The user adds a home screen widget showing a list of upcoming tasks with checkbo
 - **A-006**: The minimum deployment target is iOS 17.
 - **A-007**: The Apple Developer Team ID is GN4UMU6766 and bundle identifier follows the pattern com.kaungzinye.finally.
 - **A-008**: The Notion API version used is 2022-06-28 or the latest stable version at time of development.
-- **A-009**: Natural language parsing for task input (e.g., "buy groceries tomorrow p1") is a nice-to-have, not required for MVP.
+- **A-009**: ~~Natural language parsing for task input (e.g., "buy groceries tomorrow p1") is a nice-to-have, not required for MVP.~~ **Implemented**: `TaskTitleParser` extracts due dates, priority (p1–p4 / urgent/high/medium/low), @project mentions, and #tag mentions from inline task input. The inline creator auto-populates chips and the clean title strips detected tokens on submit.
 - **A-010**: The token exchange step of OAuth requires a server-side component (to protect the client_secret). This will be handled via a lightweight backend or serverless function.
 
 ## Scope Boundaries
@@ -232,10 +269,13 @@ The user adds a home screen widget showing a list of upcoming tasks with checkbo
 **In Scope**:
 - Notion OAuth connection and data sync
 - Todoist-style task views (Inbox, Today, Upcoming, Browse/Projects)
+- Board view (Kanban) for tasks grouped by status with drag-and-drop between columns
 - Inline task creation with chip-based field selection
+- Natural language date/priority/@project/#tag parsing in the inline task creator
 - Task editing and completion
-- Per-task custom staggered local push notifications
-- Recurring task due date advancement on completion
+- Subtasks / nested task hierarchies with suggested dates
+- Per-task custom staggered local push notifications (interval-before-due and absolute-date reminders)
+- Recurring task due date advancement on completion (including custom recurrence rules)
 - Database schema validation with actionable error messages
 - Dark/light mode with system preference support
 - Setup guide for Notion database requirements
@@ -246,9 +286,14 @@ The user adds a home screen widget showing a list of upcoming tasks with checkbo
 - iPad-specific layouts or Mac Catalyst optimization
 - Notion database creation (user must have existing databases)
 - Real-time collaboration or multi-user features
-- Subtasks or nested task hierarchies
 - File attachments or rich text editing in task descriptions
-- Natural language date/priority parsing
 - Calendar grid/month view
 - Watch complications
 - Offline task creation (offline mode is read-only with cached data)
+
+## Implementation Notes (divergences from original spec)
+
+- **SchemaValidator**: The "Status" property is required by name (case-insensitive). When a database has no "Status"-named property but has another `status`-type property, the validator reports an error rather than silently remapping — users must rename or the validator will flag it.
+- **ReminderItem**: Supports both interval-before-due reminders (`intervalSeconds > 0`) and absolute-date reminders (`absoluteDate: Date?`). The inline creator exposes both via `InlineReminderPicker`.
+- **Sync resilience (Part H)**: Status schema refresh silently falls back to current mappings if `retrieveDatabase` fails, preventing schema-fetch errors from aborting sync. Dirty tasks are never deleted during `fullSync`. Each task is saved individually after a successful push.
+- **NLP parsing**: `TaskTitleParser` handles "tomorrow", "next week", "p1"/"urgent", @project mentions, and #tags. Chips auto-populate and the clean title (without detected tokens) is stored on submit.

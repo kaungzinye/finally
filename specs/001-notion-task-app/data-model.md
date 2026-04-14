@@ -1,6 +1,7 @@
 # Data Model: Finally
 
 **Date**: 2026-03-13
+**Updated**: 2026-03-18
 **Feature**: 001-notion-task-app
 
 ## Entity Relationship Diagram
@@ -25,6 +26,7 @@
 │──────────────────────│     │  │──────────────────────│
 │ notionPageId: String  │     │  │ id: UUID (PK)         │
 │ title: String         │     │  │ intervalSeconds: Int   │
+│ iconEmoji: String?    │     │  │ absoluteDate: Date?    │
 │ lastEditedTime: Date? │     │  │ label: String          │
 │ lastSyncedAt: Date?   │     │  │ notificationId: String │
 └──────────────────────┘     │  │ isScheduled: Bool      │
@@ -38,13 +40,20 @@
 │ title: String         │
 │ status: TaskStatus    │
 │ dueDate: Date?        │
-│ priority: TaskPriority│
+│ startDate: Date?      │
+│ priority: TaskPriority?│
 │ tags: [String]        │
+│ tagColors: [String]   │
 │ recurrence: Recurrence│
+│ customRecurrenceJSON: String? │
 │ lastEditedTime: Date? │
 │ lastSyncedAt: Date?   │
 │ isDirty: Bool         │
 │ isDeleted: Bool       │
+│ isLocalOnly: Bool     │
+│ parentId: String?     │
+│ suggestedDate: Date?  │
+│ sortIndex: Int        │
 └──────────────────────┘
 ```
 
@@ -59,15 +68,24 @@ The primary entity representing a task synced from Notion.
 | notionPageId | String | Notion | Unique sync key. Notion page UUID. |
 | title | String | Notion | From the `title` property. |
 | status | TaskStatus | Notion | Enum: `.notStarted`, `.inProgress`, `.done`. Mapped from Notion `status` property groups. |
-| dueDate | Date? | Notion | From the `date` property. Nil if no due date set. |
+| dueDate | Date? | Notion | From the primary `date` property used as due date. Nil if no due date set. |
+| startDate | Date? | Notion | Optional start date for the task’s active work window, when available. |
 | priority | TaskPriority? | Notion | Enum: `.urgent`, `.high`, `.medium`, `.low`. From Notion `select` property. Nil if no priority. |
 | tags | [String] | Notion | Array of tag names from Notion `multi_select` property. |
-| recurrence | Recurrence | Notion | Enum: `.none`, `.daily`, `.weekly`, `.monthly`, `.yearly`. From Notion `select` property. |
+| tagColors | [String] | Notion | Parallel array of Notion color names for each tag (for UI chips and Kanban board). |
+| recurrence | Recurrence | Notion | Enum: `.none`, `.daily`, `.weekly`, `.monthly`, `.yearly`, `.custom`. From Notion `select` property. |
+| customRecurrenceJSON | String? | Local | JSON-encoded custom recurrence rule when `recurrence == .custom`. |
 | lastEditedTime | Date? | Notion | `last_edited_time` from Notion for conflict detection. |
 | lastSyncedAt | Date? | Local | Timestamp of last successful sync for this entity. |
 | isDirty | Bool | Local | True when local changes haven't been pushed to Notion. |
 | isDeleted | Bool | Local | Soft-delete flag for optimistic deletion before sync confirms. |
+| isLocalOnly | Bool | Local | True when the task has not yet been created in Notion (local draft). |
+| parentId | String? | Notion/Local | Notion page ID of parent task for subtasks; nil for top-level tasks. |
+| suggestedDate | Date? | Local | Suggested date used to surface subtasks in Today/Upcoming views. |
+| sortIndex | Int | Local | Ordering index used to sort subtasks under a parent. |
 | project | ProjectItem? | Notion | Relationship. From Notion `relation` property. Nil = Inbox. |
+| parent | TaskItem? | Local | Relationship to parent task entity (when this is a subtask). |
+| subtasks | [TaskItem] | Local | Inverse relationship for nested task hierarchies. |
 | reminders | [ReminderItem] | Local | Relationship (cascade delete). Local-only, not synced to Notion. |
 
 **State transitions for status:**
@@ -88,6 +106,7 @@ A grouping entity for tasks, synced from Notion.
 |-------|------|--------|-------|
 | notionPageId | String | Notion | Unique sync key. Notion page UUID. |
 | title | String | Notion | From the `title` property. |
+| iconEmoji | String? | Notion | Emoji from the Notion page icon (if set). Displayed next to project name in pickers and browse view. |
 | lastEditedTime | Date? | Notion | For sync conflict detection. |
 | lastSyncedAt | Date? | Local | Timestamp of last successful sync. |
 | tasks | [TaskItem] | Derived | Inverse relationship. All tasks linked to this project. |
@@ -101,16 +120,21 @@ A locally-stored notification schedule tied to a task. Never synced to Notion (F
 | Field | Type | Source | Notes |
 |-------|------|--------|-------|
 | id | UUID | Local | Auto-generated primary key. |
-| intervalSeconds | Int | Local | Seconds before due date to fire. E.g., 3600 = 1 hour before. |
-| label | String | Local | Human-readable label: "30 minutes before", "1 day before". |
-| notificationId | String | Local | `UNNotificationRequest` identifier. Format: `"task-{notionPageId}-reminder-{intervalSeconds}"`. |
-| isScheduled | Bool | Local | Whether this reminder is currently in the iOS notification queue (may be false if beyond the 64-notification limit). |
+| intervalSeconds | Int | Local | Seconds before due date to fire. E.g., 3600 = 1 hour before. **0 when `absoluteDate` is set.** |
+| absoluteDate | Date? | Local | If set, the reminder fires at this exact date/time (not relative to due date). Used for custom-date reminders. |
+| label | String | Local | Human-readable label: "30 minutes before", "1 day before", or a formatted absolute date string. |
+| notificationId | String | Local | `UNNotificationRequest` identifier. Format: `"task-{notionPageId}-reminder-{intervalSeconds}"` for interval reminders, `"task-{notionPageId}-reminder-abs-{unixTimestamp}"` for absolute reminders. |
+| isScheduled | Bool | Local | Whether this reminder is currently in the iOS notification queue (may be false if beyond the 60-notification limit). |
 | task | TaskItem? | Local | Parent relationship. |
 
+**Computed `fireDate`:**
+- If `absoluteDate != nil` → `absoluteDate`
+- Else → `task.dueDate - intervalSeconds`
+
 **Validation rules:**
-- `intervalSeconds` must be > 0
-- `task` must have a non-nil `dueDate` for the reminder to be schedulable
-- Computed fire date: `task.dueDate - intervalSeconds`
+- `task` must have a non-nil `dueDate` for interval-based reminders to be schedulable
+- `fireDate` must be in the future for the reminder to be scheduled
+- Absolute-date reminders can fire even if the task has no due date
 
 ### UserSession
 
@@ -154,6 +178,7 @@ Authentication and configuration state. Stored in Keychain (token) and UserDefau
 .weekly  → advance due date by 7 days
 .monthly → advance due date by 1 month (calendar-aware)
 .yearly  → advance due date by 1 year
+.custom  → advance due date according to a stored RecurrenceRule (JSON-backed)
 ```
 
 ## Property Mappings

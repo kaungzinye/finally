@@ -130,6 +130,16 @@
 - [ ] T050 [US4] Add background notification refresh: register BGAppRefreshTaskRequest in app launch, handler calls NotificationService.rescheduleAllReminders to top up notification slots; also reschedule on scenePhase change to .active
 - [x] T051 [US4] Request notification permission on first task reminder creation: if permission not yet granted, show system prompt via NotificationService.requestPermission before scheduling
 
+- [x] T077 [US4] Add `dueDateHasTime: Bool = false` to `Finally/Models/TaskItem.swift` — persisted SwiftData field; true when the Notion date string included a time component, false for date-only (all locally-created tasks via DatePickerSheet)
+- [x] T078 [US4] Update `Finally/Services/SyncService.swift` date mapping: after calling `parseDate(dateStr)`, also set `task.dueDateHasTime = dateStr.contains("T")` so time-bearing Notion dates are distinguished from date-only ones
+- [x] T079 [US4] Add `notificationBody(for:using:) -> String` to `Finally/Services/NotificationService.swift`: if `task.dueDateHasTime` → "Due at \(formatted time)"; if date == today → "Due today"; if date == tomorrow → "Due tomorrow"; otherwise "Due \(formatted date)"; if `task.dueDate == nil` → return "". Replace `content.body = reminder.label` with `content.body = notificationBody(for: task, using: now())`
+- [x] T080 [US4] Update `FinallyTests/Services/Unit/NotificationServiceUnitTests.swift`: add tests for `notificationBody` covering all 5 cases (due time, today, tomorrow, future date, nil due date) with injected clock; verify `content.body` in existing scheduleReminder tests reflects new body instead of label
+- [x] T081 [US4] Fix date-only parsing in `Finally/Services/SyncService.swift`: when `shortDateFormatter` parses a date-only string, use `Calendar.current.date(from:)` with local calendar to produce local midnight rather than UTC midnight — ensures "2026-03-20" is always 00:00 local, not 00:00 UTC
+- [x] T082 [US4] Add `@AppStorage("defaultReminderTimeMinutes") var defaultReminderTimeMinutes: Int = 540` (9 AM = 540 min from midnight) to `Finally/Views/Settings/SettingsView.swift` and create a `NotificationTimePickerView` in `Finally/Views/Settings/NotificationTimePickerView.swift` — TimePicker with `.hourAndMinute` components, saves as minutes-from-midnight, placed under a new "Notifications" section in Settings
+- [x] T083 [US4] Update `NotificationService.scheduleReminder` in `Finally/Services/NotificationService.swift`: add `defaultReminderMinutes: Int` parameter (default read from UserDefaults key "defaultReminderTimeMinutes", fallback 540). For date-only tasks (`!task.dueDateHasTime`), compute an adjusted due date at the preferred local time before subtracting `intervalSeconds` to get the fire date — so "30 min before" a date-only task with 9 AM default fires at 8:30 AM local
+- [x] T084 [US4] Trigger `rescheduleAllReminders` in `NotificationTimePickerView` (or its parent) when the default time changes, so existing date-only reminders immediately reflect the new preference
+- [x] T085 [US4] Add unit tests in `FinallyTests/Services/Unit/NotificationServiceUnitTests.swift` for date-only task scheduling: verify a "30 min before" reminder on a date-only task fires at (preferredTime - 30 min) local, not midnight - 30 min; verify changing preferredTime shifts the fire date accordingly
+
 **Checkpoint**: Multiple reminders per task work, notifications fire at correct times, deep linking to task works
 
 ---
@@ -313,5 +323,5 @@ T041: TaskDetailView.swift
 - [Story] label maps task to specific user story
 - Commit after each task or logical group
 - Stop at any checkpoint to validate independently
-- Total tasks: 76
-- Tasks per story: Setup=7, Foundation=10, US1=6, US2=10, US3=11, US4=7, US5=4, US6=6, US7=3, US8=5, Polish=7
+- Total tasks: 80
+- Tasks per story: Setup=7, Foundation=10, US1=6, US2=10, US3=11, US4=11, US5=4, US6=6, US7=3, US8=5, Polish=7
