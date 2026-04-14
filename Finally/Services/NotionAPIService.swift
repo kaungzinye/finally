@@ -9,6 +9,7 @@ protocol NotionAPIClient {
     ) async throws -> [NotionPage]
     func createPage(databaseId: String, properties: [String: Any]) async throws -> NotionPage
     func updatePage(pageId: String, properties: [String: Any]) async throws -> NotionPage
+    func archivePage(pageId: String) async throws
 }
 
 // MARK: - Notion API Error Types
@@ -193,8 +194,14 @@ final class NotionAPIService: NotionAPIClient {
         return d
     }()
 
+    private let injectedToken: String?
+
+    init(token: String? = nil) {
+        self.injectedToken = token
+    }
+
     private var accessToken: String? {
-        KeychainHelper.readNotionToken()
+        injectedToken ?? KeychainHelper.readNotionToken()
     }
 
     // MARK: - Request Building
@@ -352,8 +359,19 @@ final class NotionAPIService: NotionAPIClient {
         // Only return full-page databases, filter out inline databases
         return response.results.filter { $0.title?.first?.plainText != nil }
     }
-}
+
+    // MARK: - Page Archive
+
+    func archivePage(pageId: String) async throws {
+        let body: [String: Any] = ["archived": true]
+        let request = try buildRequest(path: "/pages/\(pageId)", method: "PATCH", body: body)
+        let _: NotionPage = try await execute(request)
+    }
+
+    // MARK: - Auth
+
     private func handleUnauthorizedResponse() {
         KeychainHelper.deleteNotionToken()
         NotificationCenter.default.post(name: .notionSessionExpired, object: nil)
     }
+}

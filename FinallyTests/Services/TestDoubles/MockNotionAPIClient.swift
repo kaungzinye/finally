@@ -13,6 +13,7 @@ final class MockNotionAPIClient: NotionAPIClient {
     var queryCalls: [QueryCall] = []
     var createdPages: [(databaseId: String, properties: [String: Any])] = []
     var updatedPages: [(pageId: String, properties: [String: Any])] = []
+    var archivedPageIds: [String] = []
 
     func retrieveDatabase(id: String) async throws -> NotionDatabase {
         if !retrieveDatabaseQueue.isEmpty {
@@ -35,7 +36,8 @@ final class MockNotionAPIClient: NotionAPIClient {
         return NotionPage(
             id: "remote-\(createdPages.count)",
             lastEditedTime: "2026-03-13T00:00:00.000Z",
-            properties: [:]
+            properties: [:],
+            icon: nil
         )
     }
 
@@ -44,8 +46,13 @@ final class MockNotionAPIClient: NotionAPIClient {
         return NotionPage(
             id: pageId,
             lastEditedTime: "2026-03-13T00:00:00.000Z",
-            properties: [:]
+            properties: [:],
+            icon: nil
         )
+    }
+
+    func archivePage(pageId: String) async throws {
+        archivedPageIds.append(pageId)
     }
 }
 
@@ -101,7 +108,7 @@ enum NotionTestFactory {
         lastEditedTime: String = "2026-03-13T00:00:00.000Z",
         properties: [String: NotionPropertyValue]
     ) -> NotionPage {
-        NotionPage(id: id, lastEditedTime: lastEditedTime, properties: properties)
+        NotionPage(id: id, lastEditedTime: lastEditedTime, properties: properties, icon: nil)
     }
 
     static func propertyValue(

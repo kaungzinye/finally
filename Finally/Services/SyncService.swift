@@ -140,7 +140,7 @@ final class SyncService {
 
     func pushDirtyChanges(session: UserSession, modelContext: ModelContext) async throws {
         let descriptor = FetchDescriptor<TaskItem>(predicate: #Predicate { $0.isDirty == true && $0.isLocalOnly == false })
-        let dirtyTasks = (try? modelContext.fetch(descriptor)) ?? []
+        let dirtyTasks = try modelContext.fetch(descriptor)  // Bug 2 fix: propagate fetch errors instead of silently returning []
 
         var mappings = session.propertyMappings
         mappings = try await refreshTaskStatusSchemaIfNeeded(
@@ -151,20 +151,42 @@ final class SyncService {
         )
 
         for task in dirtyTasks {
-            let properties = buildNotionProperties(for: task, mappings: mappings)
-            if task.lastSyncedAt == nil, !session.tasksDatabaseId.isEmpty {
-                let created = try await api.createPage(databaseId: session.tasksDatabaseId, properties: properties)
-                task.notionPageId = created.id
-            } else if task.lastSyncedAt == nil {
-                continue
-            } else {
-                _ = try await api.updatePage(pageId: task.notionPageId, properties: properties)
+            do {
+                let properties = buildNotionProperties(for: task, mappings: mappings)
+                if task.lastSyncedAt == nil, !session.tasksDatabaseId.isEmpty {
+                    let created = try await api.createPage(databaseId: session.tasksDatabaseId, properties: properties)
+                    task.notionPageId = created.id
+                } else if task.lastSyncedAt == nil {
+                    continue
+                } else {
+                    _ = try await api.updatePage(pageId: task.notionPageId, properties: properties)
+                }
+                task.isDirty = false
+                task.lastSyncedAt = Date()
+                try modelContext.save()  // Bug 1 fix: save per-task so isDirty is persisted even if later tasks fail
+            } catch NotionAPIError.rateLimited(let retryAfter) {
+                // Bug 3 fix: respect rate limit, retry once, then continue to next task
+                try? await Task.sleep(for: .seconds(retryAfter))
+                do {
+                    let properties = buildNotionProperties(for: task, mappings: mappings)
+                    if task.lastSyncedAt == nil, !session.tasksDatabaseId.isEmpty {
+                        let created = try await api.createPage(databaseId: session.tasksDatabaseId, properties: properties)
+                        task.notionPageId = created.id
+                    } else {
+                        _ = try await api.updatePage(pageId: task.notionPageId, properties: properties)
+                    }
+                    task.isDirty = false
+                    task.lastSyncedAt = Date()
+                    try modelContext.save()
+                } catch {
+                    print("[Sync] Failed to push task '\(task.title)' after rate-limit retry: \(error)")
+                }
+            } catch {
+                // Bug 3 fix: log and continue — don't clear isDirty so it retries next cycle
+                print("[Sync] Failed to push task '\(task.title)': \(error)")
             }
-            task.isDirty = false
-            task.lastSyncedAt = Date()
         }
 
-        try modelContext.save()
         reloadWidgetTimelines()
     }
 
@@ -210,7 +232,10 @@ final class SyncService {
             let task: TaskItem
             if let existing = (try? modelContext.fetch(descriptor))?.first {
                 // Don't overwrite local dirty changes
-                guard !existing.isDirty else { continue }
+                guard !existing.isDirty else {
+                    print("[Sync] Skipping upsert for dirty task '\(existing.title)' (id: \(pageId))")
+                    continue
+                }
                 task = existing
             } else {
                 task = TaskItem(notionPageId: page.id, title: title)
@@ -238,15 +263,18 @@ final class SyncService {
                     // Date range: start → startDate, end → dueDate (deadline)
                     task.startDate = parseDate(dateStr)
                     task.dueDate = parseDate(endStr)
+                    task.dueDateHasTime = endStr.contains("T")
                     print("[Sync] Task '\(title)' range: '\(dateStr)' – '\(endStr)'")
                 } else {
                     // Single date: just a due date
                     task.dueDate = parseDate(dateStr)
+                    task.dueDateHasTime = dateStr.contains("T")
                     task.startDate = nil
                     print("[Sync] Task '\(title)' due: '\(dateStr)' → \(String(describing: task.dueDate))")
                 }
             } else {
                 task.dueDate = nil
+                task.dueDateHasTime = false
                 task.startDate = nil
             }
 
@@ -297,6 +325,8 @@ final class SyncService {
         for item in locals {
             // Skip local-only items (e.g., sub-tasks)
             if let task = item as? TaskItem, task.isLocalOnly { continue }
+            // Bug 4 fix: don't delete tasks with unsaved local edits
+            if let task = item as? TaskItem, task.isDirty { continue }
             if !remoteIds.contains(item.notionPageId) {
                 modelContext.delete(item)
             }
@@ -388,7 +418,7 @@ final class SyncService {
         }
 
         guard needsRefresh,
-              let statusSchema = try await fetchTaskStatusSchema(
+              let statusSchema = await fetchTaskStatusSchema(
                   databaseId: session.tasksDatabaseId,
                   propertyName: currentMappings.taskStatusProperty
               ) else {
@@ -401,8 +431,8 @@ final class SyncService {
         return updatedMappings
     }
 
-    private func fetchTaskStatusSchema(databaseId: String, propertyName: String) async throws -> NotionStatusSchema? {
-        let database = try await api.retrieveDatabase(id: databaseId)
+    private func fetchTaskStatusSchema(databaseId: String, propertyName: String) async -> NotionStatusSchema? {
+        guard let database = try? await api.retrieveDatabase(id: databaseId) else { return nil }
         return database.properties[propertyName]?.status
     }
 
@@ -415,9 +445,24 @@ final class SyncService {
     }
 
     private func parseDate(_ string: String) -> Date? {
-        // Try full ISO8601 first, then date-only
+        // Full ISO8601 with time+timezone — already in correct absolute time
         if let date = dateFormatter.date(from: string) { return date }
-        if let date = shortDateFormatter.date(from: string) { return date }
+        // Date-only: "2026-03-20" — ISO8601DateFormatter interprets this as UTC midnight,
+        // which is wrong for users in non-UTC timezones. Parse as local calendar date instead.
+        if string.count == 10, !string.contains("T") {
+            var components = DateComponents()
+            let parts = string.split(separator: "-")
+            if parts.count == 3,
+               let year = Int(parts[0]), let month = Int(parts[1]), let day = Int(parts[2]) {
+                components.year = year
+                components.month = month
+                components.day = day
+                components.hour = 0
+                components.minute = 0
+                components.second = 0
+                return Calendar.current.date(from: components)
+            }
+        }
         return nil
     }
 

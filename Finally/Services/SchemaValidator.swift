@@ -50,9 +50,6 @@ final class SchemaValidator {
                     message: "Property '\(explicitStatusProp.key)' should be type status, found \(explicitStatusProp.value.type)."
                 ))
             }
-        } else if let statusProp = database.properties.first(where: { $0.value.type == "status" }) {
-            mappings.taskStatusProperty = statusProp.key
-            mappings.taskStatusSchema = statusProp.value.status
         } else {
             result.issues.append(.init(
                 propertyName: "Status",
