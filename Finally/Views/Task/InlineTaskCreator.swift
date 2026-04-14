@@ -204,7 +204,7 @@ struct InlineTaskCreator: View {
         .padding(.top, 12)
         .background(
             Color(.secondarySystemBackground)
-                .ignoresSafeArea(.keyboard, edges: .bottom)
+                .ignoresSafeArea(edges: .bottom)
         )
         .clipShape(.rect(topLeadingRadius: 16, topTrailingRadius: 16))
         .onAppear {

@@ -24,6 +24,10 @@ enum AppConstants {
     // Notifications
     static let maxScheduledNotifications = 60 // Leave 4 buffer from iOS 64 limit
     static let backgroundRefreshID = "com.kaungzinye.finally.refresh"
+    /// UserDefaults key for the default reminder time (minutes from midnight) for date-only tasks.
+    static let defaultReminderTimeMinutesKey = "defaultReminderTimeMinutes"
+    /// Default: 9:00 AM = 540 minutes from midnight.
+    static let defaultReminderTimeMinutes = 540
 
     // Widget
     static let widgetKind = "TaskListWidget"

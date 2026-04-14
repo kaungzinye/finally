@@ -15,6 +15,8 @@
 		1EC4B254DBD54D006F6CB30D /* NotificationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 945D47BECC130042350E778B /* NotificationService.swift */; };
 		27541C233B7309950256A7CC /* NotionConnectView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6491D6ECA6018FBC712CEEE1 /* NotionConnectView.swift */; };
 		29E5ADA85E0F38D1F3E98CB0 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 57297B6B182C9224FF27FA72 /* SettingsView.swift */; };
+		B2C3D4E5F6A7B8C9D0E1F2A3 /* NotificationTimePickerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F6A7B8C9D0E1F2 /* NotificationTimePickerView.swift */; };
+		D4E5F6A7B8C9D0E1F2A3B4C5 /* NotificationServiceUnitTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C3D4E5F6A7B8C9D0E1F2A3B4 /* NotificationServiceUnitTests.swift */; };
 		2BA18E36246E875B2071B500 /* InboxView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7D8527647C1E7B50BB5091B3 /* InboxView.swift */; };
 		34F63FDAE9AF83CAA6DCA4AF /* BackendDataFlowIntegrationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8C46663913189E0200BD2F8C /* BackendDataFlowIntegrationTests.swift */; };
 		355ED7047F5FF404C3DA161E /* BrowseProjectsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6BB4558F2F9209A1B689A505 /* BrowseProjectsView.swift */; };
@@ -114,11 +116,13 @@
 		44FC30A47CA1D9B4F15234D2 /* TaskDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskDetailView.swift; sourceTree = "<group>"; };
 		5433380C376ADA260E8BAFA3 /* TaskStatusMappingUnitTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskStatusMappingUnitTests.swift; sourceTree = "<group>"; };
 		57297B6B182C9224FF27FA72 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
+		A1B2C3D4E5F6A7B8C9D0E1F2 /* NotificationTimePickerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationTimePickerView.swift; sourceTree = "<group>"; };
+		C3D4E5F6A7B8C9D0E1F2A3B4 /* NotificationServiceUnitTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationServiceUnitTests.swift; sourceTree = "<group>"; };
 		59DCDD8E8EB5F548CA2EC0AE /* SortConfigView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SortConfigView.swift; sourceTree = "<group>"; };
 		5DF9E28C5C320BE1EE73448A /* Enums.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Enums.swift; sourceTree = "<group>"; };
 		6195045508D41FC6C8438C7F /* SyncService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SyncService.swift; sourceTree = "<group>"; };
 		628D2FCDB35AAD3E45C3B77E /* SchemaValidator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SchemaValidator.swift; sourceTree = "<group>"; };
-		6361629AB42FF68CA77254EC /* Finally.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = Finally.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		6361629AB42FF68CA77254EC /* Finally.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Finally.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		6491D6ECA6018FBC712CEEE1 /* NotionConnectView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotionConnectView.swift; sourceTree = "<group>"; };
 		695A63457914D18721BF9D98 /* SchemaValidatorUnitTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SchemaValidatorUnitTests.swift; sourceTree = "<group>"; };
 		6BB4558F2F9209A1B689A505 /* BrowseProjectsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrowseProjectsView.swift; sourceTree = "<group>"; };
@@ -126,7 +130,7 @@
 		6D0E48E011BE7F2F17609008 /* TagPicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TagPicker.swift; sourceTree = "<group>"; };
 		704CA9D55BA23389B037E759 /* FinallyApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FinallyApp.swift; sourceTree = "<group>"; };
 		73E930F938CF489C943C7116 /* NotificationDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationDelegate.swift; sourceTree = "<group>"; };
-		7B0D46B9D70A397B119AD10B /* FinallyTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = FinallyTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		7B0D46B9D70A397B119AD10B /* FinallyTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = FinallyTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		7BCA58CAA6230EA38C28E288 /* KanbanView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KanbanView.swift; sourceTree = "<group>"; };
 		7BF749849481652D57D1A7DA /* AppearanceSettingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppearanceSettingView.swift; sourceTree = "<group>"; };
 		7D8527647C1E7B50BB5091B3 /* InboxView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InboxView.swift; sourceTree = "<group>"; };
@@ -334,6 +338,7 @@
 				6BE4BD53E8A06D86F228E95E /* NotionDataShapeUnitTests.swift */,
 				695A63457914D18721BF9D98 /* SchemaValidatorUnitTests.swift */,
 				5433380C376ADA260E8BAFA3 /* TaskStatusMappingUnitTests.swift */,
+				C3D4E5F6A7B8C9D0E1F2A3B4 /* NotificationServiceUnitTests.swift */,
 			);
 			path = Unit;
 			sourceTree = "<group>";
@@ -375,6 +380,7 @@
 				7BF749849481652D57D1A7DA /* AppearanceSettingView.swift */,
 				D3442B96662ADFB087A822D4 /* DatabaseSetupGuideView.swift */,
 				57297B6B182C9224FF27FA72 /* SettingsView.swift */,
+				A1B2C3D4E5F6A7B8C9D0E1F2 /* NotificationTimePickerView.swift */,
 			);
 			path = Settings;
 			sourceTree = "<group>";
@@ -492,6 +498,7 @@
 				B2F654397FD23CCA177DA1AE /* SchemaValidatorUnitTests.swift in Sources */,
 				5BFF0F024F1538934C7D9EFC /* SyncServiceNotionMappingIntegrationTests.swift in Sources */,
 				052CF12915DE19D4E836E671 /* TaskStatusMappingUnitTests.swift in Sources */,
+				D4E5F6A7B8C9D0E1F2A3B4C5 /* NotificationServiceUnitTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -542,6 +549,7 @@
 				5370AD49C76C17C138092D04 /* SchemaValidator.swift in Sources */,
 				575E87DEC706424074C2A57A /* SearchFilterView.swift in Sources */,
 				29E5ADA85E0F38D1F3E98CB0 /* SettingsView.swift in Sources */,
+				B2C3D4E5F6A7B8C9D0E1F2A3 /* NotificationTimePickerView.swift in Sources */,
 				9255166257397CF0AE207DFD /* SortConfigView.swift in Sources */,
 				75C247FB0B0194F59F0C4E73 /* SubtaskScheduler.swift in Sources */,
 				CAAB2900354A6287A3F6EE19 /* SyncService.swift in Sources */,
@@ -599,6 +607,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = Finally/Finally.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
+				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = Finally/Info.plist;
 				INFOPLIST_VALUES = "CFBundleDisplayName=Finally CFBundleShortVersionString=1.0 CFBundleVersion=1 UILaunchScreen_Generation=YES UIUserInterfaceStyle=Automatic";
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -673,6 +682,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
+				GENERATE_INFOPLIST_FILE = YES;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -756,6 +766,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = Finally/Finally.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
+				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = Finally/Info.plist;
 				INFOPLIST_VALUES = "CFBundleDisplayName=Finally CFBundleShortVersionString=1.0 CFBundleVersion=1 UILaunchScreen_Generation=YES UIUserInterfaceStyle=Automatic";
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -772,6 +783,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
+				GENERATE_INFOPLIST_FILE = YES;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",

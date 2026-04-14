@@ -11,6 +11,19 @@ struct SettingsView: View {
     var body: some View {
         NavigationStack {
             List {
+                Section("Notifications") {
+                    NavigationLink {
+                        NotificationTimePickerView()
+                    } label: {
+                        HStack {
+                            Label("Default Reminder Time", systemImage: "clock")
+                            Spacer()
+                            DefaultReminderTimeLabel()
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                }
+
                 Section("Appearance") {
                     NavigationLink {
                         AppearanceSettingView()

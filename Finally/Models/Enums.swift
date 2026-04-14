@@ -182,6 +182,7 @@ enum ReminderOffset: String, CaseIterable, Identifiable {
     case thirtyMin = "30 minutes before"
     case oneHour = "1 hour before"
     case oneDay = "1 day before"
+    case oneWeek = "1 week before"
 
     var id: String { rawValue }
 
@@ -193,6 +194,7 @@ enum ReminderOffset: String, CaseIterable, Identifiable {
         case .thirtyMin: return 1800
         case .oneHour: return 3600
         case .oneDay: return 86400
+        case .oneWeek: return 604800
         }
     }
 }

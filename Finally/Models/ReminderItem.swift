@@ -15,8 +15,8 @@ final class ReminderItem {
     /// Computed fire date — uses absoluteDate if set, otherwise offset from task's due date
     var fireDate: Date? {
         if let absoluteDate { return absoluteDate }
-        guard let dueDate = task?.dueDate else { return nil }
-        return dueDate.addingTimeInterval(-TimeInterval(intervalSeconds))
+        guard let effectiveDate = task?.effectiveDate else { return nil }
+        return effectiveDate.addingTimeInterval(-TimeInterval(intervalSeconds))
     }
 
     /// Interval-based reminder

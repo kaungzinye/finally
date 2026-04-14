@@ -13,6 +13,7 @@ struct TaskDetailView: View {
     @State private var showProjectPicker = false
     @State private var showRecurrencePicker = false
     @State private var newSubtaskTitle = ""
+    @State private var subtaskReminderTarget: TaskItem? = nil
 
     @State private var editedTitle: String = ""
     @State private var editedDueDate: Date?
@@ -162,6 +163,7 @@ struct TaskDetailView: View {
                                         subtask.status = subtask.status == .done ? .notStarted : .done
                                         if subtask.status == .done {
                                             SubtaskScheduler.autoLevel(parent: task, completedSubtask: subtask)
+                                            NotificationService.shared.rescheduleAllReminders(modelContext: modelContext)
                                         }
                                     }
                                 } label: {
@@ -181,6 +183,16 @@ struct TaskDetailView: View {
                                 }
 
                                 Spacer()
+
+                                subtaskReminderIndicator(subtask)
+
+                                Button {
+                                    subtaskReminderTarget = subtask
+                                } label: {
+                                    Image(systemName: subtask.reminders.isEmpty ? "bell" : "bell.badge")
+                                        .foregroundStyle(subtask.reminders.isEmpty ? Color.secondary : Color.orange)
+                                }
+                                .buttonStyle(.plain)
                             }
                         }
                         .onDelete { indexSet in
@@ -189,6 +201,7 @@ struct TaskDetailView: View {
                                 modelContext.delete(sorted[index])
                             }
                             SubtaskScheduler.distributeSubtaskDates(parent: task)
+                            NotificationService.shared.rescheduleAllReminders(modelContext: modelContext)
                         }
                         .onMove { from, to in
                             var sorted = task.subtasks.sorted { $0.sortIndex < $1.sortIndex }
@@ -197,6 +210,7 @@ struct TaskDetailView: View {
                                 subtask.sortIndex = i
                             }
                             SubtaskScheduler.distributeSubtaskDates(parent: task)
+                            NotificationService.shared.rescheduleAllReminders(modelContext: modelContext)
                         }
 
                         // Add subtask
@@ -255,6 +269,20 @@ struct TaskDetailView: View {
                 contextDate: editedDueDate
             )
         }
+        .sheet(item: $subtaskReminderTarget) { subtask in
+            SubtaskReminderSheet(subtask: subtask)
+        }
+    }
+
+    @ViewBuilder
+    private func subtaskReminderIndicator(_ subtask: TaskItem) -> some View {
+        let now = Date()
+        let nextFire = subtask.reminders.compactMap(\.fireDate).filter { $0 > now }.min()
+        if let fire = nextFire {
+            Label(fire.formatted(date: .omitted, time: .shortened), systemImage: "bell.fill")
+                .font(.caption2)
+                .foregroundStyle(Color.orange)
+        }
     }
 
     private func addSubtask() {
@@ -272,6 +300,7 @@ struct TaskDetailView: View {
 
         // Recalculate dates after adding
         SubtaskScheduler.distributeSubtaskDates(parent: task)
+        NotificationService.shared.rescheduleAllReminders(modelContext: modelContext)
     }
 
     private func saveChanges() {

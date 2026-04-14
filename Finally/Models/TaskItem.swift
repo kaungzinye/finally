@@ -7,6 +7,7 @@ final class TaskItem {
     var title: String
     var statusRaw: String = TaskStatus.notStarted.rawValue
     var dueDate: Date?
+    var dueDateHasTime: Bool = false  // true when Notion date included a time component; false for date-only
     var startDate: Date?  // Read-only from Notion sync, powers orange "active window" indicator
     var priorityRaw: String?
     var tags: [String] = []
