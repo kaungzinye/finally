@@ -1,7 +1,7 @@
 # Data Model: Finally
 
 **Date**: 2026-03-13
-**Updated**: 2026-03-18
+**Updated**: 2026-04-14
 **Feature**: 001-notion-task-app
 
 ## Entity Relationship Diagram
@@ -21,82 +21,83 @@
 │ createdAt: Date       │
 └──────────────────────┘
 
-┌──────────────────────┐         ┌──────────────────────┐
-│     ProjectItem       │◄────┐  │     ReminderItem      │
-│──────────────────────│     │  │──────────────────────│
-│ notionPageId: String  │     │  │ id: UUID (PK)         │
-│ title: String         │     │  │ intervalSeconds: Int   │
-│ iconEmoji: String?    │     │  │ absoluteDate: Date?    │
-│ lastEditedTime: Date? │     │  │ label: String          │
-│ lastSyncedAt: Date?   │     │  │ notificationId: String │
-└──────────────────────┘     │  │ isScheduled: Bool      │
-        │                     │  └──────────────────────┘
-        │ 1:N                 │           │
-        ▼                     │           │ N:1
-┌──────────────────────┐     │           │
-│      TaskItem         │─────┘           │
-│──────────────────────│◄─────────────────┘
+┌──────────────────────┐
+│     ProjectItem       │
+│──────────────────────│
 │ notionPageId: String  │
 │ title: String         │
-│ status: TaskStatus    │
-│ dueDate: Date?        │
-│ startDate: Date?      │
-│ priority: TaskPriority?│
-│ tags: [String]        │
-│ tagColors: [String]   │
-│ recurrence: Recurrence│
-│ customRecurrenceJSON: String? │
+│ iconEmoji: String?    │
 │ lastEditedTime: Date? │
 │ lastSyncedAt: Date?   │
-│ isDirty: Bool         │
-│ isDeleted: Bool       │
-│ isLocalOnly: Bool     │
-│ parentId: String?     │
-│ suggestedDate: Date?  │
-│ sortIndex: Int        │
 └──────────────────────┘
+        │ 1:N
+        ▼
+┌──────────────────────────────────────────────┐
+│                  TaskItem                    │
+│──────────────────────────────────────────────│
+│ notionPageId: String                         │
+│ title: String                                │
+│ status: TaskStatus                           │
+│ dueDate: Date?                               │
+│ targetDate: Date?                            │
+│ remindersJSON: String?                       │
+│ priority: TaskPriority?                      │
+│ tags: [String]                               │
+│ tagColors: [String]                          │
+│ recurrence: Recurrence                       │
+│ customRecurrenceJSON: String?                │
+│ lastEditedTime: Date?                        │
+│ lastSyncedAt: Date?                          │
+│ isDirty: Bool                                │
+│ isDeleted: Bool                              │
+│ parentId: String?                            │
+│ sortIndex: Int                               │
+│ suggestedDateOverride: Date?                 │
+└──────────────────────────────────────────────┘
+        ▲                          │
+        │ parent-child             │ N:1
+        └──────────────────────────┘
 ```
 
 ## Entities
 
 ### TaskItem
 
-The primary entity representing a task synced from Notion.
+The primary task entity synced from Notion. Subtasks are also `TaskItem` records; they are distinguished by having a `parentId`.
 
 | Field | Type | Source | Notes |
 |-------|------|--------|-------|
 | notionPageId | String | Notion | Unique sync key. Notion page UUID. |
 | title | String | Notion | From the `title` property. |
-| status | TaskStatus | Notion | Enum: `.notStarted`, `.inProgress`, `.done`. Mapped from Notion `status` property groups. |
-| dueDate | Date? | Notion | From the primary `date` property used as due date. Nil if no due date set. |
-| startDate | Date? | Notion | Optional start date for the task’s active work window, when available. |
-| priority | TaskPriority? | Notion | Enum: `.urgent`, `.high`, `.medium`, `.low`. From Notion `select` property. Nil if no priority. |
-| tags | [String] | Notion | Array of tag names from Notion `multi_select` property. |
-| tagColors | [String] | Notion | Parallel array of Notion color names for each tag (for UI chips and Kanban board). |
-| recurrence | Recurrence | Notion | Enum: `.none`, `.daily`, `.weekly`, `.monthly`, `.yearly`, `.custom`. From Notion `select` property. |
+| status | TaskStatus | Notion | Enum: `.notStarted`, `.inProgress`, `.done`. |
+| dueDate | Date? | Notion | Official deadline synced to Notion `Due`. This is the primary task date in the app. |
+| targetDate | Date? | Notion | Optional earlier planning date synced to a secondary Notion date field such as `Target`. |
+| remindersJSON | String? | Local | JSON array of anchored reminders stored on-device. |
+| priority | TaskPriority? | Notion | Enum: `.urgent`, `.high`, `.medium`, `.low`. |
+| tags | [String] | Notion | Array of tag names from the `multi_select` property. |
+| tagColors | [String] | Notion | Parallel array of Notion color names for tag rendering. |
+| recurrence | Recurrence | Notion | Enum: `.none`, `.daily`, `.weekly`, `.monthly`, `.yearly`, `.custom`. |
 | customRecurrenceJSON | String? | Local | JSON-encoded custom recurrence rule when `recurrence == .custom`. |
 | lastEditedTime | Date? | Notion | `last_edited_time` from Notion for conflict detection. |
-| lastSyncedAt | Date? | Local | Timestamp of last successful sync for this entity. |
-| isDirty | Bool | Local | True when local changes haven't been pushed to Notion. |
+| lastSyncedAt | Date? | Local | Timestamp of last successful sync. |
+| isDirty | Bool | Local | True when local changes have not yet been pushed to Notion. |
 | isDeleted | Bool | Local | Soft-delete flag for optimistic deletion before sync confirms. |
-| isLocalOnly | Bool | Local | True when the task has not yet been created in Notion (local draft). |
-| parentId | String? | Notion/Local | Notion page ID of parent task for subtasks; nil for top-level tasks. |
-| suggestedDate | Date? | Local | Suggested date used to surface subtasks in Today/Upcoming views. |
-| sortIndex | Int | Local | Ordering index used to sort subtasks under a parent. |
-| project | ProjectItem? | Notion | Relationship. From Notion `relation` property. Nil = Inbox. |
-| parent | TaskItem? | Local | Relationship to parent task entity (when this is a subtask). |
-| subtasks | [TaskItem] | Local | Inverse relationship for nested task hierarchies. |
-| reminders | [ReminderItem] | Local | Relationship (cascade delete). Local-only, not synced to Notion. |
+| parentId | String? | Notion | Parent task page ID for subtasks. Nil for top-level tasks. |
+| sortIndex | Int | Local | Ordering index for subtasks under the same parent. |
+| suggestedDateOverride | Date? | Local | Manual override of the subtask's computed suggested date. |
+| project | ProjectItem? | Notion | Relationship to the owning project. Nil = Inbox. |
+| parent | TaskItem? | Notion | Parent relationship for subtasks. |
+| subtasks | [TaskItem] | Derived | Inverse relationship of child tasks. |
 
-**State transitions for status:**
-- Not Started → In Progress → Done
-- Done → Not Started (when recurring task completes and due date advances)
+**Computed values:**
+- `effectiveSuggestedDate = suggestedDateOverride ?? computedFromParentWindow`
 
 **Validation rules:**
 - `notionPageId` must be non-empty and unique
 - `title` must be non-empty
-- `dueDate` is required for reminders to be schedulable
-- When `recurrence != .none` and task is completed: advance `dueDate`, reset `status` to `.notStarted`
+- `dueDate` is the primary planning date
+- `targetDate`, when set, must be strictly earlier than `dueDate`
+- Subtasks are real Notion pages; they must not rely on an `isLocalOnly` subtask mode in the redesigned model
 
 ### ProjectItem
 
@@ -106,35 +107,51 @@ A grouping entity for tasks, synced from Notion.
 |-------|------|--------|-------|
 | notionPageId | String | Notion | Unique sync key. Notion page UUID. |
 | title | String | Notion | From the `title` property. |
-| iconEmoji | String? | Notion | Emoji from the Notion page icon (if set). Displayed next to project name in pickers and browse view. |
+| iconEmoji | String? | Notion | Emoji from the Notion page icon, if set. |
 | lastEditedTime | Date? | Notion | For sync conflict detection. |
 | lastSyncedAt | Date? | Local | Timestamp of last successful sync. |
 | tasks | [TaskItem] | Derived | Inverse relationship. All tasks linked to this project. |
 
 **Note:** A virtual "Inbox" project is not stored in the database. Tasks with `project == nil` are displayed under "Inbox" in the UI.
 
-### ReminderItem
+### ReminderOffset
 
-A locally-stored notification schedule tied to a task. Never synced to Notion (FR-021).
+A local-only anchored reminder descriptor stored inside `TaskItem.remindersJSON`.
 
 | Field | Type | Source | Notes |
 |-------|------|--------|-------|
-| id | UUID | Local | Auto-generated primary key. |
-| intervalSeconds | Int | Local | Seconds before due date to fire. E.g., 3600 = 1 hour before. **0 when `absoluteDate` is set.** |
-| absoluteDate | Date? | Local | If set, the reminder fires at this exact date/time (not relative to due date). Used for custom-date reminders. |
-| label | String | Local | Human-readable label: "30 minutes before", "1 day before", or a formatted absolute date string. |
-| notificationId | String | Local | `UNNotificationRequest` identifier. Format: `"task-{notionPageId}-reminder-{intervalSeconds}"` for interval reminders, `"task-{notionPageId}-reminder-abs-{unixTimestamp}"` for absolute reminders. |
-| isScheduled | Bool | Local | Whether this reminder is currently in the iOS notification queue (may be false if beyond the 60-notification limit). |
-| task | TaskItem? | Local | Parent relationship. |
+| anchor | ReminderAnchor | Local | One of `target` or `due`. |
+| value | Int | Local | Positive integer value for the offset amount. |
+| unit | ReminderOffsetUnit | Local | One of `minutes`, `hours`, `days`, `weeks`, `months`. |
+| direction | ReminderOffsetDirection | Local | `before` or `after`. |
 
-**Computed `fireDate`:**
-- If `absoluteDate != nil` → `absoluteDate`
-- Else → `task.dueDate - intervalSeconds`
+**Scheduling semantics:**
+- `anchor = target` → resolve from `targetDate`
+- `anchor = due` → resolve from `dueDate`
 
 **Validation rules:**
-- `task` must have a non-nil `dueDate` for interval-based reminders to be schedulable
-- `fireDate` must be in the future for the reminder to be scheduled
-- Absolute-date reminders can fire even if the task has no due date
+- `minutes` → `1...59`
+- `hours` → `1...23`
+- `days` → `1...30`
+- `weeks` → `1...51`
+- `months` → `1...11`
+- `years` is not supported; use months instead
+
+**Storage note:**
+- Quick presets such as "1 week before target" are convenience constructors only. They serialize to the same `ReminderOffset` structure as custom reminder entries.
+
+### ExplicitDateReminder
+
+A local-only exact-time reminder descriptor that also lives inside `TaskItem.remindersJSON`.
+
+| Field | Type | Source | Notes |
+|-------|------|--------|-------|
+| dateTime | Date | Local | Fires at this exact date/time. |
+
+**Semantics:**
+- Does not use `targetDate` or `dueDate` as an anchor
+- Remains fixed even if task dates change
+- Allows reminders to exist even when the task has no `dueDate`
 
 ### UserSession
 
@@ -143,16 +160,14 @@ Authentication and configuration state. Stored in Keychain (token) and UserDefau
 | Field | Type | Source | Notes |
 |-------|------|--------|-------|
 | id | UUID | Local | Auto-generated. |
-| accessToken | String | Notion OAuth | Stored in Keychain, NOT in SwiftData. |
+| accessToken | String | Notion OAuth | Stored in Keychain, not in SwiftData. |
 | workspaceId | String | Notion OAuth | From token exchange response. |
 | workspaceName | String | Notion OAuth | Display name for connected workspace. |
 | tasksDatabaseId | String | User selection | Notion database ID for Tasks. |
 | projectsDatabaseId | String | User selection | Notion database ID for Projects. |
-| propertyMappings | PropertyMappings | User/auto | Maps Notion property names to app fields (e.g., which date property is "due date"). |
-| lastFullSyncAt | Date? | Local | When the last full (non-incremental) sync was performed. |
+| propertyMappings | PropertyMappings | User/auto | Maps Notion property names to app fields. |
+| lastFullSyncAt | Date? | Local | When the last full sync was performed. |
 | createdAt | Date | Local | When the session was established. |
-
-**Note:** `accessToken` is stored separately in the Keychain via the Security framework. The `UserSession` entity in SwiftData holds everything except the token.
 
 ## Enums
 
@@ -165,10 +180,10 @@ Authentication and configuration state. Stored in Keychain (token) and UserDefau
 
 ### TaskPriority
 ```
-.urgent  → color: red    → maps to Notion select option "Urgent"
-.high    → color: orange → maps to Notion select option "High"
-.medium  → color: blue   → maps to Notion select option "Medium"
-.low     → color: default → maps to Notion select option "Low"
+.urgent  → color: red
+.high    → color: orange
+.medium  → color: blue
+.low     → color: default
 ```
 
 ### Recurrence
@@ -176,31 +191,87 @@ Authentication and configuration state. Stored in Keychain (token) and UserDefau
 .none    → no recurrence
 .daily   → advance due date by 1 day
 .weekly  → advance due date by 7 days
-.monthly → advance due date by 1 month (calendar-aware)
+.monthly → advance due date by 1 month
 .yearly  → advance due date by 1 year
-.custom  → advance due date according to a stored RecurrenceRule (JSON-backed)
+.custom  → advance due date according to stored recurrence JSON
 ```
+
+### ReminderOffsetUnit
+```
+.minutes
+.hours
+.days
+.weeks
+.months
+```
+
+### ReminderOffsetDirection
+```
+.before
+.after
+```
+
+### ReminderAnchor
+```
+.target
+.due
+```
+
+## Subtask Scheduling
+
+Default suggested dates for subtasks are computed from the parent task window:
+
+- If parent has a `targetDate`, the app works backward from `targetDate`
+- Otherwise it works backward from `dueDate`
+- Later subtasks land closer to the chosen planning date, earlier subtasks are spaced earlier by subtask order
+- Any subtask may override its computed date via `suggestedDateOverride`
+
+## Recurrence + Deadline Behavior
+
+- Recurrence and reminders are separate concerns
+- A recurring task keeps its recurrence rule, anchored reminders, and target date as reusable metadata
+- When the task rolls into the next cycle, the same reminders are re-applied to the new dates using their explicit anchors
+- In the app model, recurrence creates a new logical cycle; in the Notion model, the same parent and subtask pages persist and reset state rather than duplicating pages
 
 ## Property Mappings
 
-The app detects Notion database properties by **type**, not name. When ambiguity exists (e.g., multiple `date` properties), the user is prompted to map them.
+The app detects Notion database properties by **type**, not name, unless a specific named property is required by product policy.
 
 ### Required Tasks Database Properties
 
 | App Field | Notion Property Type | Detection Strategy |
 |-----------|---------------------|--------------------|
-| Name | `title` | Guaranteed to exist (one per database) |
-| Status | `status` | Find the `status` type property; map options to groups |
-| Due Date | `date` | If one `date` property exists, auto-map. If multiple, prompt user. |
+| Name | `title` | Guaranteed to exist |
+| Status | `status` | Required for task state |
+| Due | `date` | Used as the official deadline field |
+| Target | `date` | Used as the optional earlier planning field |
+| Parent Task | `relation` / parent-child | Required for real Notion-backed subtasks in the redesigned model |
 
 ### Optional Tasks Database Properties
 
 | App Field | Notion Property Type | Detection Strategy |
 |-----------|---------------------|--------------------|
-| Priority | `select` | Look for a `select` with options containing "High"/"Medium"/"Low" or "Urgent"/"P1"/etc. |
-| Tags | `multi_select` | Look for any `multi_select` property. If multiple, prompt user. |
-| Project | `relation` | Look for a `relation` pointing to the Projects database. |
-| Recurrence | `select` | Look for a `select` with options containing "Daily"/"Weekly"/"Monthly"/"Yearly". If not found, offer to create it. |
+| Priority | `select` | Match known priority values |
+| Tags | `multi_select` | Any tag collection property |
+| Project | `relation` | Relation to the Projects database |
+| Recurrence | `select` | Match daily / weekly / monthly / yearly / custom semantics |
+
+## Sync Layer
+
+The sync contract is intentionally simpler than the app planning model:
+
+- Notion `Due` <-> app `dueDate`
+- Notion `Target` <-> app `targetDate`
+- Local only:
+  - `remindersJSON`
+  - `sortIndex`
+  - `suggestedDateOverride`
+
+Subtasks in the app should mirror Notion subtasks directly:
+
+- every app subtask is a real Notion child page
+- the app should not maintain a parallel subtask-only hierarchy that differs from Notion
+- local metadata may enrich planning, but Notion remains the structural source of truth
 
 ### Required Projects Database Properties
 

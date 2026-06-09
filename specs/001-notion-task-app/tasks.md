@@ -144,6 +144,21 @@
 
 ---
 
+## Phase 6B: Deadline Model Redesign (Planned)
+
+**Purpose**: Replace the current reminder/deadline storage model with explicit target dates, hybrid reminders (anchored plus explicit-date), and real Notion-backed subtasks.
+
+- [ ] T086 [US4] Replace per-reminder `ReminderItem` persistence with task-level reminder JSON supporting both anchored reminder tuples `(anchor, value, unit, direction)` and explicit-date reminder entries; add migration for existing reminder data
+- [ ] T087 [US4] Add `targetDate` support to `TaskItem` as an optional secondary synced date that must remain earlier than `dueDate`
+- [ ] T088 [US4] Redesign reminder UI so `due` is the default anchor, `target` appears only when a `targetDate` exists, anchored reminders use bounded units: minutes `1–59`, hours `1–23`, days `1–30`, weeks `1–51`, months `1–11`, and exact-date reminders remain available
+- [ ] T089 [US4] Update notification scheduling so anchored reminders resolve against explicit anchors (`target` or `due`) while exact-date reminders fire from their fixed timestamp
+- [ ] T090 [US3] Promote subtasks to real Notion child pages in the Tasks database using the parent-child relation; keep `sortIndex`, `suggestedDateOverride`, and reminder metadata local-only
+- [ ] T091 [US3] Add explicit one-time migration flow for legacy local-only subtasks with user confirmation before any Notion pages are created
+- [ ] T092 [US3] Implement redesigned suggested-date logic: work subtasks backward from `targetDate` when present, otherwise backward from `dueDate`
+- [ ] T093 [US5] Carry `targetDate` forward coherently and reset persistent subtask pages correctly across recurring task cycles
+
+---
+
 ## Phase 7: User Story 5 — Complete Recurring Tasks (Priority: P3)
 
 **Goal**: Completing a recurring task advances its due date to the next occurrence and resets status to "Not Started" instead of marking done.
@@ -228,6 +243,45 @@
 
 ---
 
+## Phase 12: Part I — Notion Platform 2026 Integration
+
+**Purpose**: Replace polling sync with webhook-driven push, migrate OAuth relay from Vercel to Notion Workers, add Markdown task notes, and remove Workspace Owner onboarding requirement.
+
+### Sub-phase 12A: Any-Member OAuth (US12) — Low effort, high impact, no dependencies
+
+- [ ] T094 [US12] Remove "Workspace Owner required" copy from `Finally/Views/Onboarding/NotionConnectView.swift`; update subtitle to "Connect any Notion workspace where you're a member"
+- [ ] T095 [US12] Add 403 handling in `Finally/Services/NotionAPIService.swift`: detect HTTP 403 responses from `createPage`/`updatePage` calls → throw a new `NotionAPIError.permissionDenied(message: String)` case
+- [ ] T096 [US12] Surface permission errors in `Finally/Views/Task/InlineTaskCreator.swift` and `TaskDetailView.swift`: catch `.permissionDenied` → show an inline banner "You don't have edit access to this database" and disable the submit/save button until dismissed
+
+### Sub-phase 12B: Workers OAuth Relay (US10) — Replaces Vercel
+
+- [ ] T097 [US10] Create `notion-workers-auth/` directory alongside `vercel-notion-auth/` with: `package.json` (Notion Workers SDK dep), `worker.ts` exporting a `Worker` instance with one HTTP tool `POST /token` that mirrors the existing Vercel function contract (`{ code }` → `{ access_token, workspace_id, workspace_name, bot_id }`)
+- [ ] T098 [US10] Implement `notion-workers-auth/worker.ts`: read `NOTION_CLIENT_ID` and `NOTION_CLIENT_SECRET` from `env`, call `https://api.notion.com/v1/oauth/token` with Basic auth and `grant_type=authorization_code`, return JSON response or structured error matching the Vercel contract
+- [ ] T099 [US10] Deploy Worker with `ntn workers deploy notion-workers-auth/worker.ts` and set secrets via `ntn env set NOTION_CLIENT_ID=... NOTION_CLIENT_SECRET=...` — record deployed Worker URL
+- [ ] T100 [US10] Update `Finally/Shared/Constants.swift`: replace `vercelAPIBaseURL` with `workerBaseURL` pointing to deployed Worker endpoint; delete the old Vercel constant
+- [ ] T101 [US10] Remove `vercel-notion-auth/` directory now that the Worker is live (keep in git history via commit, don't just delete without committing)
+
+### Sub-phase 12C: Webhook-Driven Sync (US9) — Biggest impact
+
+- [ ] T102 [US9] Add `webhookEndpointURL: String?` and `webhookRegisteredAt: Date?` to `Finally/Models/UserSession.swift` SwiftData model — persists the registered webhook endpoint so the app can detect stale registrations
+- [ ] T103 [US9] Create `notion-workers-auth/webhook-relay.ts` (or a second exported worker): registers itself as a Notion webhook listener on the user's Tasks and Projects database IDs, debounces events per page (3-second window), and forwards a compact payload `{ pageIds: [String] }` to the app's registered background fetch URL
+- [ ] T104 [US9] Create `Finally/Services/WebhookRegistrationService.swift`: `registerWebhook(session: UserSession)` calls the Worker's registration endpoint with the app's background URL session callback URL (a well-known `https://` URL registered in the app's associated domains or a stable webhook URL the Worker proxies); stores returned endpoint URL + timestamp in `UserSession`; `isStale() -> Bool` returns true if `webhookRegisteredAt` is nil or > 7 days ago
+- [ ] T105 [US9] Call `WebhookRegistrationService.registerWebhook` in `SyncService.syncOnLaunch` after a successful first full sync, and re-register if `isStale()` returns true
+- [ ] T106 [US9] Add a `URLSessionDelegate`-based background URL session in `Finally/Services/SyncService.swift`: handle incoming webhook payloads by extracting `pageIds`, calling `incrementalSync(pageIds:)` scoped to just those pages, and calling `WidgetCenter.shared.reloadTimelines` on completion
+- [ ] T107 [US9] Remove or disable the 90-second foreground poll timer from `FinallyApp.swift` (T074) — replace with a 15-minute fallback timer that runs only when `webhookRegisteredAt` is older than 10 minutes (belt-and-suspenders for missed webhooks)
+- [ ] T108 [US9] Add `incrementalSync(pageIds: [String])` overload to `SyncService.swift` that fetches only the listed pages rather than querying the full database — avoids unnecessary data transfer for single-task webhook events
+
+### Sub-phase 12D: Markdown Notes (US11) — Self-contained
+
+- [ ] T109 [US11] Add `notesMarkdown: String?` and `notesDirty: Bool` fields to `Finally/Models/TaskItem.swift` — `notesMarkdown` stores the last-fetched page body as Markdown; `notesDirty` flags unsaved local edits
+- [ ] T110 [US11] Add `fetchPageMarkdown(pageId: String) async throws -> String` to `Finally/Services/NotionAPIService.swift`: `GET /v1/pages/{id}/markdown` with `Accept: text/markdown` header, return response body as String
+- [ ] T111 [US11] Add `updatePageMarkdown(pageId: String, markdown: String) async throws` to `NotionAPIService.swift`: `PATCH /v1/pages/{id}/markdown` with `Content-Type: text/markdown` and markdown body
+- [ ] T112 [US11] Add a "Notes" section to `Finally/Views/Task/TaskDetailView.swift`: lazy-loaded on tap — first tap calls `fetchPageMarkdown` and caches in `task.notesMarkdown`; renders markdown text in a `Text` view with `.markdownText` rendering; shows "View in Notion" link for any unsupported blocks
+- [ ] T113 [US11] Add inline editing to the Notes section: "Edit Notes" button opens a full-screen `TextEditor` over the raw markdown; on Save → `task.notesMarkdown = edited`, `task.notesDirty = true`, call `updatePageMarkdown` immediately if online; if offline, leave `notesDirty = true` for next sync
+- [ ] T114 [US11] Add `pushDirtyNotes()` step in `SyncService.pushDirtyChanges`: query `notesDirty == true`, call `updatePageMarkdown` for each, clear `notesDirty` on success
+
+---
+
 ## Dependencies & Execution Order
 
 ### Phase Dependencies
@@ -243,6 +297,10 @@
 - **Phase 9 (US7 - Dark Mode)**: Can start after Phase 2 (only needs app shell)
 - **Phase 10 (US8 - Widgets)**: Depends on Phase 5 (needs data model + completion logic)
 - **Phase 11 (Polish)**: Depends on all desired user stories
+- **Phase 12A (Any-Member OAuth)**: No dependencies — can run immediately
+- **Phase 12B (Workers OAuth Relay)**: No code dependencies; requires Notion developer platform account and `ntn` CLI
+- **Phase 12C (Webhook Sync)**: Depends on Phase 12B (Worker must be deployed before webhook relay can be registered) and Phase 4 (SyncService must exist)
+- **Phase 12D (Markdown Notes)**: Depends on Phase 5 (TaskDetailView must exist); can run in parallel with 12A/12B/12C
 
 ### Parallel Opportunities
 
@@ -323,5 +381,5 @@ T041: TaskDetailView.swift
 - [Story] label maps task to specific user story
 - Commit after each task or logical group
 - Stop at any checkpoint to validate independently
-- Total tasks: 80
-- Tasks per story: Setup=7, Foundation=10, US1=6, US2=10, US3=11, US4=11, US5=4, US6=6, US7=3, US8=5, Polish=7
+- Total tasks: 109
+- Tasks per story: Setup=7, Foundation=10, US1=6, US2=10, US3=14, US4=15, US5=5, US6=6, US7=3, US8=5, Polish=7, Part-I=21
