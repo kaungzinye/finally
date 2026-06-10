@@ -111,7 +111,7 @@ struct TaskRowView: View {
 
                 // Reminders
                 Button { showReminderPicker = true } label: {
-                    if !task.reminders.isEmpty {
+                    if !task.taskReminders.isEmpty {
                         Image(systemName: "bell.fill")
                             .foregroundStyle(.orange)
                     } else {

@@ -295,6 +295,47 @@ final class SyncServiceNotionMappingIntegrationTests: XCTestCase {
         XCTAssertEqual(session.propertyMappings.taskStatusSchema?.preferredOptionName(for: .done), "✅")
     }
 
+    func testFullSync_MapsTargetDateAndDueDateRange() async throws {
+        let mock = MockNotionAPIClient()
+        let syncService = SyncService(api: mock)
+        let context = try makeInMemoryContext()
+
+        var mappings = PropertyMappings()
+        mappings.taskTargetDateProperty = "Target"
+        mappings.taskDueDateProperty = "Due Date"
+
+        let session = UserSession(workspaceId: "ws-1", workspaceName: "Workspace")
+        session.tasksDatabaseId = "tasks-db"
+        session.propertyMappings = mappings
+        context.insert(session)
+
+        mock.queryAllPagesResult["tasks-db"] = [
+            NotionTestFactory.page(
+                id: "task-1",
+                properties: [
+                    "Name": NotionTestFactory.propertyValue(
+                        type: "title",
+                        title: [NotionRichText(plainText: "Plan and finish")]
+                    ),
+                    "Status": NotionTestFactory.propertyValue(type: "status", statusName: "Not started"),
+                    "Due Date": NotionTestFactory.propertyValue(
+                        type: "date",
+                        dateStart: "2026-06-01",
+                        dateEnd: "2026-06-20"
+                    ),
+                    "Target": NotionTestFactory.propertyValue(type: "date", dateStart: "2026-06-10"),
+                ]
+            )
+        ]
+
+        try await syncService.fullSync(session: session, modelContext: context)
+
+        let task = try XCTUnwrap(try context.fetch(FetchDescriptor<TaskItem>()).first)
+        XCTAssertNotNil(task.targetDate)
+        XCTAssertNotNil(task.dueDate)
+        XCTAssertTrue(task.targetDate! < task.dueDate!)
+    }
+
     private func makeInMemoryContext() throws -> ModelContext {
         let schema = Schema([
             TaskItem.self,

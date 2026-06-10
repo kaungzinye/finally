@@ -117,6 +117,7 @@ enum NotionTestFactory {
         statusId: String? = nil,
         statusName: String? = nil,
         dateStart: String? = nil,
+        dateEnd: String? = nil,
         selectName: String? = nil,
         multiSelectNames: [String]? = nil,
         relationIds: [String]? = nil
@@ -125,7 +126,7 @@ enum NotionTestFactory {
             type: type,
             title: title,
             status: statusName.map { NotionStatusValue(id: statusId, name: $0) },
-            date: dateStart.map { NotionDateValue(start: $0, end: nil) },
+            date: dateStart.map { NotionDateValue(start: $0, end: dateEnd) },
             select: selectName.map { NotionSelectOption(id: nil, name: $0, color: nil) },
             multiSelect: multiSelectNames?.map { NotionSelectOption(id: nil, name: $0, color: nil) },
             relation: relationIds?.map { NotionRelation(id: $0) },

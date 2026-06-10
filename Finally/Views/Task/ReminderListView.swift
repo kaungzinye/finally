@@ -2,57 +2,6 @@ import SwiftUI
 import SwiftData
 import UserNotifications
 
-// MARK: - Modular interval unit
-
-private enum ReminderIntervalUnit: String, CaseIterable, Identifiable {
-    case minutes = "Minutes"
-    case hours   = "Hours"
-    case days    = "Days"
-    case weeks   = "Weeks"
-    case months  = "Months"
-
-    var id: String { rawValue }
-
-    var bounds: ClosedRange<Int> {
-        switch self {
-        case .minutes: return 1...59
-        case .hours:   return 1...23
-        case .days:    return 1...27
-        case .weeks:   return 1...8
-        case .months:  return 1...11
-        }
-    }
-
-    /// Seconds equivalent — used for ReminderItem storage and duplicate detection only.
-    /// Months use an average (not Calendar math) because intervalSeconds is an approximation.
-    func toSeconds(_ value: Int) -> Int {
-        switch self {
-        case .minutes: return value * 60
-        case .hours:   return value * 3_600
-        case .days:    return value * 86_400
-        case .weeks:   return value * 604_800
-        case .months:  return value * 2_629_746 // ~30.44 days average
-        }
-    }
-
-    /// Returns the precise fire date using Calendar math for months, simple offset otherwise.
-    func fireDate(before baseDate: Date, value: Int) -> Date? {
-        switch self {
-        case .months:
-            return Calendar.current.date(byAdding: .month, value: -value, to: baseDate)
-        default:
-            return baseDate.addingTimeInterval(-TimeInterval(toSeconds(value)))
-        }
-    }
-
-    func label(for value: Int) -> String {
-        let unit = value == 1 ? String(rawValue.dropLast()) : rawValue
-        return "\(value) \(unit.lowercased()) before"
-    }
-}
-
-// MARK: - Inline Reminder Content (for embedding in TaskDetailView's List)
-
 struct ReminderSectionContent: View {
     @Bindable var task: TaskItem
     @Environment(\.modelContext) private var modelContext
@@ -60,45 +9,36 @@ struct ReminderSectionContent: View {
 
     var body: some View {
         Section("Reminders") {
-            if task.reminders.isEmpty {
+            if task.taskReminders.isEmpty {
                 Text("No reminders set")
                     .foregroundStyle(.secondary)
             } else {
-                ForEach(task.reminders, id: \.id) { reminder in
+                ForEach(task.taskReminders) { reminder in
                     HStack {
                         VStack(alignment: .leading, spacing: 4) {
                             HStack(spacing: 6) {
                                 Image(systemName: "bell")
                                     .foregroundStyle(.orange)
-                                Text(reminder.label)
+                                Text(reminder.displayLabel)
                             }
-                            if let fireDate = reminder.fireDate {
-                                if reminder.absoluteDate != nil {
-                                    Text(fireDate.formatted(date: .abbreviated, time: .shortened))
-                                        .font(.caption)
-                                        .foregroundStyle(.secondary)
-                                } else {
-                                    Text(fireDate.formatted(date: .omitted, time: .shortened))
-                                        .font(.caption)
-                                        .foregroundStyle(.secondary)
-                                }
+                            if let fireDate = reminder.fireDate(for: task) {
+                                Text(fireDate.formatted(date: .abbreviated, time: .shortened))
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
                             }
                         }
                         Spacer()
-                        if reminder.isScheduled {
-                            Image(systemName: "checkmark.circle.fill")
-                                .font(.caption)
-                                .foregroundStyle(.green)
-                        }
                     }
                 }
                 .onDelete { indexSet in
-                    for index in indexSet {
-                        let reminder = task.reminders[index]
+                    var reminders = task.taskReminders
+                    for index in indexSet.sorted(by: >) {
+                        let id = reminders[index].id
                         UNUserNotificationCenter.current()
-                            .removePendingNotificationRequests(withIdentifiers: [reminder.notificationId])
-                        modelContext.delete(reminder)
+                            .removePendingNotificationRequests(withIdentifiers: [reminders[index].notificationId])
+                        reminders.remove(at: index)
                     }
+                    task.taskReminders = reminders
                     NotificationService.shared.rescheduleAllReminders(modelContext: modelContext)
                 }
             }
@@ -108,14 +48,13 @@ struct ReminderSectionContent: View {
             } label: {
                 Label("Add Reminder", systemImage: "plus.circle")
             }
+            .disabled(!task.hasValidAnchoredReminderAnchor && task.dueDate == nil && task.targetDate == nil)
         }
         .sheet(isPresented: $showAddReminder) {
             ReminderAddSheet(task: task)
         }
     }
 }
-
-// MARK: - Standalone ReminderListView (for sheet presentation from TaskRowView)
 
 struct ReminderListView: View {
     @Bindable var task: TaskItem
@@ -132,43 +71,59 @@ struct ReminderListView: View {
     }
 }
 
-// MARK: - Add Reminder Sheet
-
 struct ReminderAddSheet: View {
     @Bindable var task: TaskItem
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
 
-    @State private var selectedTab: Int = 0
-    @State private var intervalValue: Int = 30
-    @State private var intervalUnit: ReminderIntervalUnit = .minutes
-    @State private var showAbsolutePicker = false
+    @State private var selectedTab = 0
+    @State private var anchor: ReminderAnchor = .due
+    @State private var direction: ReminderOffsetDirection = .before
+    @State private var intervalValue = 30
+    @State private var intervalUnit: ReminderOffsetUnit = .minutes
     @State private var absoluteDate = Date()
 
-    private var intervalSeconds: Int { intervalUnit.toSeconds(intervalValue) }
-    private var intervalLabel: String { intervalUnit.label(for: intervalValue) }
+    private var availableAnchors: [ReminderAnchor] {
+        var anchors: [ReminderAnchor] = []
+        if task.dueDate != nil { anchors.append(.due) }
+        if task.targetDate != nil { anchors.append(.target) }
+        return anchors
+    }
+
+    private var draftAnchoredReminder: AnchoredReminder {
+        AnchoredReminder(anchor: anchor, value: intervalValue, unit: intervalUnit, direction: direction)
+    }
+
+    private var draftReminder: TaskReminder {
+        selectedTab == 0
+            ? .anchored(draftAnchoredReminder)
+            : .explicitDate(ExplicitDateReminder(dateTime: absoluteDate))
+    }
 
     private var previewFireDate: Date? {
-        guard let base = task.effectiveDate else { return nil }
-        return intervalUnit.fireDate(before: base, value: intervalValue)
+        draftReminder.fireDate(for: task)
     }
-    private var fireDateIsInPast: Bool { previewFireDate.map { $0 <= Date() } ?? false }
+
+    private var fireDateIsInPast: Bool {
+        previewFireDate.map { $0 <= Date() } ?? false
+    }
+
     private var alreadyAdded: Bool {
-        task.reminders.contains { $0.intervalSeconds == intervalSeconds && $0.absoluteDate == nil }
+        task.taskReminders.contains { $0.isDuplicate(of: draftReminder) }
     }
 
     var body: some View {
         NavigationStack {
             List {
                 Picker("Type", selection: $selectedTab) {
-                    Text("Interval").tag(0)
+                    Text("Anchored").tag(0)
                     Text("Exact Date").tag(1)
                 }
                 .pickerStyle(.segmented)
                 .listRowBackground(Color.clear)
 
                 if selectedTab == 0 {
-                    intervalSection
+                    anchoredSection
                 } else {
                     exactDateSection
                 }
@@ -180,31 +135,52 @@ struct ReminderAddSheet: View {
                     Button("Cancel") { dismiss() }
                 }
             }
+            .onAppear {
+                anchor = availableAnchors.first ?? .due
+            }
         }
         .presentationDetents([.medium, .large])
     }
 
-    @ViewBuilder private var intervalSection: some View {
+    @ViewBuilder private var anchoredSection: some View {
         Section {
-            Stepper(value: $intervalValue, in: intervalUnit.bounds, step: 1) {
-                HStack {
-                    Text("Amount")
-                    Spacer()
-                    Text("\(intervalValue)")
-                        .foregroundStyle(.secondary)
-                        .monospacedDigit()
+            if availableAnchors.isEmpty {
+                Text("Set a due date or target date to use anchored reminders.")
+                    .foregroundStyle(.secondary)
+            } else {
+                Picker("Anchor", selection: $anchor) {
+                    ForEach(availableAnchors) { option in
+                        Text(option.label).tag(option)
+                    }
                 }
-            }
-            .onChange(of: intervalUnit) { _, newUnit in
-                intervalValue = min(max(intervalValue, newUnit.bounds.lowerBound), newUnit.bounds.upperBound)
-            }
 
-            Picker("Unit", selection: $intervalUnit) {
-                ForEach(ReminderIntervalUnit.allCases) { unit in
-                    Text(unit.rawValue).tag(unit)
+                Picker("Direction", selection: $direction) {
+                    ForEach(ReminderOffsetDirection.allCases) { option in
+                        Text(option.label).tag(option)
+                    }
                 }
+                .pickerStyle(.segmented)
+
+                Stepper(value: $intervalValue, in: intervalUnit.bounds, step: 1) {
+                    HStack {
+                        Text("Amount")
+                        Spacer()
+                        Text("\(intervalValue)")
+                            .foregroundStyle(.secondary)
+                            .monospacedDigit()
+                    }
+                }
+                .onChange(of: intervalUnit) { _, newUnit in
+                    intervalValue = min(max(intervalValue, newUnit.bounds.lowerBound), newUnit.bounds.upperBound)
+                }
+
+                Picker("Unit", selection: $intervalUnit) {
+                    ForEach(ReminderOffsetUnit.allCases) { unit in
+                        Text(unit.displayName).tag(unit)
+                    }
+                }
+                .pickerStyle(.segmented)
             }
-            .pickerStyle(.segmented)
         } footer: {
             if let fire = previewFireDate {
                 if fireDateIsInPast {
@@ -214,15 +190,12 @@ struct ReminderAddSheet: View {
                     Text("Fires: \(fire.formatted(date: .abbreviated, time: .shortened))")
                         .foregroundStyle(.secondary)
                 }
-            } else {
-                Text("Task has no due date — reminder won't fire")
-                    .foregroundStyle(.secondary)
             }
         }
 
         Section {
             Button {
-                addReminder(label: intervalLabel, seconds: intervalSeconds)
+                addReminder(draftReminder)
                 dismiss()
             } label: {
                 HStack {
@@ -231,48 +204,35 @@ struct ReminderAddSheet: View {
                     Spacer()
                 }
             }
-            .disabled(fireDateIsInPast || alreadyAdded || task.effectiveDate == nil)
+            .disabled(availableAnchors.isEmpty || fireDateIsInPast || alreadyAdded || !draftAnchoredReminder.isValidValue())
         }
     }
 
     @ViewBuilder private var exactDateSection: some View {
         Section {
+            DatePicker(
+                "Remind at",
+                selection: $absoluteDate,
+                in: Date()...,
+                displayedComponents: [.date, .hourAndMinute]
+            )
+            .datePickerStyle(.graphical)
+
             Button {
-                showAbsolutePicker.toggle()
+                addReminder(.explicitDate(ExplicitDateReminder(dateTime: absoluteDate)))
+                dismiss()
             } label: {
                 HStack {
-                    Image(systemName: "clock").foregroundStyle(.orange)
-                    Text("Pick exact date & time").foregroundStyle(.primary)
                     Spacer()
-                    Image(systemName: showAbsolutePicker ? "chevron.up" : "chevron.down")
-                        .foregroundStyle(.secondary)
+                    Text("Add Reminder").fontWeight(.medium)
+                    Spacer()
                 }
             }
-
-            if showAbsolutePicker {
-                DatePicker(
-                    "Remind at",
-                    selection: $absoluteDate,
-                    in: Date()...,
-                    displayedComponents: [.date, .hourAndMinute]
-                )
-                .datePickerStyle(.graphical)
-
-                Button {
-                    addAbsoluteReminder(date: absoluteDate)
-                    dismiss()
-                } label: {
-                    HStack {
-                        Spacer()
-                        Text("Add Reminder").fontWeight(.medium)
-                        Spacer()
-                    }
-                }
-            }
+            .disabled(fireDateIsInPast || alreadyAdded)
         }
     }
 
-    private func addReminder(label: String, seconds: Int) {
+    private func addReminder(_ reminder: TaskReminder) {
         Task {
             let status = await NotificationService.shared.checkPermissionStatus()
             if status == .notDetermined {
@@ -280,133 +240,74 @@ struct ReminderAddSheet: View {
             }
         }
 
-        let reminder = ReminderItem(
-            intervalSeconds: seconds,
-            label: label,
-            taskNotionPageId: task.notionPageId
-        )
-        reminder.task = task
-        modelContext.insert(reminder)
-
-        NotificationService.shared.scheduleReminder(for: task, reminder: reminder)
-        NotificationService.shared.rescheduleAllReminders(modelContext: modelContext)
-    }
-
-    private func addAbsoluteReminder(date: Date) {
-        Task {
-            let status = await NotificationService.shared.checkPermissionStatus()
-            if status == .notDetermined {
-                _ = await NotificationService.shared.requestPermission()
-            }
-        }
-
-        let label = date.formatted(date: .abbreviated, time: .shortened)
-        let reminder = ReminderItem(
-            absoluteDate: date,
-            label: label,
-            taskNotionPageId: task.notionPageId
-        )
-        reminder.task = task
-        modelContext.insert(reminder)
+        var reminders = task.taskReminders
+        reminders.append(reminder)
+        task.taskReminders = reminders
 
         NotificationService.shared.scheduleReminder(for: task, reminder: reminder)
         NotificationService.shared.rescheduleAllReminders(modelContext: modelContext)
     }
 }
 
-// MARK: - Subtask Reminder Sheet
-
 struct SubtaskReminderSheet: View {
     @Bindable var subtask: TaskItem
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
 
-    @State private var intervalValue: Int = 30
-    @State private var intervalUnit: ReminderIntervalUnit = .minutes
+    @State private var intervalValue = 30
+    @State private var intervalUnit: ReminderOffsetUnit = .minutes
+    @State private var direction: ReminderOffsetDirection = .before
 
-    private var intervalSeconds: Int { intervalUnit.toSeconds(intervalValue) }
-    private var intervalLabel: String { intervalUnit.label(for: intervalValue) }
-
-    private var previewFireDate: Date? {
-        guard let base = subtask.effectiveDate else { return nil }
-        return intervalUnit.fireDate(before: base, value: intervalValue)
-    }
-    private var fireDateIsInPast: Bool { previewFireDate.map { $0 <= Date() } ?? false }
-    private var alreadyAdded: Bool {
-        subtask.reminders.contains { $0.intervalSeconds == intervalSeconds && $0.absoluteDate == nil }
+    private var draftReminder: TaskReminder {
+        .anchored(AnchoredReminder(anchor: .due, value: intervalValue, unit: intervalUnit, direction: direction))
     }
 
     var body: some View {
         NavigationStack {
             List {
-                if !subtask.reminders.isEmpty {
+                if !subtask.taskReminders.isEmpty {
                     Section("Current Reminders") {
-                        ForEach(subtask.reminders, id: \.id) { reminder in
+                        ForEach(subtask.taskReminders) { reminder in
                             HStack {
                                 Image(systemName: "bell").foregroundStyle(.orange)
                                 VStack(alignment: .leading, spacing: 2) {
-                                    Text(reminder.label)
-                                    if let fire = reminder.fireDate {
+                                    Text(reminder.displayLabel)
+                                    if let fire = reminder.fireDate(for: subtask) {
                                         Text(fire.formatted(date: .abbreviated, time: .shortened))
                                             .font(.caption)
                                             .foregroundStyle(.secondary)
                                     }
                                 }
-                                Spacer()
-                                if reminder.isScheduled {
-                                    Image(systemName: "checkmark.circle.fill")
-                                        .font(.caption)
-                                        .foregroundStyle(.green)
-                                }
                             }
                         }
                         .onDelete { indexSet in
-                            for index in indexSet {
-                                let r = subtask.reminders[index]
+                            var reminders = subtask.taskReminders
+                            for index in indexSet.sorted(by: >) {
                                 UNUserNotificationCenter.current()
-                                    .removePendingNotificationRequests(withIdentifiers: [r.notificationId])
-                                modelContext.delete(r)
+                                    .removePendingNotificationRequests(withIdentifiers: [reminders[index].notificationId])
+                                reminders.remove(at: index)
                             }
+                            subtask.taskReminders = reminders
                             NotificationService.shared.rescheduleAllReminders(modelContext: modelContext)
                         }
                     }
                 }
 
-                Section {
+                Section("Add Reminder") {
                     Stepper(value: $intervalValue, in: intervalUnit.bounds, step: 1) {
                         HStack {
                             Text("Amount")
                             Spacer()
                             Text("\(intervalValue)")
                                 .foregroundStyle(.secondary)
-                                .monospacedDigit()
                         }
                     }
-                    .onChange(of: intervalUnit) { _, newUnit in
-                        intervalValue = min(max(intervalValue, newUnit.bounds.lowerBound), newUnit.bounds.upperBound)
-                    }
-
                     Picker("Unit", selection: $intervalUnit) {
-                        ForEach(ReminderIntervalUnit.allCases) { unit in
-                            Text(unit.rawValue).tag(unit)
+                        ForEach(ReminderOffsetUnit.allCases) { unit in
+                            Text(unit.displayName).tag(unit)
                         }
                     }
                     .pickerStyle(.segmented)
-                } header: {
-                    Text("Add Reminder")
-                } footer: {
-                    if let fire = previewFireDate {
-                        if fireDateIsInPast {
-                            Label("This time is already in the past", systemImage: "exclamationmark.triangle.fill")
-                                .foregroundStyle(.red)
-                        } else {
-                            Text("Fires: \(fire.formatted(date: .abbreviated, time: .shortened))")
-                                .foregroundStyle(.secondary)
-                        }
-                    } else {
-                        Text("Subtask has no scheduled date yet")
-                            .foregroundStyle(.secondary)
-                    }
                 }
 
                 Section {
@@ -419,7 +320,7 @@ struct SubtaskReminderSheet: View {
                             Spacer()
                         }
                     }
-                    .disabled(fireDateIsInPast || alreadyAdded || subtask.effectiveDate == nil)
+                    .disabled(subtask.effectiveSuggestedDate == nil)
                 }
             }
             .navigationTitle(subtask.title)
@@ -431,7 +332,6 @@ struct SubtaskReminderSheet: View {
             }
         }
         .presentationDetents([.height(480), .large])
-        .presentationCompactAdaptation(.sheet)
     }
 
     private func addSubtaskReminder() {
@@ -441,14 +341,16 @@ struct SubtaskReminderSheet: View {
                 _ = await NotificationService.shared.requestPermission()
             }
         }
-        let reminder = ReminderItem(
-            intervalSeconds: intervalSeconds,
-            label: intervalLabel,
-            taskNotionPageId: subtask.notionPageId
-        )
-        reminder.task = subtask
-        modelContext.insert(reminder)
-        NotificationService.shared.scheduleReminder(for: subtask, reminder: reminder)
+        var reminders = subtask.taskReminders
+        reminders.append(draftReminder)
+        subtask.taskReminders = reminders
+        NotificationService.shared.scheduleReminder(for: subtask, reminder: draftReminder)
         NotificationService.shared.rescheduleAllReminders(modelContext: modelContext)
+    }
+}
+
+private extension TaskItem {
+    var hasValidAnchoredReminderAnchor: Bool {
+        dueDate != nil || targetDate != nil
     }
 }

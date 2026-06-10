@@ -9,6 +9,7 @@ struct InlineTaskCreator: View {
 
     @State private var taskTitle = ""
     @State private var dueDate: Date?
+    @State private var targetDate: Date?
     @State private var priority: TaskPriority?
     @State private var tags: [String] = []
     @State private var project: ProjectItem?
@@ -28,6 +29,7 @@ struct InlineTaskCreator: View {
     @State private var showTagSuggestions = false
 
     @State private var showDatePicker = false
+    @State private var showTargetDatePicker = false
     @State private var showPriorityPicker = false
     @State private var showTagPicker = false
     @State private var showProjectPicker = false
@@ -110,6 +112,13 @@ struct InlineTaskCreator: View {
                                 color: .secondary
                             ) { showDatePicker = true }
                         }
+                        if let targetDate {
+                            ChipView(
+                                label: "Target \(targetDate.formatted(date: .abbreviated, time: .omitted))",
+                                icon: "scope",
+                                color: .blue
+                            ) { showTargetDatePicker = true }
+                        }
                         if let priority {
                             ChipView(
                                 label: priority.rawValue,
@@ -162,6 +171,10 @@ struct InlineTaskCreator: View {
                 Button { showDatePicker = true } label: {
                     Image(systemName: "calendar")
                         .foregroundStyle(dueDate != nil ? .primary : .secondary)
+                }
+                Button { showTargetDatePicker = true } label: {
+                    Image(systemName: "scope")
+                        .foregroundStyle(targetDate != nil ? .blue : .secondary)
                 }
                 Button { showPriorityPicker = true } label: {
                     Image(systemName: "flag")
@@ -216,6 +229,9 @@ struct InlineTaskCreator: View {
         .sheet(isPresented: $showDatePicker) {
             DatePickerSheet(selectedDate: $dueDate)
         }
+        .sheet(isPresented: $showTargetDatePicker) {
+            DatePickerSheet(selectedDate: $targetDate)
+        }
         .sheet(isPresented: $showPriorityPicker) {
             PriorityPicker(selection: $priority)
         }
@@ -241,7 +257,7 @@ struct InlineTaskCreator: View {
     }
 
     private var hasSelections: Bool {
-        dueDate != nil || priority != nil || !tags.isEmpty || project != nil || recurrence != .none || !reminderChoices.isEmpty || parentTask != nil
+        dueDate != nil || targetDate != nil || priority != nil || !tags.isEmpty || project != nil || recurrence != .none || !reminderChoices.isEmpty || parentTask != nil
     }
 
     private func createTask() {
@@ -258,6 +274,8 @@ struct InlineTaskCreator: View {
 
         let task = TaskItem(notionPageId: UUID().uuidString, title: title)
         task.dueDate = dueDate
+        task.targetDate = targetDate
+        task.validateTargetDate()
         task.priority = priority
         task.tags = tags
         task.project = project
@@ -265,44 +283,21 @@ struct InlineTaskCreator: View {
         task.customRecurrenceRule = customRecurrenceRule
         task.isDirty = true
 
-        // Link as subtask if parent selected
         if let parent = parentTask {
             task.parentId = parent.notionPageId
             task.parent = parent
-            task.isLocalOnly = true
             task.sortIndex = parent.subtasks.count
         }
 
         modelContext.insert(task)
 
-        // Schedule subtask dates if linked to parent
         if let parent = parentTask {
             SubtaskScheduler.distributeSubtaskDates(parent: parent)
         }
 
-        // Create reminders from selected choices
-        for choice in reminderChoices {
-            let reminder: ReminderItem
-            switch choice {
-            case .preset(let offset):
-                reminder = ReminderItem(
-                    intervalSeconds: offset.intervalSeconds,
-                    label: offset.rawValue,
-                    taskNotionPageId: task.notionPageId
-                )
-            case .custom(let date):
-                reminder = ReminderItem(
-                    absoluteDate: date,
-                    label: date.formatted(date: .abbreviated, time: .shortened),
-                    taskNotionPageId: task.notionPageId
-                )
-            }
-            reminder.task = task
-            modelContext.insert(reminder)
-        }
+        task.taskReminders = reminderChoices.map { $0.toTaskReminder(hasTargetDate: targetDate != nil) }
 
-        // Schedule notifications if we have reminders
-        if !reminderChoices.isEmpty {
+        if !task.taskReminders.isEmpty {
             NotificationService.shared.rescheduleAllReminders(modelContext: modelContext)
         }
 
@@ -317,6 +312,7 @@ struct InlineTaskCreator: View {
         // Reset for next task
         taskTitle = ""
         dueDate = nil
+        targetDate = nil
         priority = nil
         tags = []
         if presetProject == nil { project = nil }

@@ -256,27 +256,33 @@ final class SyncService {
                 print("[Sync] Task '\(title)' NO STATUS FOUND. Property key: '\(mappings.taskStatusProperty)', available keys: \(Array(page.properties.keys))")
             }
 
-            // Due Date (with optional start date for date ranges / Notion Calendar)
+            // Due Date — official deadline only
             if let dateProp = page.properties[mappings.taskDueDateProperty],
                let dateStr = dateProp.date?.start {
                 if let endStr = dateProp.date?.end {
-                    // Date range: start → startDate, end → dueDate (deadline)
-                    task.startDate = parseDate(dateStr)
+                    task.targetDate = parseDate(dateStr)
+                    task.targetDateHasTime = dateStr.contains("T")
                     task.dueDate = parseDate(endStr)
                     task.dueDateHasTime = endStr.contains("T")
-                    print("[Sync] Task '\(title)' range: '\(dateStr)' – '\(endStr)'")
                 } else {
-                    // Single date: just a due date
                     task.dueDate = parseDate(dateStr)
                     task.dueDateHasTime = dateStr.contains("T")
-                    task.startDate = nil
-                    print("[Sync] Task '\(title)' due: '\(dateStr)' → \(String(describing: task.dueDate))")
                 }
             } else {
                 task.dueDate = nil
                 task.dueDateHasTime = false
-                task.startDate = nil
             }
+
+            // Target Date — optional secondary planning date
+            if let targetKey = mappings.taskTargetDateProperty,
+               let targetProp = page.properties[targetKey],
+               let targetStr = targetProp.date?.start {
+                task.targetDate = parseDate(targetStr)
+                task.targetDateHasTime = targetStr.contains("T")
+            }
+
+            task.validateTargetDate()
+            task.startDate = nil
 
             // Priority
             if let priorityKey = mappings.taskPriorityProperty,
@@ -313,6 +319,38 @@ final class SyncService {
             } else {
                 task.project = nil
             }
+
+            // Parent relation (subtasks)
+            if let parentKey = mappings.taskParentProperty,
+               let parentProp = page.properties[parentKey],
+               let relations = parentProp.relation,
+               let firstRelation = relations.first {
+                task.parentId = firstRelation.id
+                let parentDescriptor = FetchDescriptor<TaskItem>(predicate: #Predicate<TaskItem> { item in
+                    item.notionPageId == firstRelation.id
+                })
+                task.parent = (try? modelContext.fetch(parentDescriptor))?.first
+                task.isLocalOnly = false
+            } else if task.parentId == nil {
+                task.parent = nil
+            }
+        }
+
+        linkPendingSubtaskParents(modelContext: modelContext)
+    }
+
+    private func linkPendingSubtaskParents(modelContext: ModelContext) {
+        let descriptor = FetchDescriptor<TaskItem>(predicate: #Predicate { $0.parentId != nil })
+        guard let tasks = try? modelContext.fetch(descriptor) else { return }
+
+        for task in tasks {
+            guard let parentId = task.parentId else { continue }
+            let parentDescriptor = FetchDescriptor<TaskItem>(predicate: #Predicate<TaskItem> { item in
+                item.notionPageId == parentId
+            })
+            if let parent = try? modelContext.fetch(parentDescriptor).first {
+                task.parent = parent
+            }
         }
     }
 
@@ -348,14 +386,8 @@ final class SyncService {
             "status": ["name": mappings.notionStatusName(for: task.status)]
         ]
 
-        // Due Date (preserve startDate for Notion Calendar round-trip)
-        if let startDate = task.startDate, let dueDate = task.dueDate {
-            let startStr = shortDateFormatter.string(from: startDate)
-            let endStr = shortDateFormatter.string(from: dueDate)
-            props[mappings.taskDueDateProperty] = [
-                "date": ["start": startStr, "end": endStr]
-            ]
-        } else if let dueDate = task.dueDate {
+        // Due Date
+        if let dueDate = task.dueDate {
             let dateStr = shortDateFormatter.string(from: dueDate)
             props[mappings.taskDueDateProperty] = [
                 "date": ["start": dateStr]
@@ -364,6 +396,26 @@ final class SyncService {
             props[mappings.taskDueDateProperty] = [
                 "date": NSNull()
             ]
+        }
+
+        // Target Date
+        if let targetKey = mappings.taskTargetDateProperty {
+            if let targetDate = task.targetDate {
+                let dateStr = shortDateFormatter.string(from: targetDate)
+                props[targetKey] = [
+                    "date": ["start": dateStr]
+                ]
+            } else {
+                props[targetKey] = [
+                    "date": NSNull()
+                ]
+            }
+        }
+
+        // Parent relation for subtasks
+        if let parentKey = mappings.taskParentProperty,
+           let parentId = task.parentId {
+            props[parentKey] = ["relation": [["id": parentId]]]
         }
 
         // Priority

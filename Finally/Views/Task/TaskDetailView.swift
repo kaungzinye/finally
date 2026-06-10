@@ -8,6 +8,7 @@ struct TaskDetailView: View {
     @Environment(SyncService.self) private var syncService
 
     @State private var showDatePicker = false
+    @State private var showTargetDatePicker = false
     @State private var showPriorityPicker = false
     @State private var showTagPicker = false
     @State private var showProjectPicker = false
@@ -17,6 +18,7 @@ struct TaskDetailView: View {
 
     @State private var editedTitle: String = ""
     @State private var editedDueDate: Date?
+    @State private var editedTargetDate: Date?
     @State private var editedPriority: TaskPriority?
     @State private var editedTags: [String] = []
     @State private var editedProject: ProjectItem?
@@ -57,6 +59,22 @@ struct TaskDetailView: View {
                             Label("Due Date", systemImage: "calendar")
                             Spacer()
                             if let date = editedDueDate {
+                                Text(date.formatted(date: .abbreviated, time: .omitted))
+                                    .foregroundStyle(.secondary)
+                            } else {
+                                Text("None")
+                                    .foregroundStyle(.tertiary)
+                            }
+                        }
+                    }
+
+                    Button {
+                        showTargetDatePicker = true
+                    } label: {
+                        HStack {
+                            Label("Target Date", systemImage: "scope")
+                            Spacer()
+                            if let date = editedTargetDate {
                                 Text(date.formatted(date: .abbreviated, time: .omitted))
                                     .foregroundStyle(.secondary)
                             } else {
@@ -175,7 +193,7 @@ struct TaskDetailView: View {
                                     Text(subtask.title)
                                         .strikethrough(subtask.status == .done)
                                         .foregroundStyle(subtask.status == .done ? .secondary : .primary)
-                                    if let suggested = subtask.suggestedDate {
+                                    if let suggested = subtask.effectiveSuggestedDate {
                                         Text(suggested.formatted(date: .abbreviated, time: .omitted))
                                             .font(.caption2)
                                             .foregroundStyle(suggested < Calendar.current.startOfDay(for: Date()) && subtask.status != .done ? .red : .secondary)
@@ -189,8 +207,8 @@ struct TaskDetailView: View {
                                 Button {
                                     subtaskReminderTarget = subtask
                                 } label: {
-                                    Image(systemName: subtask.reminders.isEmpty ? "bell" : "bell.badge")
-                                        .foregroundStyle(subtask.reminders.isEmpty ? Color.secondary : Color.orange)
+                                    Image(systemName: subtask.taskReminders.isEmpty ? "bell" : "bell.badge")
+                                        .foregroundStyle(subtask.taskReminders.isEmpty ? Color.secondary : Color.orange)
                                 }
                                 .buttonStyle(.plain)
                             }
@@ -244,6 +262,7 @@ struct TaskDetailView: View {
         .onAppear {
             editedTitle = task.title
             editedDueDate = task.dueDate
+            editedTargetDate = task.targetDate
             editedPriority = task.priority
             editedTags = task.tags
             editedProject = task.project
@@ -252,6 +271,9 @@ struct TaskDetailView: View {
         }
         .sheet(isPresented: $showDatePicker) {
             DatePickerSheet(selectedDate: $editedDueDate)
+        }
+        .sheet(isPresented: $showTargetDatePicker) {
+            DatePickerSheet(selectedDate: $editedTargetDate)
         }
         .sheet(isPresented: $showPriorityPicker) {
             PriorityPicker(selection: $editedPriority)
@@ -277,7 +299,7 @@ struct TaskDetailView: View {
     @ViewBuilder
     private func subtaskReminderIndicator(_ subtask: TaskItem) -> some View {
         let now = Date()
-        let nextFire = subtask.reminders.compactMap(\.fireDate).filter { $0 > now }.min()
+        let nextFire = subtask.taskReminders.compactMap { $0.fireDate(for: subtask) }.filter { $0 > now }.min()
         if let fire = nextFire {
             Label(fire.formatted(date: .omitted, time: .shortened), systemImage: "bell.fill")
                 .font(.caption2)
@@ -292,7 +314,7 @@ struct TaskDetailView: View {
         let subtask = TaskItem(notionPageId: UUID().uuidString, title: title)
         subtask.parentId = task.notionPageId
         subtask.parent = task
-        subtask.isLocalOnly = true
+        subtask.isDirty = true
         subtask.sortIndex = task.subtasks.count
         modelContext.insert(subtask)
 
@@ -305,9 +327,12 @@ struct TaskDetailView: View {
 
     private func saveChanges() {
         let dueDateChanged = task.dueDate != editedDueDate
+        let targetDateChanged = task.targetDate != editedTargetDate
 
         task.title = editedTitle
         task.dueDate = editedDueDate
+        task.targetDate = editedTargetDate
+        task.validateTargetDate()
         task.priority = editedPriority
         task.tags = editedTags
         task.project = editedProject
@@ -316,7 +341,7 @@ struct TaskDetailView: View {
         task.isDirty = true
 
         // Reschedule reminders if due date changed
-        if dueDateChanged {
+        if dueDateChanged || targetDateChanged {
             NotificationService.shared.rescheduleAllReminders(modelContext: modelContext)
             // Redistribute subtask dates if parent deadline changed
             if task.hasSubtasks {

@@ -91,6 +91,32 @@ final class SchemaValidator {
             }
         }
 
+        // Optional: Target date (secondary planning date)
+        if let targetProp = database.properties.first(where: {
+            ($0.key.lowercased().contains("target") || $0.key.lowercased() == "start") && $0.value.type == "date"
+        }) {
+            mappings.taskTargetDateProperty = targetProp.key
+        } else {
+            mappings.taskTargetDateProperty = nil
+        }
+
+        // Optional: Parent task relation (subtasks)
+        if let parentProp = database.properties.first(where: {
+            ($0.key.lowercased().contains("parent") || $0.key.lowercased().contains("sub-task") || $0.key.lowercased().contains("subtask"))
+            && $0.value.type == "relation"
+            && !$0.key.lowercased().contains("project")
+        }) {
+            mappings.taskParentProperty = parentProp.key
+        } else if let selfRelation = database.properties.first(where: {
+            $0.value.type == "relation"
+            && $0.value.relation?.databaseId != nil
+            && !$0.key.lowercased().contains("project")
+        }) {
+            mappings.taskParentProperty = selfRelation.key
+        } else {
+            mappings.taskParentProperty = nil
+        }
+
         // Optional: Priority (select)
         if let priorityProp = database.properties.first(where: { $0.key.lowercased().contains("priority") && $0.value.type == "select" }) {
             mappings.taskPriorityProperty = priorityProp.key

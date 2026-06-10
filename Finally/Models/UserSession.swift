@@ -33,6 +33,8 @@ struct PropertyMappings: Codable {
     var taskStatusProperty: String = "Status"
     var taskStatusSchema: NotionStatusSchema?
     var taskDueDateProperty: String = "Due Date"
+    var taskTargetDateProperty: String? = "Target"
+    var taskParentProperty: String? = "Parent task"
     var taskPriorityProperty: String? = "Priority"
     var taskTagsProperty: String? = "Tags"
     var taskProjectProperty: String? = "Project"

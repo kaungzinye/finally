@@ -78,22 +78,22 @@ final class PropertyRoundtripE2ETests: NotionE2ETestCase {
         XCTAssertEqual(syncedComponents.day, 15)
     }
 
-    func testRoundtrip_DueDateRange_StartAndEnd() async throws {
+    func testRoundtrip_TargetAndDueDates() async throws {
         var cal = Calendar(identifier: .gregorian)
         cal.timeZone = TimeZone(identifier: "UTC")!
-        let startDate = cal.date(from: DateComponents(year: 2026, month: 7, day: 1))!
+        let targetDate = cal.date(from: DateComponents(year: 2026, month: 7, day: 1))!
         let endDate = cal.date(from: DateComponents(year: 2026, month: 7, day: 7))!
 
-        let task = try await pushLocalTask(title: "Date Range roundtrip") { t in
-            t.startDate = startDate
+        let task = try await pushLocalTask(title: "Target + Due roundtrip") { t in
+            t.targetDate = targetDate
             t.dueDate = endDate
         }
         try await syncService.fullSync(session: session, modelContext: modelContext)
         let synced = try XCTUnwrap(try fetchTask(notionPageId: task.notionPageId))
 
-        let startComponents = cal.dateComponents([.year, .month, .day], from: try XCTUnwrap(synced.startDate))
+        let targetComponents = cal.dateComponents([.year, .month, .day], from: try XCTUnwrap(synced.targetDate))
         let endComponents = cal.dateComponents([.year, .month, .day], from: try XCTUnwrap(synced.dueDate))
-        XCTAssertEqual(startComponents.day, 1)
+        XCTAssertEqual(targetComponents.day, 1)
         XCTAssertEqual(endComponents.day, 7)
     }
 

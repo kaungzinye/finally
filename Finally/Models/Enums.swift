@@ -197,6 +197,27 @@ enum ReminderOffset: String, CaseIterable, Identifiable {
         case .oneWeek: return 604800
         }
     }
+
+    func toTaskReminder(hasTargetDate: Bool) -> TaskReminder {
+        switch self {
+        case .atTime:
+            return .anchored(AnchoredReminder(anchor: .due, value: 0, unit: .minutes, direction: .before))
+        case .fiveMin:
+            return .anchored(AnchoredReminder(anchor: .due, value: 5, unit: .minutes, direction: .before))
+        case .fifteenMin:
+            return .anchored(AnchoredReminder(anchor: .due, value: 15, unit: .minutes, direction: .before))
+        case .thirtyMin:
+            return TaskReminder.presetThirtyMinutesBeforeDue()
+        case .oneHour:
+            return .anchored(AnchoredReminder(anchor: .due, value: 1, unit: .hours, direction: .before))
+        case .oneDay:
+            return TaskReminder.presetOneDayBeforeDue()
+        case .oneWeek:
+            return hasTargetDate
+                ? TaskReminder.presetWeekBeforeTarget()
+                : .anchored(AnchoredReminder(anchor: .due, value: 1, unit: .weeks, direction: .before))
+        }
+    }
 }
 
 // MARK: - Reminder Choice (for InlineTaskCreator)
@@ -216,6 +237,15 @@ enum ReminderChoice: Equatable, Identifiable {
         switch self {
         case .preset(let offset): return offset.rawValue
         case .custom(let date): return date.formatted(date: .abbreviated, time: .shortened)
+        }
+    }
+
+    func toTaskReminder(hasTargetDate: Bool) -> TaskReminder {
+        switch self {
+        case .preset(let offset):
+            return offset.toTaskReminder(hasTargetDate: hasTargetDate)
+        case .custom(let date):
+            return .explicitDate(ExplicitDateReminder(dateTime: date))
         }
     }
 }
