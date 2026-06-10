@@ -8,7 +8,7 @@ By using Finally, you agree to these terms.
 
 ## What Finally Does
 
-Finally is a free, open-source iOS app that helps you manage tasks stored in your Notion workspace. It reads and writes to Notion databases you grant access to.
+Finally is a free, open-source iOS app that helps you manage tasks stored in your Notion workspace. It reads and writes to Notion databases you grant access to. Source code is available under the [MIT License](LICENSE).
 
 ## Your Responsibilities
 
