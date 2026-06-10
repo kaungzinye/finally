@@ -2,7 +2,7 @@
 
 Finally is a free, open-source iOS task manager that connects to your [Notion](https://www.notion.com) workspace. It syncs tasks from your Notion databases, supports Todoist-style inline creation, per-task reminders, recurring tasks, widgets, and dark mode.
 
-**Status:** Active development. The iOS app lives on the [`001-notion-task-app`](https://github.com/kaungzinye/finally/tree/001-notion-task-app) branch; `main` currently holds the OAuth relay and project docs.
+**Branch:** [`main`](https://github.com/kaungzinye/finally/tree/main) is the public integration branch — fork it, branch off it, and open PRs against it.
 
 ## Features
 
@@ -14,29 +14,48 @@ Finally is a free, open-source iOS task manager that connects to your [Notion](h
 - Home screen widget
 - iOS 17+ with SwiftUI and SwiftData
 
-See [`specs/001-notion-task-app/spec.md`](https://github.com/kaungzinye/finally/blob/001-notion-task-app/specs/001-notion-task-app/spec.md) on the development branch for the full product spec.
+See [`specs/001-notion-task-app/spec.md`](specs/001-notion-task-app/spec.md) for the full product spec.
 
 ## Repository layout
 
 | Path | Description |
 |------|-------------|
+| [`Finally/`](Finally/) | iOS app (SwiftUI + SwiftData) |
+| [`FinallyWidget/`](FinallyWidget/) | Home screen widget extension |
+| [`FinallyTests/`](FinallyTests/) | Unit, integration, and E2E tests |
 | [`vercel-notion-auth/`](vercel-notion-auth/) | Serverless OAuth relay (HTTPS callback + token exchange) |
+| [`specs/001-notion-task-app/`](specs/001-notion-task-app/) | Feature specs and task checklist |
 | [`PRIVACY.md`](PRIVACY.md) | Privacy policy |
 | [`TERMS.md`](TERMS.md) | Terms of use |
-| `001-notion-task-app` branch | iOS app, widget, tests, specs, Xcode project |
-
-### Branch strategy
-
-| Branch | Purpose |
-|--------|---------|
-| `main` | Stable infra (OAuth relay) and top-level docs |
-| `001-notion-task-app` | Active app development (default branch for now) |
-
-When contributing to the **iOS app**, branch off `001-notion-task-app`. When contributing to the **OAuth relay**, branch off `main`.
 
 ## Quick start
 
-### OAuth relay (this branch)
+### iOS app
+
+Requires macOS with Xcode 15+.
+
+```bash
+git clone https://github.com/kaungzinye/finally.git
+cd finally
+
+# Compile check (no simulator needed)
+xcodebuild build -project Finally.xcodeproj -scheme Finally \
+  -destination 'generic/platform=iOS' CODE_SIGNING_ALLOWED=NO -quiet
+
+# Unit test compile check
+xcodebuild build-for-testing -project Finally.xcodeproj -scheme FinallyTests \
+  -destination 'generic/platform=iOS' CODE_SIGNING_ALLOWED=NO -quiet
+```
+
+Full setup (Notion integration, database schema, OAuth): [`specs/001-notion-task-app/quickstart.md`](specs/001-notion-task-app/quickstart.md).
+
+If you change `project.yml`, regenerate the Xcode project:
+
+```bash
+xcodegen generate
+```
+
+### OAuth relay
 
 ```bash
 cd vercel-notion-auth
@@ -46,31 +65,13 @@ vercel dev          # local dev at http://localhost:3000
 
 Deploy and env var setup: [`vercel-notion-auth/DEPLOY.md`](vercel-notion-auth/DEPLOY.md).
 
-### iOS app (development branch)
-
-Requires macOS with Xcode 15+.
-
-```bash
-git checkout 001-notion-task-app
-
-# Compile check (no simulator needed)
-xcodebuild build -project Finally.xcodeproj -scheme Finally \
-  -destination 'generic/platform=iOS' CODE_SIGNING_ALLOWED=NO -quiet
-
-# Run unit tests (compile-only)
-xcodebuild build-for-testing -project Finally.xcodeproj -scheme FinallyTests \
-  -destination 'generic/platform=iOS' CODE_SIGNING_ALLOWED=NO -quiet
-```
-
-Full setup (Notion integration, database schema, OAuth): see [`specs/001-notion-task-app/quickstart.md`](https://github.com/kaungzinye/finally/blob/001-notion-task-app/specs/001-notion-task-app/quickstart.md) on the development branch.
-
 ## Contributing
 
-We welcome issues and pull requests. Please read [CONTRIBUTING.md](CONTRIBUTING.md) before opening a PR.
+All contributions target **`main`**. See [CONTRIBUTING.md](CONTRIBUTING.md).
 
-- **Bug reports** — use the [bug report template](.github/ISSUE_TEMPLATE/bug_report.yml)
-- **Feature ideas** — use the [feature request template](.github/ISSUE_TEMPLATE/feature_request.yml)
-- **Security issues** — see [SECURITY.md](SECURITY.md) (do not open public issues)
+- **Bug reports** — [bug report template](.github/ISSUE_TEMPLATE/bug_report.yml)
+- **Feature ideas** — [feature request template](.github/ISSUE_TEMPLATE/feature_request.yml)
+- **Security issues** — [SECURITY.md](SECURITY.md) (do not open public issues)
 
 ## License
 

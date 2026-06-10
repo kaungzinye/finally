@@ -4,45 +4,37 @@
 
 ## Component
 
-<!-- Check one -->
-
-- [ ] iOS app (`001-notion-task-app`)
-- [ ] OAuth relay (`main` / `vercel-notion-auth/`)
-- [ ] Documentation / repo hygiene
+- [ ] iOS app (`Finally/`, `FinallyWidget/`, `FinallyTests/`)
+- [ ] OAuth relay (`vercel-notion-auth/`)
+- [ ] Specs / documentation
 - [ ] Other
 
 ## Changes
-
-<!-- Bullet list of notable changes -->
 
 -
 
 ## Testing
 
-<!-- How did you verify this works? -->
-
 - [ ] `xcodebuild build` passes (iOS changes)
 - [ ] `xcodebuild build-for-testing` passes (iOS changes)
 - [ ] Unit/integration tests added or updated
 - [ ] Manual testing performed (describe below)
-- [ ] OAuth relay smoke-tested (`vercel dev` or deployed preview)
+- [ ] OAuth relay: `npm run typecheck` passes
 - [ ] N/A — docs only
 
 **Manual test notes:**
 
 ## Screenshots / recordings
 
-<!-- UI changes only — drag images here -->
+<!-- UI changes only -->
 
 ## Spec updates
 
-<!-- If behavior changed, did you update specs/001-notion-task-app/? -->
-
-- [ ] Updated `spec.md` and/or `tasks.md`
+- [ ] Updated `specs/001-notion-task-app/spec.md` and/or `tasks.md`
 - [ ] Not applicable
 
 ## Checklist
 
-- [ ] PR targets the correct base branch (`main` or `001-notion-task-app`)
+- [ ] PR targets **`main`**
 - [ ] No secrets, tokens, or personal credentials committed
 - [ ] Commit messages are clear and focused

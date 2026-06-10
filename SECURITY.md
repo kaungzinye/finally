@@ -2,10 +2,10 @@
 
 ## Supported versions
 
-| Component | Branch | Notes |
-|-----------|--------|-------|
-| OAuth relay (`vercel-notion-auth/`) | `main` | Receives auth codes; must not log or persist tokens |
-| iOS app | `001-notion-task-app` | Stores Notion tokens in Keychain only |
+| Component | Notes |
+|-----------|-------|
+| OAuth relay (`vercel-notion-auth/`) | Receives auth codes; must not log or persist tokens |
+| iOS app (`main`) | Stores Notion tokens in Keychain only |
 
 ## Reporting a vulnerability
 

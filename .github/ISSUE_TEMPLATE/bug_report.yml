@@ -14,8 +14,8 @@ body:
     attributes:
       label: Component
       options:
-        - iOS app (001-notion-task-app branch)
-        - OAuth relay (vercel-notion-auth / main)
+        - iOS app
+        - OAuth relay (vercel-notion-auth)
         - Documentation
         - Other
     validations:
@@ -48,7 +48,7 @@ body:
     attributes:
       label: App version or commit
       description: e.g. commit SHA, TestFlight build, or "main @ abc1234"
-      placeholder: 001-notion-task-app @ 3a156f6
+      placeholder: main @ abc1234
     validations:
       required: true
 
