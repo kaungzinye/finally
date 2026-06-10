@@ -1,0 +1,81 @@
+name: Bug report
+description: Report something broken in Finally or the OAuth relay
+title: "[Bug]: "
+labels:
+  - bug
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report a bug. Please search [existing issues](https://github.com/kaungzinye/finally/issues) first.
+
+  - type: dropdown
+    id: component
+    attributes:
+      label: Component
+      options:
+        - iOS app (001-notion-task-app branch)
+        - OAuth relay (vercel-notion-auth / main)
+        - Documentation
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: What happened?
+      description: Describe the bug clearly. What did you expect instead?
+      placeholder: When I complete a recurring task, the target date is not carried forward...
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Steps to reproduce
+      description: Numbered steps help us reproduce the issue
+      placeholder: |
+        1. Connect Notion workspace
+        2. Create a task with recurrence set to Weekly
+        3. Mark complete
+        4. Observe due date but not target date
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: App version or commit
+      description: e.g. commit SHA, TestFlight build, or "main @ abc1234"
+      placeholder: 001-notion-task-app @ 3a156f6
+    validations:
+      required: true
+
+  - type: dropdown
+    id: ios
+    attributes:
+      label: iOS version (if applicable)
+      options:
+        - N/A
+        - iOS 17
+        - iOS 18
+        - iOS 26 beta
+        - Other
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs or screenshots
+      description: Xcode console output, screenshots, or screen recordings
+      placeholder: Paste relevant logs or attach screenshots in a follow-up comment
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Checklist
+      options:
+        - label: I searched existing issues before filing
+          required: true
+        - label: I am willing to help test a fix if one is proposed
+          required: false

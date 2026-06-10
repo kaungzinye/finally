@@ -1,0 +1,33 @@
+name: OAuth relay check
+
+on:
+  pull_request:
+    paths:
+      - "vercel-notion-auth/**"
+      - ".github/workflows/oauth-relay-check.yml"
+  push:
+    branches: [main]
+    paths:
+      - "vercel-notion-auth/**"
+
+jobs:
+  typecheck:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: vercel-notion-auth
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: vercel-notion-auth/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Typecheck serverless handlers
+        run: npm run typecheck
