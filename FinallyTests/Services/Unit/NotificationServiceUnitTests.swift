@@ -100,7 +100,7 @@ final class NotificationServiceUnitTests: XCTestCase {
         let now = referenceDate
 
         let task = TaskItem(notionPageId: "t-reschedule", title: "Reschedule me")
-        task.dueDate = now.addingTimeInterval(7200)
+        task.dueDate = now.addingTimeInterval(2 * 86_400)
         task.dueDateHasTime = true
         task.taskReminders = [TaskReminder.presetOneDayBeforeDue()]
         ctx.insert(task)
@@ -134,7 +134,7 @@ final class NotificationServiceUnitTests: XCTestCase {
 
         for i in 0..<(limit + 5) {
             let task = TaskItem(notionPageId: "t-limit-\(i)", title: "Task \(i)")
-            task.dueDate = now.addingTimeInterval(Double(i + 1) * 3600 + 7200)
+            task.dueDate = now.addingTimeInterval(2 * 86_400 + Double(i + 1) * 3600)
             task.dueDateHasTime = true
             task.taskReminders = [TaskReminder.presetOneDayBeforeDue()]
             ctx.insert(task)

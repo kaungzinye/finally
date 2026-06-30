@@ -33,7 +33,6 @@ struct ReminderSectionContent: View {
                 .onDelete { indexSet in
                     var reminders = task.taskReminders
                     for index in indexSet.sorted(by: >) {
-                        let id = reminders[index].id
                         UNUserNotificationCenter.current()
                             .removePendingNotificationRequests(withIdentifiers: [reminders[index].notificationId])
                         reminders.remove(at: index)

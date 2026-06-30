@@ -95,7 +95,7 @@ struct AnchoredReminder: Codable, Equatable, Identifiable {
     }
 
     var displayLabel: String {
-        let unitLabel = value == 1 ? unit.displayName.dropLast() : unit.displayName
+        let unitLabel = value == 1 ? String(unit.displayName.dropLast()) : unit.displayName
         return "\(value) \(unitLabel.lowercased()) \(direction.rawValue) \(anchor.label.lowercased())"
     }
 

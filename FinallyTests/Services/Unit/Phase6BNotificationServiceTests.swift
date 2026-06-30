@@ -39,7 +39,7 @@ final class Phase6BNotificationServiceTests: XCTestCase {
         let now = referenceDate
 
         let task = TaskItem(notionPageId: "t-2", title: "Future task")
-        task.dueDate = now.addingTimeInterval(7200)
+        task.dueDate = now.addingTimeInterval(2 * 86_400)
         task.dueDateHasTime = true
         task.taskReminders = [TaskReminder.presetOneDayBeforeDue()]
         ctx.insert(task)

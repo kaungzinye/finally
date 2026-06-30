@@ -2,6 +2,7 @@ import XCTest
 import SwiftData
 @testable import Finally
 
+@MainActor
 final class Phase6BDataMigrationTests: XCTestCase {
     private func makeContext() throws -> ModelContext {
         let schema = Schema([TaskItem.self, ProjectItem.self, ReminderItem.self, UserSession.self])
