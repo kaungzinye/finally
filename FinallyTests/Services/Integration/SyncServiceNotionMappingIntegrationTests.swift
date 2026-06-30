@@ -336,6 +336,48 @@ final class SyncServiceNotionMappingIntegrationTests: XCTestCase {
         XCTAssertTrue(task.targetDate! < task.dueDate!)
     }
 
+    func testFullSync_WhenChildArrivesBeforeParent_LinksSubtaskToParent() async throws {
+        let mock = MockNotionAPIClient()
+        let syncService = SyncService(api: mock)
+        let context = try makeInMemoryContext()
+
+        var mappings = PropertyMappings()
+        mappings.taskParentProperty = "Parent task"
+
+        let session = UserSession(workspaceId: "ws-1", workspaceName: "Workspace")
+        session.tasksDatabaseId = "tasks-db"
+        session.propertyMappings = mappings
+        context.insert(session)
+
+        mock.queryAllPagesResult["tasks-db"] = [
+            NotionTestFactory.page(
+                id: "child-1",
+                properties: [
+                    "Name": NotionTestFactory.propertyValue(type: "title", title: [NotionRichText(plainText: "Draft outline")]),
+                    "Status": NotionTestFactory.propertyValue(type: "status", statusName: "Not started"),
+                    "Due Date": NotionTestFactory.propertyValue(type: "date", dateStart: "2026-06-19"),
+                    "Parent task": NotionTestFactory.propertyValue(type: "relation", relationIds: ["parent-1"]),
+                ]
+            ),
+            NotionTestFactory.page(
+                id: "parent-1",
+                properties: [
+                    "Name": NotionTestFactory.propertyValue(type: "title", title: [NotionRichText(plainText: "Ship proposal")]),
+                    "Status": NotionTestFactory.propertyValue(type: "status", statusName: "Not started"),
+                    "Due Date": NotionTestFactory.propertyValue(type: "date", dateStart: "2026-06-20"),
+                ]
+            ),
+        ]
+
+        try await syncService.fullSync(session: session, modelContext: context)
+
+        let tasks = try context.fetch(FetchDescriptor<TaskItem>())
+        let child = try XCTUnwrap(tasks.first { $0.notionPageId == "child-1" })
+        XCTAssertEqual(child.parent?.notionPageId, "parent-1")
+        XCTAssertEqual(child.parentId, "parent-1")
+        XCTAssertEqual(child.parent?.subtasks.map(\.notionPageId), ["child-1"])
+    }
+
     private func makeInMemoryContext() throws -> ModelContext {
         let schema = Schema([
             TaskItem.self,

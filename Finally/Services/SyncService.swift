@@ -325,9 +325,10 @@ final class SyncService {
                let parentProp = page.properties[parentKey],
                let relations = parentProp.relation,
                let firstRelation = relations.first {
-                task.parentId = firstRelation.id
+                let parentId = firstRelation.id
+                task.parentId = parentId
                 let parentDescriptor = FetchDescriptor<TaskItem>(predicate: #Predicate<TaskItem> { item in
-                    item.notionPageId == firstRelation.id
+                    item.notionPageId == parentId
                 })
                 task.parent = (try? modelContext.fetch(parentDescriptor))?.first
                 task.isLocalOnly = false
