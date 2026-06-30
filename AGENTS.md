@@ -8,17 +8,23 @@ Auto-generated from all feature plans. Last updated: 2026-03-13
 
 ## Build & Test
 
-**IMPORTANT**: Always verify code compiles before committing. Use xcodebuild for compilation checks — never build to a device or simulator.
+**IMPORTANT**: Always verify code builds before committing. Simulator builds, launches, UI inspection, log capture, and test runs are allowed and should use the `build-ios-apps` XcodeBuildMCP workflow when available. Do not build to a physical device unless the user explicitly requests it.
 
 ```bash
-# Compile check (no device/simulator needed):
+# Headless compile check:
 xcodebuild build -project Finally.xcodeproj -scheme Finally -destination 'generic/platform=iOS' CODE_SIGNING_ALLOWED=NO -quiet
 
 # If project.yml changes, regenerate first:
 xcodegen generate
 
-# Run tests (compile-only, no simulator):
+# Compile the test target without launching a simulator:
 xcodebuild build-for-testing -project Finally.xcodeproj -scheme FinallyTests -destination 'generic/platform=iOS' CODE_SIGNING_ALLOWED=NO -quiet
+
+# Runtime verification:
+# 1. Select a booted iOS Simulator with XcodeBuildMCP.
+# 2. Set project, scheme, and simulator session defaults.
+# 3. Build and run the app, then inspect the launched UI and logs.
+# 4. Run the relevant tests on that simulator when behavioral verification is required.
 ```
 
 ## Project Structure
