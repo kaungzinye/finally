@@ -79,4 +79,18 @@ final class Phase6BTaskItemTests: XCTestCase {
         XCTAssertNotNil(task.remindersJSON)
         XCTAssertTrue(task.hasReminders)
     }
+
+    func testDeadlineDemoFixture_ProvidesCompleteDeadlineScenario() throws {
+        let referenceDate = makeDate(year: 2026, month: 6, day: 27)
+
+        let task = DeadlineDemoFixture.makeTask(referenceDate: referenceDate, calendar: calendar)
+
+        XCTAssertEqual(task.title, "Ship the project proposal")
+        XCTAssertEqual(task.priority, .urgent)
+        XCTAssertEqual(task.recurrence, .weekly)
+        XCTAssertTrue(try XCTUnwrap(task.targetDate) < XCTUnwrap(task.dueDate))
+        XCTAssertEqual(task.taskReminders.count, 2)
+        XCTAssertEqual(task.subtasks.map(\.sortIndex), [0, 1, 2])
+        XCTAssertEqual(task.subtasks.filter { $0.status == .done }.count, 1)
+    }
 }

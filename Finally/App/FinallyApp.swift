@@ -21,7 +21,9 @@ struct FinallyApp: App {
     var body: some Scene {
         WindowGroup {
             Group {
-                if isLoading {
+                if isDeadlineDemoMode {
+                    DeadlineDemoView()
+                } else if isLoading {
                     ProgressView("Loading...")
                 } else if !hasSession {
                     NotionConnectView(onConnected: {
@@ -83,6 +85,14 @@ struct FinallyApp: App {
         case 2: return .dark
         default: return nil
         }
+    }
+
+    private var isDeadlineDemoMode: Bool {
+#if DEBUG
+        ProcessInfo.processInfo.arguments.contains("-deadline-demo")
+#else
+        false
+#endif
     }
 
     // MARK: - Session Check
@@ -195,3 +205,13 @@ struct FinallyApp: App {
         }
     }
 }
+
+#if DEBUG
+private struct DeadlineDemoView: View {
+    @State private var task = DeadlineDemoFixture.makeTask()
+
+    var body: some View {
+        TaskDetailView(task: task)
+    }
+}
+#endif

@@ -229,3 +229,37 @@ final class TaskItem {
 extension TaskItem {
     var displaySuggestedDate: Date? { effectiveSuggestedDate }
 }
+
+enum DeadlineDemoFixture {
+    static func makeTask(referenceDate: Date = Date(), calendar: Calendar = .current) -> TaskItem {
+        let task = TaskItem(notionPageId: "deadline-demo-parent", title: "Ship the project proposal")
+        task.status = .inProgress
+        task.priority = .urgent
+        task.tags = ["Launch", "Client"]
+        task.recurrence = .weekly
+        task.targetDate = calendar.date(byAdding: .day, value: 9, to: referenceDate)
+        task.dueDate = calendar.date(byAdding: .day, value: 20, to: referenceDate)
+        task.taskReminders = [
+            .anchored(AnchoredReminder(anchor: .target, value: 1, unit: .days)),
+            .anchored(AnchoredReminder(anchor: .due, value: 2, unit: .hours)),
+        ]
+
+        let subtaskDefinitions: [(String, Int, TaskStatus)] = [
+            ("Confirm scope and milestones", 0, .done),
+            ("Draft the implementation plan", 1, .inProgress),
+            ("Review and send proposal", 2, .notStarted),
+        ]
+
+        task.subtasks = subtaskDefinitions.map { title, index, status in
+            let subtask = TaskItem(notionPageId: "deadline-demo-subtask-\(index)", title: title)
+            subtask.parentId = task.notionPageId
+            subtask.parent = task
+            subtask.sortIndex = index
+            subtask.status = status
+            subtask.suggestedDateOverride = calendar.date(byAdding: .day, value: index * 3, to: referenceDate)
+            return subtask
+        }
+
+        return task
+    }
+}
