@@ -146,6 +146,7 @@ final class SchemaValidatorUnitTests: XCTestCase {
 
         XCTAssertTrue(result.isValid)
         XCTAssertEqual(Set(result.ambiguousDueDateCandidates), Set(["Start", "End"]))
-        XCTAssertEqual(mappings.taskDueDateProperty, "Start")
+        XCTAssertEqual(result.ambiguousDueDateCandidates, ["End", "Start"])
+        XCTAssertEqual(mappings.taskDueDateProperty, "End")
     }
 }

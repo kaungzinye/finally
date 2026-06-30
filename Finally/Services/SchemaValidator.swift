@@ -70,7 +70,9 @@ final class SchemaValidator {
                 ))
             }
         } else {
-            let dateProps = database.properties.filter { $0.value.type == "date" }
+            let dateProps = database.properties
+                .filter { $0.value.type == "date" }
+                .sorted { $0.key.localizedCaseInsensitiveCompare($1.key) == .orderedAscending }
             if dateProps.count == 1 {
                 mappings.taskDueDateProperty = dateProps.first!.key
             } else if dateProps.count > 1 {
@@ -80,7 +82,7 @@ final class SchemaValidator {
                     mappings.taskDueDateProperty = match.key
                 } else {
                     mappings.taskDueDateProperty = dateProps.first!.key
-                    result.ambiguousDueDateCandidates = dateProps.map(\.key).sorted()
+                    result.ambiguousDueDateCandidates = dateProps.map(\.key)
                 }
             } else {
                 result.issues.append(.init(
