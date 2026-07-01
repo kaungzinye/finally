@@ -2,6 +2,31 @@ import XCTest
 @testable import Finally
 
 final class NotionDataShapeUnitTests: XCTestCase {
+    func testPageWrites_WhenNotionReturnsForbidden_ThrowPermissionDeniedMessage() async throws {
+        let configuration = URLSessionConfiguration.ephemeral
+        configuration.protocolClasses = [ForbiddenNotionURLProtocol.self]
+        let api = NotionAPIService(
+            token: "test-token",
+            session: URLSession(configuration: configuration)
+        )
+
+        let writes: [() async throws -> NotionPage] = [
+            { try await api.createPage(databaseId: "tasks-db", properties: [:]) },
+            { try await api.updatePage(pageId: "task-1", properties: [:]) },
+        ]
+
+        for write in writes {
+            do {
+                _ = try await write()
+                XCTFail("Expected a permission-denied error")
+            } catch NotionAPIError.permissionDenied(let message) {
+                XCTAssertEqual(message, ForbiddenNotionURLProtocol.message)
+            } catch {
+                XCTFail("Expected permissionDenied, received \(error)")
+            }
+        }
+    }
+
     func testQueryResponseDecoding_WithTypicalTaskShape_DecodesExpectedFields() throws {
         let json = """
         {
@@ -65,4 +90,32 @@ final class NotionDataShapeUnitTests: XCTestCase {
         XCTAssertEqual(page.properties["Status"]?.status?.name, "Done")
         XCTAssertNil(page.properties["Due Date"]?.date?.start)
     }
+}
+
+private final class ForbiddenNotionURLProtocol: URLProtocol {
+    static let message = "You do not have permission to edit this database."
+
+    override class func canInit(with request: URLRequest) -> Bool { true }
+
+    override class func canonicalRequest(for request: URLRequest) -> URLRequest { request }
+
+    override func startLoading() {
+        let response = HTTPURLResponse(
+            url: request.url!,
+            statusCode: 403,
+            httpVersion: nil,
+            headerFields: ["Content-Type": "application/json"]
+        )!
+        let data = Data(
+            """
+            {"object":"error","status":403,"code":"restricted_resource","message":"\(Self.message)"}
+            """.utf8
+        )
+
+        client?.urlProtocol(self, didReceive: response, cacheStoragePolicy: .notAllowed)
+        client?.urlProtocol(self, didLoad: data)
+        client?.urlProtocolDidFinishLoading(self)
+    }
+
+    override func stopLoading() {}
 }
