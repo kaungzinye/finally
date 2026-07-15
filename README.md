@@ -49,6 +49,16 @@ xcodebuild build-for-testing -project Finally.xcodeproj -scheme FinallyTests \
 
 Full setup (Notion integration, database schema, OAuth): [`specs/001-notion-task-app/quickstart.md`](specs/001-notion-task-app/quickstart.md).
 
+### Notion-first recovery baseline
+
+The annotated `notion-first-baseline` tag identifies the last buildable state where the iOS app uses Notion as its task provider. Restore that source state with:
+
+```bash
+git switch --detach notion-first-baseline
+```
+
+Create a branch from the tag before making recovery changes. The tag preserves source history; restore Keychain credentials and Notion workspace access separately.
+
 If you change `project.yml`, regenerate the Xcode project:
 
 ```bash
