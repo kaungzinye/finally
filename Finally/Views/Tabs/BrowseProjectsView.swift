@@ -7,7 +7,7 @@ struct BrowseProjectsView: View {
         filter: #Predicate<TaskItem> { $0.isDeleted == false && $0.statusRaw != "Complete" }
     )
     private var allActiveTasks: [TaskItem]
-    @Environment(SyncService.self) private var syncService
+    @Environment(TaskProviderCoordinator.self) private var taskProvider
     @Environment(\.modelContext) private var modelContext
 
     @State private var expandedSections: Set<String> = ["Inbox", "Projects"]
@@ -119,7 +119,7 @@ struct BrowseProjectsView: View {
                 }
             }
             .refreshable {
-                await syncService.syncOnLaunch(modelContext: modelContext)
+                try? await taskProvider.synchronize(.launch, store: modelContext)
             }
             .sheet(item: $selectedTask) { task in
                 TaskDetailView(task: task)
@@ -168,7 +168,7 @@ struct ProjectDetailView: View {
 
     @Query private var allTasks: [TaskItem]
     @Query private var allProjects: [ProjectItem]
-    @Environment(SyncService.self) private var syncService
+    @Environment(TaskProviderCoordinator.self) private var taskProvider
     @Environment(\.modelContext) private var modelContext
 
     @State private var selectedTask: TaskItem?
@@ -193,7 +193,7 @@ struct ProjectDetailView: View {
         .listStyle(.plain)
         .navigationTitle(project?.title ?? "Project")
         .refreshable {
-            await syncService.syncOnLaunch(modelContext: modelContext)
+            try? await taskProvider.synchronize(.launch, store: modelContext)
         }
         .overlay {
             if projectTasks.isEmpty {

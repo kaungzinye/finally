@@ -9,7 +9,7 @@ struct InboxView: View {
         sort: \TaskItem.dueDate
     )
     private var allNonDoneTasks: [TaskItem]
-    @Environment(SyncService.self) private var syncService
+    @Environment(TaskProviderCoordinator.self) private var taskProvider
     @Environment(\.modelContext) private var modelContext
 
     @State private var selectedTask: TaskItem?
@@ -22,7 +22,7 @@ struct InboxView: View {
 
     var body: some View {
         NavigationStack {
-            if syncService.isSyncing && allNonDoneTasks.isEmpty {
+            if taskProvider.isSyncing && allNonDoneTasks.isEmpty {
                 // First-load sync: replace content entirely
                 VStack(spacing: 12) {
                     ProgressView()
@@ -66,7 +66,7 @@ struct InboxView: View {
                 .listStyle(.plain)
                 .navigationTitle(isSelectionMode ? "Select Tasks (\(selectedTasks.count))" : "Inbox")
                 .refreshable {
-                    await syncService.syncOnLaunch(modelContext: modelContext)
+                    try? await taskProvider.synchronize(.launch, store: modelContext)
                 }
                 .toolbar {
                     if isSelectionMode {

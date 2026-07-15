@@ -3,7 +3,7 @@ import SwiftData
 
 struct InlineTaskCreator: View {
     @Environment(\.modelContext) private var modelContext
-    @Environment(SyncService.self) private var syncService
+    @Environment(TaskProviderCoordinator.self) private var taskProvider
     @Query(sort: \ProjectItem.title) private var allProjects: [ProjectItem]
     @Query(filter: #Predicate<TaskItem> { $0.isDeleted == false }) private var allTasks: [TaskItem]
 
@@ -313,7 +313,7 @@ struct InlineTaskCreator: View {
         Task {
             guard let session = try? context.fetch(FetchDescriptor<UserSession>()).first else { return }
             do {
-                try await syncService.pushDirtyChanges(session: session, modelContext: context)
+                try await taskProvider.synchronize(.push, workspace: session, store: context)
             } catch let error as TaskSyncError {
                 syncErrorMessage = error.localizedDescription
             } catch {

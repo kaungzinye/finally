@@ -15,8 +15,10 @@
 		19D487F867C9063029029395 /* NetworkService.swift in Sources */ = {isa = PBXBuildFile; fileRef = C9438CA4430DF5A84E08C34F /* NetworkService.swift */; };
 		1A1EF31471916736EF4376BA /* NotionCRUDE2ETests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B810A6DFB04DE19772B99FA3 /* NotionCRUDE2ETests.swift */; };
 		1EC4B254DBD54D006F6CB30D /* NotificationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 945D47BECC130042350E778B /* NotificationService.swift */; };
+		22ACFD0761284D5E7776A944 /* TaskProviderAdapter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8A0F563FE7E903936791CA0D /* TaskProviderAdapter.swift */; };
 		27541C233B7309950256A7CC /* NotionConnectView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6491D6ECA6018FBC712CEEE1 /* NotionConnectView.swift */; };
 		29E5ADA85E0F38D1F3E98CB0 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 57297B6B182C9224FF27FA72 /* SettingsView.swift */; };
+		2A608FE968CA3F48AAE6D108 /* TaskProviderContractTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 62E26D76ABE69007EDD2D951 /* TaskProviderContractTests.swift */; };
 		2BA18E36246E875B2071B500 /* InboxView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7D8527647C1E7B50BB5091B3 /* InboxView.swift */; };
 		2BB7E5F6DCE5BC8BE7C09E4E /* NotificationTimePickerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 92344AD11CDB9C5B2DCC2F2B /* NotificationTimePickerView.swift */; };
 		34F63FDAE9AF83CAA6DCA4AF /* BackendDataFlowIntegrationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8C46663913189E0200BD2F8C /* BackendDataFlowIntegrationTests.swift */; };
@@ -136,6 +138,7 @@
 		5DF9E28C5C320BE1EE73448A /* Enums.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Enums.swift; sourceTree = "<group>"; };
 		6195045508D41FC6C8438C7F /* SyncService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SyncService.swift; sourceTree = "<group>"; };
 		628D2FCDB35AAD3E45C3B77E /* SchemaValidator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SchemaValidator.swift; sourceTree = "<group>"; };
+		62E26D76ABE69007EDD2D951 /* TaskProviderContractTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskProviderContractTests.swift; sourceTree = "<group>"; };
 		6361629AB42FF68CA77254EC /* Finally.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = Finally.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		6491D6ECA6018FBC712CEEE1 /* NotionConnectView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotionConnectView.swift; sourceTree = "<group>"; };
 		695A63457914D18721BF9D98 /* SchemaValidatorUnitTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SchemaValidatorUnitTests.swift; sourceTree = "<group>"; };
@@ -155,6 +158,7 @@
 		837D45B286A6CB5EEF5A4D27 /* InlineTaskCreator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InlineTaskCreator.swift; sourceTree = "<group>"; };
 		886B142AE74239CB20B81B88 /* SubtaskScheduler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubtaskScheduler.swift; sourceTree = "<group>"; };
 		8875DF7703CDE08E6E96792D /* E2EConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = E2EConfig.swift; sourceTree = "<group>"; };
+		8A0F563FE7E903936791CA0D /* TaskProviderAdapter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskProviderAdapter.swift; sourceTree = "<group>"; };
 		8AF288D737D929B86F432D4C /* E2ETestBase.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = E2ETestBase.swift; sourceTree = "<group>"; };
 		8AFC4C0D33FEEB196CFC5B9E /* DatePickerSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DatePickerSheet.swift; sourceTree = "<group>"; };
 		8C46663913189E0200BD2F8C /* BackendDataFlowIntegrationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackendDataFlowIntegrationTests.swift; sourceTree = "<group>"; };
@@ -290,6 +294,7 @@
 				628D2FCDB35AAD3E45C3B77E /* SchemaValidator.swift */,
 				886B142AE74239CB20B81B88 /* SubtaskScheduler.swift */,
 				6195045508D41FC6C8438C7F /* SyncService.swift */,
+				8A0F563FE7E903936791CA0D /* TaskProviderAdapter.swift */,
 				142A6914DF4321AEE4F34A6F /* TaskTitleParser.swift */,
 			);
 			path = Services;
@@ -339,6 +344,7 @@
 			children = (
 				8C46663913189E0200BD2F8C /* BackendDataFlowIntegrationTests.swift */,
 				42B3711F01223345C22AC39D /* SyncServiceNotionMappingIntegrationTests.swift */,
+				62E26D76ABE69007EDD2D951 /* TaskProviderContractTests.swift */,
 			);
 			path = Integration;
 			sourceTree = "<group>";
@@ -545,6 +551,7 @@
 				AA82CDE694D91D5E61C9CBDE /* RecurrenceTests.swift in Sources */,
 				B2F654397FD23CCA177DA1AE /* SchemaValidatorUnitTests.swift in Sources */,
 				5BFF0F024F1538934C7D9EFC /* SyncServiceNotionMappingIntegrationTests.swift in Sources */,
+				2A608FE968CA3F48AAE6D108 /* TaskProviderContractTests.swift in Sources */,
 				052CF12915DE19D4E836E671 /* TaskStatusMappingUnitTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -603,6 +610,7 @@
 				57CE613AD4B410992C4696B8 /* TagPicker.swift in Sources */,
 				74C65A22FA4C6AEEF8B6E9EB /* TaskDetailView.swift in Sources */,
 				1462F1EB97E6FA5647BE0E69 /* TaskItem.swift in Sources */,
+				22ACFD0761284D5E7776A944 /* TaskProviderAdapter.swift in Sources */,
 				ACB67A088AA0A224717E6FEE /* TaskReminder.swift in Sources */,
 				6B3F6A15D72DE7B329EEAFBE /* TaskRowView.swift in Sources */,
 				8A4013637BD595F7018BBDCF /* TaskTitleParser.swift in Sources */,

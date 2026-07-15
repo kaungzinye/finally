@@ -3,7 +3,7 @@ import SwiftData
 
 struct KanbanView: View {
     @Query(filter: #Predicate<TaskItem> { $0.isDeleted == false }) private var allTasks: [TaskItem]
-    @Environment(SyncService.self) private var syncService
+    @Environment(TaskProviderCoordinator.self) private var taskProvider
     @Environment(\.modelContext) private var modelContext
 
     @State private var selectedTask: TaskItem?
@@ -43,7 +43,7 @@ struct KanbanView: View {
     var body: some View {
         NavigationStack {
             Group {
-                if syncService.isSyncing && allTasks.isEmpty {
+                if taskProvider.isSyncing && allTasks.isEmpty {
                     // First-load sync: replace content entirely
                     VStack(spacing: 12) {
                         ProgressView()
@@ -71,7 +71,7 @@ struct KanbanView: View {
             }
             .navigationTitle("Board")
             .refreshable {
-                await syncService.syncOnLaunch(modelContext: modelContext)
+                try? await taskProvider.synchronize(.launch, store: modelContext)
             }
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {

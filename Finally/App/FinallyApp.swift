@@ -7,7 +7,7 @@ import BackgroundTasks
 struct FinallyApp: App {
     @Environment(\.scenePhase) private var scenePhase
     @State private var router = NavigationRouter()
-    @State private var syncService = SyncService()
+    @State private var taskProvider = TaskProviderCoordinator()
     @State private var authService = NotionAuthService()
     @State private var networkService = NetworkService()
     @State private var hasSession = false
@@ -38,7 +38,7 @@ struct FinallyApp: App {
                 }
             }
             .environment(router)
-            .environment(syncService)
+            .environment(taskProvider)
             .environment(networkService)
             .tint(Color(.label))
             .preferredColorScheme(colorScheme)
@@ -116,7 +116,7 @@ struct FinallyApp: App {
 
         // Trigger sync on launch if we have a session with databases configured
         if hasSession && !needsDatabaseSetup {
-            await syncService.syncOnLaunch(modelContext: context)
+            try? await taskProvider.synchronize(.launch, store: context)
         }
     }
 
@@ -126,7 +126,7 @@ struct FinallyApp: App {
         let success = await authService.completeOAuth(withCode: code, modelContext: context)
         if success {
             hasSession = true
-            await syncService.syncOnLaunch(modelContext: context)
+            try? await taskProvider.synchronize(.launch, store: context)
         }
         router.pendingOAuthCode = nil
     }
@@ -147,14 +147,14 @@ struct FinallyApp: App {
     @MainActor
     private func triggerSync() async {
         let context = ModelContext(appContainer)
-        await syncService.syncOnLaunch(modelContext: context)
+        try? await taskProvider.synchronize(.launch, store: context)
     }
 
     private func runIncrementalSyncIfPossible() async {
         guard hasSession else { return }
         let context = ModelContext(appContainer)
         guard let session = ((try? context.fetch(FetchDescriptor<UserSession>())) ?? []).first else { return }
-        try? await syncService.incrementalSync(session: session, modelContext: context)
+        try? await taskProvider.synchronize(.incremental, workspace: session, store: context)
     }
 
     private func startForegroundSyncLoop() async {
