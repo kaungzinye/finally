@@ -23,7 +23,7 @@ struct NotionConnectView: View {
             Text("Finally")
                 .font(.largeTitle.bold())
 
-            Text("Connect your Notion workspace to get started")
+            Text("Connect any Notion workspace where you're a member")
                 .font(.body)
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
