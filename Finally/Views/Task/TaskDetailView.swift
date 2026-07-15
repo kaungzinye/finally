@@ -5,7 +5,7 @@ struct TaskDetailView: View {
     @Bindable var task: TaskItem
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
-    @Environment(SyncService.self) private var syncService
+    @Environment(TaskProviderCoordinator.self) private var taskProvider
 
     @State private var showDatePicker = false
     @State private var showTargetDatePicker = false
@@ -369,7 +369,7 @@ struct TaskDetailView: View {
         let context = modelContext
         guard let session = try? context.fetch(FetchDescriptor<UserSession>()).first else { return }
         do {
-            try await syncService.pushDirtyChanges(session: session, modelContext: context)
+            try await taskProvider.synchronize(.push, workspace: session, store: context)
         } catch let error as TaskSyncError {
             syncErrorMessage = error.localizedDescription
         } catch {

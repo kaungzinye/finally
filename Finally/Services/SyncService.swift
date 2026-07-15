@@ -210,6 +210,15 @@ final class SyncService {
         mappings: PropertyMappings,
         modelContext: ModelContext
     ) async throws {
+        if task.isDeleted {
+            if task.lastSyncedAt != nil {
+                try await api.archivePage(pageId: task.notionPageId)
+            }
+            modelContext.delete(task)
+            try modelContext.save()
+            return
+        }
+
         let properties = buildNotionProperties(for: task, mappings: mappings)
         if task.lastSyncedAt == nil, !session.tasksDatabaseId.isEmpty {
             let created = try await api.createPage(databaseId: session.tasksDatabaseId, properties: properties)

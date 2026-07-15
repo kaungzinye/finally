@@ -9,7 +9,7 @@ struct UpcomingView: View {
         sort: \TaskItem.dueDate
     )
     private var allFutureTasks: [TaskItem]
-    @Environment(SyncService.self) private var syncService
+    @Environment(TaskProviderCoordinator.self) private var taskProvider
     @Environment(\.modelContext) private var modelContext
 
     @State private var selectedTask: TaskItem?
@@ -48,7 +48,7 @@ struct UpcomingView: View {
 
     var body: some View {
         NavigationStack {
-            if syncService.isSyncing && allFutureTasks.isEmpty {
+            if taskProvider.isSyncing && allFutureTasks.isEmpty {
                 // First-load sync: replace content entirely
                 VStack(spacing: 12) {
                     ProgressView()
@@ -91,7 +91,7 @@ struct UpcomingView: View {
                 .listStyle(.plain)
                 .navigationTitle(isSelectionMode ? "Select Tasks (\(selectedTasks.count))" : "Upcoming")
                 .refreshable {
-                    await syncService.syncOnLaunch(modelContext: modelContext)
+                    try? await taskProvider.synchronize(.launch, store: modelContext)
                 }
                 .toolbar {
                 if isSelectionMode {
