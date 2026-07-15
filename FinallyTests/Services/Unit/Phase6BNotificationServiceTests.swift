@@ -7,7 +7,7 @@ final class Phase6BNotificationServiceTests: XCTestCase {
     private let referenceDate = Date(timeIntervalSinceReferenceDate: 2_000_000)
 
     private func makeContext() throws -> ModelContext {
-        let schema = Schema([TaskItem.self, ProjectItem.self, ReminderItem.self, UserSession.self])
+        let schema = Schema([TaskItem.self, ProjectItem.self, UserSession.self])
         let container = try ModelContainer(for: schema, configurations: [ModelConfiguration(isStoredInMemoryOnly: true)])
         return ModelContext(container)
     }

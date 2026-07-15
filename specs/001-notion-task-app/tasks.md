@@ -148,12 +148,11 @@
 
 **Purpose**: Replace the current reminder/deadline storage model with explicit target dates, hybrid reminders (anchored plus explicit-date), and real Notion-backed subtasks.
 
-- [ ] T086 [US4] Replace per-reminder `ReminderItem` persistence with task-level reminder JSON supporting both anchored reminder tuples `(anchor, value, unit, direction)` and explicit-date reminder entries; add migration for existing reminder data
+- [ ] T086 [US4] Store reminders as task-level JSON supporting both anchored reminder tuples `(anchor, value, unit, direction)` and explicit-date reminder entries
 - [ ] T087 [US4] Add `targetDate` support to `TaskItem` as an optional secondary synced date that must remain earlier than `dueDate`
 - [ ] T088 [US4] Redesign reminder UI so `due` is the default anchor, `target` appears only when a `targetDate` exists, anchored reminders use bounded units: minutes `1–59`, hours `1–23`, days `1–30`, weeks `1–51`, months `1–11`, and exact-date reminders remain available
 - [ ] T089 [US4] Update notification scheduling so anchored reminders resolve against explicit anchors (`target` or `due`) while exact-date reminders fire from their fixed timestamp
 - [ ] T090 [US3] Promote subtasks to real Notion child pages in the Tasks database using the parent-child relation; keep `sortIndex`, `suggestedDateOverride`, and reminder metadata local-only
-- [ ] T091 [US3] Add explicit one-time migration flow for legacy local-only subtasks with user confirmation before any Notion pages are created
 - [ ] T092 [US3] Implement redesigned suggested-date logic: work subtasks backward from `targetDate` when present, otherwise backward from `dueDate`
 - [ ] T093 [US5] Carry `targetDate` forward coherently and reset persistent subtask pages correctly across recurring task cycles
 
@@ -245,7 +244,7 @@
 
 ## Phase 12: Part I — Notion Platform 2026 Integration
 
-**Purpose**: Replace polling sync with webhook-driven push, migrate OAuth relay from Vercel to Notion Workers, add Markdown task notes, and remove Workspace Owner onboarding requirement.
+**Purpose**: Replace polling sync with webhook-driven push, move the OAuth relay from Vercel to Notion Workers, add Markdown task notes, and remove Workspace Owner onboarding requirement.
 
 ### Sub-phase 12A: Any-Member OAuth (US12) — Low effort, high impact, no dependencies
 

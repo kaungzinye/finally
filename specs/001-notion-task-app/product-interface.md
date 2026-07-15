@@ -61,7 +61,7 @@ Finally presents one provider-independent task experience backed by a local Swif
 - Notification tests use a scheduler test double and verify resolved fire dates, cancellation, rescheduling, and the iOS pending-notification limit.
 - Widget contract tests verify the task selection presented to WidgetKit and the resulting deep links.
 - Provider conformance scenarios run the same canonical create, update, complete, recurrence, and delete lifecycle against each adapter.
-- Existing notification, recurrence, data-migration, task-model, and backend-flow tests provide the prior art.
+- Existing notification, recurrence, task-model, and backend-flow tests provide the prior art.
 
 ## Out of Scope
 
@@ -74,4 +74,4 @@ Finally presents one provider-independent task experience backed by a local Swif
 
 ## Further Notes
 
-The current SwiftData implementation still uses Notion-specific identifiers in shared entities. The provider-neutral model specification replaces those identifiers through a separate migration rather than treating the current representation as the lasting product contract.
+The current SwiftData implementation still uses Notion-specific identifiers in shared entities. The provider-neutral model replaces that unreleased representation directly rather than preserving it as a compatibility layer.

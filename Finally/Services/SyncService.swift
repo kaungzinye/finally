@@ -170,7 +170,7 @@ final class SyncService {
     }
 
     private func pushDirtyChangesUsingProvider(session: UserSession, modelContext: ModelContext) async throws {
-        let descriptor = FetchDescriptor<TaskItem>(predicate: #Predicate { $0.isDirty == true && $0.isLocalOnly == false })
+        let descriptor = FetchDescriptor<TaskItem>(predicate: #Predicate { $0.isDirty == true })
         let dirtyTasks = try modelContext.fetch(descriptor)  // Bug 2 fix: propagate fetch errors instead of silently returning []
 
         var mappings = session.propertyMappings
@@ -331,8 +331,6 @@ final class SyncService {
             }
 
             task.validateTargetDate()
-            task.startDate = nil
-
             // Priority
             if let priorityKey = mappings.taskPriorityProperty,
                let priorityProp = page.properties[priorityKey],
@@ -380,7 +378,6 @@ final class SyncService {
                     item.notionPageId == parentId
                 })
                 task.parent = (try? modelContext.fetch(parentDescriptor))?.first
-                task.isLocalOnly = false
             } else if task.parentId == nil {
                 task.parent = nil
             }
@@ -411,8 +408,6 @@ final class SyncService {
         guard let locals = try? modelContext.fetch(descriptor) else { return }
 
         for item in locals {
-            // Skip local-only items (e.g., sub-tasks)
-            if let task = item as? TaskItem, task.isLocalOnly { continue }
             // Bug 4 fix: don't delete tasks with unsaved local edits
             if let task = item as? TaskItem, task.isDirty { continue }
             if !remoteIds.contains(item.notionPageId) {

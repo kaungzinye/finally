@@ -101,16 +101,4 @@ final class Phase6BTaskReminderTests: XCTestCase {
         XCTAssertFalse(invalid.isValidValue())
     }
 
-    // MARK: - Legacy migration mapping
-
-    func testFromLegacy_MapsIntervalSecondsToAnchoredDueReminder() {
-        let reminder = TaskReminder.fromLegacy(intervalSeconds: 86_400, absoluteDate: nil)
-        guard case .anchored(let anchored) = reminder else {
-            return XCTFail("Expected anchored reminder")
-        }
-        XCTAssertEqual(anchored.anchor, .due)
-        XCTAssertEqual(anchored.value, 1)
-        XCTAssertEqual(anchored.unit, .days)
-        XCTAssertEqual(anchored.direction, .before)
-    }
 }

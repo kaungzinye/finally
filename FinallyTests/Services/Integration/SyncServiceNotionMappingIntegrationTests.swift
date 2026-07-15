@@ -382,7 +382,6 @@ final class SyncServiceNotionMappingIntegrationTests: XCTestCase {
         let schema = Schema([
             TaskItem.self,
             ProjectItem.self,
-            ReminderItem.self,
             UserSession.self,
         ])
         let configuration = ModelConfiguration(isStoredInMemoryOnly: true)

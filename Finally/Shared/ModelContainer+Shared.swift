@@ -11,7 +11,6 @@ extension ModelContainer {
         let schema = Schema([
             TaskItem.self,
             ProjectItem.self,
-            ReminderItem.self,
             UserSession.self,
         ])
 

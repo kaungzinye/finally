@@ -10,7 +10,7 @@ The product also remains open source and customizable without making every insta
 
 ## Solution
 
-Finally Server is a public, self-hosted task provider derived from Vikunja. It implements Finally's canonical task model as first-class server concepts and becomes the authoritative self-hosted task store shared by Finally iOS and authorized automation clients. It runs beside the existing Vikunja service during validation, receives a complete verified migration, and replaces Vikunja after cutover.
+Finally Server is a public, self-hosted task provider derived from Vikunja. It implements Finally's canonical task model as first-class server concepts and becomes the authoritative self-hosted task store shared by Finally iOS and authorized automation clients. Development uses one canonical schema because the app has no released data contract to preserve.
 
 Finally iOS remains the primary human interface and supports separate Finally Server and Notion workspaces. Tasks never copy automatically between providers. A provider-neutral planning layer accepts minimal read-only projections from both providers and produces one Daily Plan with a bounded focus list. An authorized automation agent proposes up to three focus tasks in the evening, the user confirms in the morning, and urgent additions replace an existing focus task instead of expanding the list.
 
@@ -22,12 +22,6 @@ Finally Server stores canonical reminder rules, while each iPhone schedules a lo
 
 1. As a user, I want Finally Server to preserve Finally's task model, so that the workflow does not shrink to the capabilities of a generic task server.
 2. As a user, I want automation clients and Finally iOS to operate on the same tasks, so that conversational and direct edits remain consistent.
-3. As a user, I want Finally Server to replace Vikunja only after validation, so that the cutover does not endanger current tasks.
-4. As a user, I want every existing Vikunja project and task migrated, so that adopting Finally Server does not require starting over.
-5. As a user, I want migration counts and representative records verified, so that I can trust the imported data.
-6. As a user, I want original Vikunja identifiers retained as migration metadata, so that records remain traceable during rollback and diagnosis.
-7. As a user, I want unsupported migration data reported explicitly, so that silent loss cannot occur.
-8. As a user, I want current Vikunja backups retained through cutover, so that I can restore the previous service if validation fails.
 9. As a user, I want self-hosted tasks to remain separate from collaborative Notion tasks, so that each workspace retains one authority.
 10. As a user, I want Finally iOS to switch between Finally Server and Notion workspaces, so that one interface serves both contexts.
 11. As a user, I want the same canonical task vocabulary in both workspaces, so that changing providers does not change how I think about tasks.
@@ -38,7 +32,7 @@ Finally Server stores canonical reminder rules, while each iPhone schedules a lo
 16. As a user, I want an optional date-only or timed deadline, so that the system represents real constraints accurately.
 17. As a user, I want planned days and deadlines to remain distinct, so that changing an intention does not move an obligation.
 18. As a user, I want three explicit task states, so that not-started, in-progress, and completed work remain distinct.
-19. As a user, I want projects, labels, priorities, assignees, and task relations, so that migrated Vikunja organization remains useful.
+19. As a user, I want projects, labels, priorities, assignees, and task relations, so that rich task organization remains useful.
 20. As a user, I want subtasks to remain real tasks, so that hierarchy, reminders, and recurrence behavior remain consistent.
 21. As a user, I want actionable subtasks surfaced ahead of non-actionable parents, so that the execution view presents concrete work.
 22. As a user, I want a task to contain zero or more work sessions, so that complex tasks can receive several periods of protected time.
@@ -113,9 +107,9 @@ Finally Server stores canonical reminder rules, while each iPhone schedules a lo
 
 - Finally's canonical model is opinionated. Bounded configuration covers focus limits, views, labels, priorities, field visibility, defaults, and provider mappings. Semantic alternatives remain distributions or forks rather than arbitrary runtime schemas.
 - Finally Server lives in a separate public repository derived from Vikunja and inherits AGPL-3.0-or-later. Finally iOS remains in its MIT-licensed repository.
-- Finally Server runs as a distinct service beside Vikunja during validation. It uses its own persistent data location, public HTTPS endpoint, service unit, and backup schedule. It replaces Vikunja after migration validation and cutover.
+- Finally Server runs as a distinct service with its own persistent data location, public HTTPS endpoint, service unit, and backup schedule.
 - The inherited Vikunja web client provides read-only task viewing and basic administration in V1. Finally iOS and authorized automation clients are the task-editing surfaces.
-- Finally Server preserves Vikunja projects, permissions, labels, assignees, attachments, relations, comments, exports, and backup behavior where they remain compatible with the canonical model.
+- Finally Server provides projects, permissions, labels, assignees, attachments, relations, comments, exports, and backup behavior through the canonical model.
 - The task model contains stable identity, title, description, status, optional planned day, optional deadline, priority, project, parent, subtask order, suggested-day override, labels, assignees, recurrence rule and policy, board placement, creator, timestamps, revision, and recoverable deletion state.
 - `plannedDay` is a date-only intention. `deadline` is either date-only or timed. Neither field is required.
 - Reminder rules, work sessions, recurrence-cycle history, relations, comments, and attachments are linked records rather than repeated scalar task fields.
@@ -138,7 +132,6 @@ Finally Server stores canonical reminder rules, while each iPhone schedules a lo
 - Chat integrations are optional conversational surfaces for explicit task mutations. They are not notification-delivery channels.
 - Every mutable server entity carries a revision or equivalent ETag. Automation clients submit narrow field patches. Stale automation writes fail. Finally iOS fetches the current revision and reapplies the explicit phone patch; the phone wins same-field conflicts while unrelated changes survive.
 - Completion and deletion conflicts require explicit handling and never resolve silently.
-- Migration imports all supported Vikunja data, retains legacy identifiers, reports unsupported records, verifies counts and sampled content, and preserves source dumps and a read-only source service until cutover acceptance.
 - Finally Server publishes a versioned OpenAPI description. Finally iOS generates its server client from that contract.
 - `main` is the only long-lived product branch in each repository. Product pull requests squash into `main`. Explicit merge commits synchronize upstream Vikunja releases into Finally Server.
 
@@ -148,7 +141,6 @@ Finally Server stores canonical reminder rules, while each iPhone schedules a lo
 - The highest acceptance seam executes one canonical lifecycle through a provider adapter and local store: create a task, set planned day and deadline, add an offline reminder, select it in a Daily Plan, confirm a work session, publish calendar artifacts, complete the task, and reconcile provider state.
 - A provider conformance suite runs canonical create, read, update, complete, recurrence, delete, and conflict scenarios against Finally Server and the Notion adapter using deterministic provider doubles. Live provider E2E tests remain separately gated by credentials.
 - Finally Server API acceptance tests run against a temporary real database and verify authentication, permissions, canonical fields, revisions, stale writes, Daily Plans, work sessions, recurrence cycles, reminder rules, exports, and recoverable deletion.
-- Migration tests restore representative Vikunja dumps, run the migration, compare entity counts and relationships, inspect unsupported-data reports, and exercise rollback without touching production data.
 - Daily Plan tests verify the configured one-to-five bound, default three-task behavior, ordered selections, cross-provider references, explicit replacement for urgent work, and absence of automatic rollover.
 - Planning-agent contract tests verify evening proposals, morning confirmation, calendar-aware slot suggestions, explicit user approval, selective time blocking, and lack of source mutation for projected Notion tasks.
 - Calendar adapter tests use a deterministic Google Calendar double and verify the three calendar names, busy versus transparent availability, event identity, idempotent publication, update and removal from server-side changes, two-account reads, and no reverse mutation in V1.
@@ -156,8 +148,8 @@ Finally Server stores canonical reminder rules, while each iPhone schedules a lo
 - Reminder tests use a notification-scheduler double and verify anchored versus exact resolution, offline scheduling, cancellation, rescheduling, per-device status, and replenishment within the iOS pending-notification limit.
 - Conflict tests cover stale automation patches, phone-wins same-field edits, preservation of unrelated fields, and explicit completion or deletion conflicts.
 - Recurrence tests cover stable task identity, cycle history, planned-day and deadline advancement, subtask reset policy, reminder reuse, and absence of automatically recurring work sessions.
-- Existing backend data-flow integration tests provide prior art for the highest iOS sync seam. Existing Notion mapping, notification, recurrence, task-model, data-migration, and E2E round-trip tests provide prior art for focused contracts.
-- Release verification includes an iOS build, relevant simulator tests, server test suite, migration dry run, API compatibility check, backup verification, and a parallel-deployment smoke test through an automation client and Finally iOS.
+- Existing backend data-flow integration tests provide prior art for the highest iOS sync seam. Existing Notion mapping, notification, recurrence, task-model, and E2E round-trip tests provide prior art for focused contracts.
+- Release verification includes an iOS build, relevant simulator tests, server test suite, API compatibility check, backup verification, and a smoke test through an automation client and Finally iOS.
 
 ## Out of Scope
 
