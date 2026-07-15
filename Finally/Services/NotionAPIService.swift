@@ -16,6 +16,7 @@ protocol NotionAPIClient {
 
 enum NotionAPIError: Error, LocalizedError {
     case unauthorized
+    case permissionDenied(message: String)
     case rateLimited(retryAfter: TimeInterval)
     case notFound
     case badRequest(String)
@@ -27,6 +28,8 @@ enum NotionAPIError: Error, LocalizedError {
         switch self {
         case .unauthorized:
             return "Your Notion connection has expired. Please reconnect."
+        case .permissionDenied(let message):
+            return message
         case .rateLimited:
             return "Too many requests. Please wait a moment."
         case .notFound:
@@ -60,6 +63,10 @@ struct NotionDatabaseQueryResponse: Decodable {
         case hasMore = "has_more"
         case nextCursor = "next_cursor"
     }
+}
+
+private struct NotionErrorResponse: Decodable {
+    let message: String
 }
 
 struct NotionPageIcon: Decodable {
@@ -188,7 +195,7 @@ struct NotionRelationSchema: Decodable {
 
 @Observable
 final class NotionAPIService: NotionAPIClient {
-    private let session = URLSession.shared
+    private let session: URLSession
     private let decoder: JSONDecoder = {
         let d = JSONDecoder()
         return d
@@ -196,8 +203,9 @@ final class NotionAPIService: NotionAPIClient {
 
     private let injectedToken: String?
 
-    init(token: String? = nil) {
+    init(token: String? = nil, session: URLSession = .shared) {
         self.injectedToken = token
+        self.session = session
     }
 
     private var accessToken: String? {
@@ -251,6 +259,10 @@ final class NotionAPIService: NotionAPIClient {
         case 401:
             handleUnauthorizedResponse()
             throw NotionAPIError.unauthorized
+        case 403:
+            let message = (try? decoder.decode(NotionErrorResponse.self, from: data).message)
+                ?? "You don't have edit access to this database."
+            throw NotionAPIError.permissionDenied(message: message)
         case 404:
             throw NotionAPIError.notFound
         case 429:
