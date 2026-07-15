@@ -4,6 +4,29 @@ import SwiftData
 import WidgetKit
 #endif
 
+enum TaskSyncError: Error, LocalizedError {
+    case permissionDenied
+    case authenticationExpired
+    case rateLimited
+    case remoteTaskUnavailable
+    case serviceUnavailable
+
+    var errorDescription: String? {
+        switch self {
+        case .permissionDenied:
+            return "You don't have edit access to this database"
+        case .authenticationExpired:
+            return "Your task provider connection has expired. Reconnect it in Settings."
+        case .rateLimited:
+            return "Sync is temporarily rate-limited. Try again in a moment."
+        case .remoteTaskUnavailable:
+            return "This task is no longer available from its provider. Refresh and try again."
+        case .serviceUnavailable:
+            return "Sync is temporarily unavailable. Try again."
+        }
+    }
+}
+
 @Observable
 final class SyncService {
     private let api: NotionAPIClient
@@ -139,6 +162,14 @@ final class SyncService {
     // MARK: - Push Dirty Changes
 
     func pushDirtyChanges(session: UserSession, modelContext: ModelContext) async throws {
+        do {
+            try await pushDirtyChangesUsingProvider(session: session, modelContext: modelContext)
+        } catch let error as NotionAPIError {
+            throw taskSyncError(for: error)
+        }
+    }
+
+    private func pushDirtyChangesUsingProvider(session: UserSession, modelContext: ModelContext) async throws {
         let descriptor = FetchDescriptor<TaskItem>(predicate: #Predicate { $0.isDirty == true && $0.isLocalOnly == false })
         let dirtyTasks = try modelContext.fetch(descriptor)  // Bug 2 fix: propagate fetch errors instead of silently returning []
 
@@ -152,37 +183,18 @@ final class SyncService {
 
         for task in dirtyTasks {
             do {
-                let properties = buildNotionProperties(for: task, mappings: mappings)
-                if task.lastSyncedAt == nil, !session.tasksDatabaseId.isEmpty {
-                    let created = try await api.createPage(databaseId: session.tasksDatabaseId, properties: properties)
-                    task.notionPageId = created.id
-                } else if task.lastSyncedAt == nil {
-                    continue
-                } else {
-                    _ = try await api.updatePage(pageId: task.notionPageId, properties: properties)
-                }
-                task.isDirty = false
-                task.lastSyncedAt = Date()
-                try modelContext.save()  // Bug 1 fix: save per-task so isDirty is persisted even if later tasks fail
+                try await push(task, session: session, mappings: mappings, modelContext: modelContext)
             } catch NotionAPIError.rateLimited(let retryAfter) {
-                // Bug 3 fix: respect rate limit, retry once, then continue to next task
                 try? await Task.sleep(for: .seconds(retryAfter))
                 do {
-                    let properties = buildNotionProperties(for: task, mappings: mappings)
-                    if task.lastSyncedAt == nil, !session.tasksDatabaseId.isEmpty {
-                        let created = try await api.createPage(databaseId: session.tasksDatabaseId, properties: properties)
-                        task.notionPageId = created.id
-                    } else {
-                        _ = try await api.updatePage(pageId: task.notionPageId, properties: properties)
-                    }
-                    task.isDirty = false
-                    task.lastSyncedAt = Date()
-                    try modelContext.save()
+                    try await push(task, session: session, mappings: mappings, modelContext: modelContext)
+                } catch let retryError as NotionAPIError {
+                    throw retryError
                 } catch {
                     print("[Sync] Failed to push task '\(task.title)' after rate-limit retry: \(error)")
                 }
-            } catch NotionAPIError.permissionDenied(let message) {
-                throw NotionAPIError.permissionDenied(message: message)
+            } catch let error as NotionAPIError {
+                throw error
             } catch {
                 // Bug 3 fix: log and continue — don't clear isDirty so it retries next cycle
                 print("[Sync] Failed to push task '\(task.title)': \(error)")
@@ -190,6 +202,41 @@ final class SyncService {
         }
 
         reloadWidgetTimelines()
+    }
+
+    private func push(
+        _ task: TaskItem,
+        session: UserSession,
+        mappings: PropertyMappings,
+        modelContext: ModelContext
+    ) async throws {
+        let properties = buildNotionProperties(for: task, mappings: mappings)
+        if task.lastSyncedAt == nil, !session.tasksDatabaseId.isEmpty {
+            let created = try await api.createPage(databaseId: session.tasksDatabaseId, properties: properties)
+            task.notionPageId = created.id
+        } else if task.lastSyncedAt == nil {
+            return
+        } else {
+            _ = try await api.updatePage(pageId: task.notionPageId, properties: properties)
+        }
+        task.isDirty = false
+        task.lastSyncedAt = Date()
+        try modelContext.save()
+    }
+
+    private func taskSyncError(for error: NotionAPIError) -> TaskSyncError {
+        switch error {
+        case .permissionDenied:
+            return .permissionDenied
+        case .unauthorized:
+            return .authenticationExpired
+        case .rateLimited:
+            return .rateLimited
+        case .notFound:
+            return .remoteTaskUnavailable
+        case .badRequest, .serverError, .networkError, .decodingError:
+            return .serviceUnavailable
+        }
     }
 
     // MARK: - Upsert Projects

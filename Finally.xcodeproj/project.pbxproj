@@ -32,7 +32,6 @@
 		531A6FD89E09145823875703 /* ProjectItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = DFAA764278E2B2298E8B7404 /* ProjectItem.swift */; };
 		5370AD49C76C17C138092D04 /* SchemaValidator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 628D2FCDB35AAD3E45C3B77E /* SchemaValidator.swift */; };
 		54095140D5AD00207ED39D17 /* NotificationDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 73E930F938CF489C943C7116 /* NotificationDelegate.swift */; };
-		5420599EB389C870849DE10A /* PermissionErrorBanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1E27FE69C859D2C8A468480D /* PermissionErrorBanner.swift */; };
 		55F711B9628F214966D1A267 /* ChipView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 08A9E12B9A89E0FDD5D30146 /* ChipView.swift */; };
 		575E87DEC706424074C2A57A /* SearchFilterView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 20F4BC274C5EABE7503A6A36 /* SearchFilterView.swift */; };
 		57CE613AD4B410992C4696B8 /* TagPicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D0E48E011BE7F2F17609008 /* TagPicker.swift */; };
@@ -58,6 +57,7 @@
 		97F8D8ECF949758077A23F6B /* SchemaErrorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 02F22C959A8815F6DCE53E20 /* SchemaErrorView.swift */; };
 		9A45E9935E085623D5744E6B /* UserSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = EFCAC682CEE30C58506E0425 /* UserSession.swift */; };
 		A44B70C6027FB5BFC252B8CA /* NavigationRouter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 33A9FE20A98C304B52360113 /* NavigationRouter.swift */; };
+		A7A759AD35ADFF96495DD15D /* SyncErrorBanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = 054C505CC74E80E9EDF43954 /* SyncErrorBanner.swift */; };
 		A9060BC5E46C493F61E105DD /* DatePickerSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8AFC4C0D33FEEB196CFC5B9E /* DatePickerSheet.swift */; };
 		AA82CDE694D91D5E61C9CBDE /* RecurrenceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BDF3A5C0B718FB3F9D18C039 /* RecurrenceTests.swift */; };
 		ACB67A088AA0A224717E6FEE /* TaskReminder.swift in Sources */ = {isa = PBXBuildFile; fileRef = E23557EFB66C7C96C459D609 /* TaskReminder.swift */; };
@@ -115,6 +115,7 @@
 		02F22C959A8815F6DCE53E20 /* SchemaErrorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SchemaErrorView.swift; sourceTree = "<group>"; };
 		038C576AF41A21C7B7DF9981 /* FinallyWidget.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = FinallyWidget.entitlements; sourceTree = "<group>"; };
 		03F3B629AECA1694C5B528B5 /* FinallyWidgetExtension.appex */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = "wrapper.app-extension"; path = FinallyWidgetExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		054C505CC74E80E9EDF43954 /* SyncErrorBanner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SyncErrorBanner.swift; sourceTree = "<group>"; };
 		076DC8A4A8CF43403DD2050E /* RecurrencePicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecurrencePicker.swift; sourceTree = "<group>"; };
 		08A9E12B9A89E0FDD5D30146 /* ChipView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChipView.swift; sourceTree = "<group>"; };
 		0B13C11F80B93B61065C6CAD /* DatabasePickerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DatabasePickerView.swift; sourceTree = "<group>"; };
@@ -124,7 +125,6 @@
 		17927D5217F64C91979B6708 /* MockNotionAPIClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MockNotionAPIClient.swift; sourceTree = "<group>"; };
 		19D6396C60EC66DD7C32ED4D /* KeychainHelper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeychainHelper.swift; sourceTree = "<group>"; };
 		1D6E15836E98186A00C4ED0D /* KanbanFilterView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KanbanFilterView.swift; sourceTree = "<group>"; };
-		1E27FE69C859D2C8A468480D /* PermissionErrorBanner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PermissionErrorBanner.swift; sourceTree = "<group>"; };
 		20F4BC274C5EABE7503A6A36 /* SearchFilterView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchFilterView.swift; sourceTree = "<group>"; };
 		2BB0C1AC47E9326D0A6E9F36 /* PriorityPicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PriorityPicker.swift; sourceTree = "<group>"; };
 		33A9FE20A98C304B52360113 /* NavigationRouter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NavigationRouter.swift; sourceTree = "<group>"; };
@@ -234,11 +234,11 @@
 				E210597AFF8D4995D1175AA3 /* InlineReminderPicker.swift */,
 				1D6E15836E98186A00C4ED0D /* KanbanFilterView.swift */,
 				CCE5F29F716D6CB80D87B657 /* ParentTaskPicker.swift */,
-				1E27FE69C859D2C8A468480D /* PermissionErrorBanner.swift */,
 				2BB0C1AC47E9326D0A6E9F36 /* PriorityPicker.swift */,
 				832612E5901E80295CD69C97 /* ProjectPicker.swift */,
 				076DC8A4A8CF43403DD2050E /* RecurrencePicker.swift */,
 				59DCDD8E8EB5F548CA2EC0AE /* SortConfigView.swift */,
+				054C505CC74E80E9EDF43954 /* SyncErrorBanner.swift */,
 				6D0E48E011BE7F2F17609008 /* TagPicker.swift */,
 			);
 			path = Components;
@@ -601,7 +601,6 @@
 				72B3C47A213C17281F6CC2C9 /* NotionAuthService.swift in Sources */,
 				27541C233B7309950256A7CC /* NotionConnectView.swift in Sources */,
 				D5423739046AE1DC495CD241 /* ParentTaskPicker.swift in Sources */,
-				5420599EB389C870849DE10A /* PermissionErrorBanner.swift in Sources */,
 				10B3C0F097CEDFDC88AF04A1 /* PriorityPicker.swift in Sources */,
 				531A6FD89E09145823875703 /* ProjectItem.swift in Sources */,
 				D6D0544538223C2E6CF6F0E6 /* ProjectPicker.swift in Sources */,
@@ -615,6 +614,7 @@
 				9255166257397CF0AE207DFD /* SortConfigView.swift in Sources */,
 				725CDACB9D379F21C39840FE /* SubtaskMigrationPromptView.swift in Sources */,
 				75C247FB0B0194F59F0C4E73 /* SubtaskScheduler.swift in Sources */,
+				A7A759AD35ADFF96495DD15D /* SyncErrorBanner.swift in Sources */,
 				CAAB2900354A6287A3F6EE19 /* SyncService.swift in Sources */,
 				57CE613AD4B410992C4696B8 /* TagPicker.swift in Sources */,
 				74C65A22FA4C6AEEF8B6E9EB /* TaskDetailView.swift in Sources */,

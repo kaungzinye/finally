@@ -18,7 +18,7 @@ xcodebuild build -project Finally.xcodeproj -scheme Finally -destination 'generi
 xcodegen generate
 
 # Run tests (compile-only, no simulator):
-xcodebuild build-for-testing -project Finally.xcodeproj -scheme FinallyTests -destination 'generic/platform=iOS' CODE_SIGNING_ALLOWED=NO -quiet
+xcodebuild build-for-testing -project Finally.xcodeproj -scheme Finally -destination 'generic/platform=iOS' CODE_SIGNING_ALLOWED=NO -quiet
 ```
 
 ## Project Structure

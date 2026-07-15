@@ -38,15 +38,15 @@ struct InlineTaskCreator: View {
     @State private var showParentPicker = false
 
     @FocusState private var isFocused: Bool
-    @State private var permissionError: String?
+    @State private var syncErrorMessage: String?
 
     var presetProject: ProjectItem?
 
     var body: some View {
         VStack(spacing: 10) {
-            if let permissionError {
-                PermissionErrorBanner(message: permissionError) {
-                    self.permissionError = nil
+            if let syncErrorMessage {
+                SyncErrorBanner(message: syncErrorMessage) {
+                    self.syncErrorMessage = nil
                 }
             }
 
@@ -215,7 +215,7 @@ struct InlineTaskCreator: View {
                         .font(.title)
                         .foregroundStyle(taskTitle.isEmpty ? Color.secondary : Color.primary)
                 }
-                .disabled(taskTitle.trimmingCharacters(in: .whitespaces).isEmpty || permissionError != nil)
+                .disabled(taskTitle.trimmingCharacters(in: .whitespaces).isEmpty || syncErrorMessage != nil)
             }
             .font(.title3)
             .padding(.horizontal, 16)
@@ -314,8 +314,8 @@ struct InlineTaskCreator: View {
             guard let session = try? context.fetch(FetchDescriptor<UserSession>()).first else { return }
             do {
                 try await syncService.pushDirtyChanges(session: session, modelContext: context)
-            } catch NotionAPIError.permissionDenied(let message) {
-                permissionError = message
+            } catch let error as TaskSyncError {
+                syncErrorMessage = error.localizedDescription
             } catch {
                 print("[InlineTaskCreator] Failed to push task: \(error)")
             }

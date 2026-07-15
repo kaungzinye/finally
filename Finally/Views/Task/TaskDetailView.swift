@@ -24,15 +24,15 @@ struct TaskDetailView: View {
     @State private var editedProject: ProjectItem?
     @State private var editedRecurrence: Recurrence = .none
     @State private var editedCustomRule: RecurrenceRule?
-    @State private var permissionError: String?
+    @State private var syncErrorMessage: String?
 
     var body: some View {
         NavigationStack {
             List {
-                if let permissionError {
+                if let syncErrorMessage {
                     Section {
-                        PermissionErrorBanner(message: permissionError) {
-                            self.permissionError = nil
+                        SyncErrorBanner(message: syncErrorMessage) {
+                            self.syncErrorMessage = nil
                         }
                         .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
                         .listRowBackground(Color.clear)
@@ -261,12 +261,12 @@ struct TaskDetailView: View {
                     Button("Save") {
                         Task {
                             await saveChanges()
-                            if permissionError == nil {
+                            if syncErrorMessage == nil {
                                 dismiss()
                             }
                         }
                     }
-                    .disabled(permissionError != nil)
+                    .disabled(syncErrorMessage != nil)
                 }
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel") {
@@ -365,13 +365,13 @@ struct TaskDetailView: View {
             }
         }
 
-        // Push in background
+        // Synchronize before dismissing so failures remain visible.
         let context = modelContext
         guard let session = try? context.fetch(FetchDescriptor<UserSession>()).first else { return }
         do {
             try await syncService.pushDirtyChanges(session: session, modelContext: context)
-        } catch NotionAPIError.permissionDenied(let message) {
-            permissionError = message
+        } catch let error as TaskSyncError {
+            syncErrorMessage = error.localizedDescription
         } catch {
             print("[TaskDetailView] Failed to push task: \(error)")
         }

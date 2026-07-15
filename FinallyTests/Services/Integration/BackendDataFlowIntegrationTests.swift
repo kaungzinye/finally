@@ -98,6 +98,64 @@ final class BackendDataFlowIntegrationTests: XCTestCase {
         XCTAssertNil(task.lastSyncedAt)
     }
 
+    func testPushDirtyChanges_WhenProviderDeniesAccess_ThrowsProductError() async throws {
+        let mock = MockNotionAPIClient()
+        mock.createPageErrors = [NotionAPIError.permissionDenied(message: "Provider-specific message")]
+        let syncService = SyncService(api: mock)
+        let context = try makeInMemoryContext()
+
+        let session = UserSession(workspaceId: "ws-1", workspaceName: "Workspace")
+        session.tasksDatabaseId = "tasks-db"
+        context.insert(session)
+
+        let task = TaskItem(notionPageId: UUID().uuidString, title: "Protected task")
+        task.isDirty = true
+        context.insert(task)
+        try context.save()
+
+        do {
+            try await syncService.pushDirtyChanges(session: session, modelContext: context)
+            XCTFail("Expected a permission error")
+        } catch let error as TaskSyncError {
+            guard case .permissionDenied = error else {
+                return XCTFail("Expected permissionDenied, received \(error)")
+            }
+            XCTAssertEqual(error.localizedDescription, "You don't have edit access to this database")
+        }
+
+        XCTAssertTrue(task.isDirty)
+    }
+
+    func testPushDirtyChanges_WhenRetryLosesAuthorization_ThrowsProductError() async throws {
+        let mock = MockNotionAPIClient()
+        mock.createPageErrors = [
+            NotionAPIError.rateLimited(retryAfter: 0),
+            NotionAPIError.unauthorized,
+        ]
+        let syncService = SyncService(api: mock)
+        let context = try makeInMemoryContext()
+
+        let session = UserSession(workspaceId: "ws-1", workspaceName: "Workspace")
+        session.tasksDatabaseId = "tasks-db"
+        context.insert(session)
+
+        let task = TaskItem(notionPageId: UUID().uuidString, title: "Protected task")
+        task.isDirty = true
+        context.insert(task)
+        try context.save()
+
+        do {
+            try await syncService.pushDirtyChanges(session: session, modelContext: context)
+            XCTFail("Expected an authentication error")
+        } catch let error as TaskSyncError {
+            guard case .authenticationExpired = error else {
+                return XCTFail("Expected authenticationExpired, received \(error)")
+            }
+        }
+
+        XCTAssertTrue(task.isDirty)
+    }
+
     func testIncrementalSync_WhenNotionTaskChanges_UpdatesLocalTaskFields() async throws {
         let mock = MockNotionAPIClient()
         let syncService = SyncService(api: mock)

@@ -1,6 +1,6 @@
 import SwiftUI
 
-struct PermissionErrorBanner: View {
+struct SyncErrorBanner: View {
     let message: String
     let onDismiss: () -> Void
 
