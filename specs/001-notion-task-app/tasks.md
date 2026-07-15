@@ -249,9 +249,9 @@
 
 ### Sub-phase 12A: Any-Member OAuth (US12) — Low effort, high impact, no dependencies
 
-- [ ] T094 [US12] Remove "Workspace Owner required" copy from `Finally/Views/Onboarding/NotionConnectView.swift`; update subtitle to "Connect any Notion workspace where you're a member"
+- [x] T094 [US12] Remove "Workspace Owner required" copy from `Finally/Views/Onboarding/NotionConnectView.swift`; update subtitle to "Connect any Notion workspace where you're a member"
 - [x] T095 [US12] Add 403 handling in `Finally/Services/NotionAPIService.swift`: detect HTTP 403 responses from `createPage`/`updatePage` calls → throw a new `NotionAPIError.permissionDenied(message: String)` case
-- [ ] T096 [US12] Surface permission errors in `Finally/Views/Task/InlineTaskCreator.swift` and `TaskDetailView.swift`: catch `.permissionDenied` → show an inline banner "You don't have edit access to this database" and disable the submit/save button until dismissed
+- [x] T096 [US12] Surface permission errors in `Finally/Views/Task/InlineTaskCreator.swift` and `TaskDetailView.swift`: catch `.permissionDenied` → show an inline banner "You don't have edit access to this database" and disable the submit/save button until dismissed
 
 ### Sub-phase 12B: Workers OAuth Relay (US10) — Replaces Vercel
 

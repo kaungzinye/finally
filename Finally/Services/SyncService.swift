@@ -181,6 +181,8 @@ final class SyncService {
                 } catch {
                     print("[Sync] Failed to push task '\(task.title)' after rate-limit retry: \(error)")
                 }
+            } catch NotionAPIError.permissionDenied(let message) {
+                throw NotionAPIError.permissionDenied(message: message)
             } catch {
                 // Bug 3 fix: log and continue — don't clear isDirty so it retries next cycle
                 print("[Sync] Failed to push task '\(task.title)': \(error)")

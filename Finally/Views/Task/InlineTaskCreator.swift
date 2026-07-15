@@ -38,11 +38,18 @@ struct InlineTaskCreator: View {
     @State private var showParentPicker = false
 
     @FocusState private var isFocused: Bool
+    @State private var permissionError: String?
 
     var presetProject: ProjectItem?
 
     var body: some View {
         VStack(spacing: 10) {
+            if let permissionError {
+                PermissionErrorBanner(message: permissionError) {
+                    self.permissionError = nil
+                }
+            }
+
             // Text field
             TextField("Add a task...", text: $taskTitle)
                 .textFieldStyle(.plain)
@@ -208,7 +215,7 @@ struct InlineTaskCreator: View {
                         .font(.title)
                         .foregroundStyle(taskTitle.isEmpty ? Color.secondary : Color.primary)
                 }
-                .disabled(taskTitle.trimmingCharacters(in: .whitespaces).isEmpty)
+                .disabled(taskTitle.trimmingCharacters(in: .whitespaces).isEmpty || permissionError != nil)
             }
             .font(.title3)
             .padding(.horizontal, 16)
@@ -304,8 +311,13 @@ struct InlineTaskCreator: View {
         // Push to Notion in background
         let context = modelContext
         Task {
-            if let session = try? context.fetch(FetchDescriptor<UserSession>()).first {
-                try? await syncService.pushDirtyChanges(session: session, modelContext: context)
+            guard let session = try? context.fetch(FetchDescriptor<UserSession>()).first else { return }
+            do {
+                try await syncService.pushDirtyChanges(session: session, modelContext: context)
+            } catch NotionAPIError.permissionDenied(let message) {
+                permissionError = message
+            } catch {
+                print("[InlineTaskCreator] Failed to push task: \(error)")
             }
         }
 

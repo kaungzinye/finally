@@ -32,6 +32,7 @@
 		531A6FD89E09145823875703 /* ProjectItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = DFAA764278E2B2298E8B7404 /* ProjectItem.swift */; };
 		5370AD49C76C17C138092D04 /* SchemaValidator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 628D2FCDB35AAD3E45C3B77E /* SchemaValidator.swift */; };
 		54095140D5AD00207ED39D17 /* NotificationDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 73E930F938CF489C943C7116 /* NotificationDelegate.swift */; };
+		5420599EB389C870849DE10A /* PermissionErrorBanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1E27FE69C859D2C8A468480D /* PermissionErrorBanner.swift */; };
 		55F711B9628F214966D1A267 /* ChipView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 08A9E12B9A89E0FDD5D30146 /* ChipView.swift */; };
 		575E87DEC706424074C2A57A /* SearchFilterView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 20F4BC274C5EABE7503A6A36 /* SearchFilterView.swift */; };
 		57CE613AD4B410992C4696B8 /* TagPicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D0E48E011BE7F2F17609008 /* TagPicker.swift */; };
@@ -123,6 +124,7 @@
 		17927D5217F64C91979B6708 /* MockNotionAPIClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MockNotionAPIClient.swift; sourceTree = "<group>"; };
 		19D6396C60EC66DD7C32ED4D /* KeychainHelper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeychainHelper.swift; sourceTree = "<group>"; };
 		1D6E15836E98186A00C4ED0D /* KanbanFilterView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KanbanFilterView.swift; sourceTree = "<group>"; };
+		1E27FE69C859D2C8A468480D /* PermissionErrorBanner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PermissionErrorBanner.swift; sourceTree = "<group>"; };
 		20F4BC274C5EABE7503A6A36 /* SearchFilterView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchFilterView.swift; sourceTree = "<group>"; };
 		2BB0C1AC47E9326D0A6E9F36 /* PriorityPicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PriorityPicker.swift; sourceTree = "<group>"; };
 		33A9FE20A98C304B52360113 /* NavigationRouter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NavigationRouter.swift; sourceTree = "<group>"; };
@@ -232,6 +234,7 @@
 				E210597AFF8D4995D1175AA3 /* InlineReminderPicker.swift */,
 				1D6E15836E98186A00C4ED0D /* KanbanFilterView.swift */,
 				CCE5F29F716D6CB80D87B657 /* ParentTaskPicker.swift */,
+				1E27FE69C859D2C8A468480D /* PermissionErrorBanner.swift */,
 				2BB0C1AC47E9326D0A6E9F36 /* PriorityPicker.swift */,
 				832612E5901E80295CD69C97 /* ProjectPicker.swift */,
 				076DC8A4A8CF43403DD2050E /* RecurrencePicker.swift */,
@@ -598,6 +601,7 @@
 				72B3C47A213C17281F6CC2C9 /* NotionAuthService.swift in Sources */,
 				27541C233B7309950256A7CC /* NotionConnectView.swift in Sources */,
 				D5423739046AE1DC495CD241 /* ParentTaskPicker.swift in Sources */,
+				5420599EB389C870849DE10A /* PermissionErrorBanner.swift in Sources */,
 				10B3C0F097CEDFDC88AF04A1 /* PriorityPicker.swift in Sources */,
 				531A6FD89E09145823875703 /* ProjectItem.swift in Sources */,
 				D6D0544538223C2E6CF6F0E6 /* ProjectPicker.swift in Sources */,

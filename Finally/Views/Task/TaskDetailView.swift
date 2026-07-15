@@ -24,10 +24,21 @@ struct TaskDetailView: View {
     @State private var editedProject: ProjectItem?
     @State private var editedRecurrence: Recurrence = .none
     @State private var editedCustomRule: RecurrenceRule?
+    @State private var permissionError: String?
 
     var body: some View {
         NavigationStack {
             List {
+                if let permissionError {
+                    Section {
+                        PermissionErrorBanner(message: permissionError) {
+                            self.permissionError = nil
+                        }
+                        .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
+                        .listRowBackground(Color.clear)
+                    }
+                }
+
                 // Title
                 Section {
                     TextField("Task name", text: $editedTitle)
@@ -248,9 +259,14 @@ struct TaskDetailView: View {
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Save") {
-                        saveChanges()
-                        dismiss()
+                        Task {
+                            await saveChanges()
+                            if permissionError == nil {
+                                dismiss()
+                            }
+                        }
                     }
+                    .disabled(permissionError != nil)
                 }
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel") {
@@ -325,7 +341,7 @@ struct TaskDetailView: View {
         NotificationService.shared.rescheduleAllReminders(modelContext: modelContext)
     }
 
-    private func saveChanges() {
+    private func saveChanges() async {
         let dueDateChanged = task.dueDate != editedDueDate
         let targetDateChanged = task.targetDate != editedTargetDate
 
@@ -351,10 +367,13 @@ struct TaskDetailView: View {
 
         // Push in background
         let context = modelContext
-        Task {
-            if let session = try? context.fetch(FetchDescriptor<UserSession>()).first {
-                try? await syncService.pushDirtyChanges(session: session, modelContext: context)
-            }
+        guard let session = try? context.fetch(FetchDescriptor<UserSession>()).first else { return }
+        do {
+            try await syncService.pushDirtyChanges(session: session, modelContext: context)
+        } catch NotionAPIError.permissionDenied(let message) {
+            permissionError = message
+        } catch {
+            print("[TaskDetailView] Failed to push task: \(error)")
         }
     }
 }
