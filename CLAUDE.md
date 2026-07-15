@@ -43,6 +43,16 @@ project.yml                    # XcodeGen project definition
 
 Swift 5.9+ / SwiftUI: Follow standard conventions
 
+## Agent skills
+
+### Issue tracker
+
+Issues and PRDs live in GitHub Issues for `kaungzinye/finally`. See `docs/agents/issue-tracker.md`.
+
+### Domain docs
+
+The repository uses a single-context domain model rooted at `CONTEXT.md`, with architectural decisions under `docs/adr/`. See `docs/agents/domain.md`.
+
 ## Recent Changes
 
 - 001-notion-task-app: Added Swift 5.9+ / SwiftUI + SwiftData, WidgetKit, AppIntents, UserNotifications, BackgroundTasks, AuthenticationServices (ASWebAuthenticationSession), Security (Keychain)
