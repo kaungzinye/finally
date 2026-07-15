@@ -14,6 +14,8 @@ final class MockNotionAPIClient: NotionAPIClient {
     var createdPages: [(databaseId: String, properties: [String: Any])] = []
     var updatedPages: [(pageId: String, properties: [String: Any])] = []
     var archivedPageIds: [String] = []
+    var createPageErrors: [Error] = []
+    var updatePageErrors: [Error] = []
 
     func retrieveDatabase(id: String) async throws -> NotionDatabase {
         if !retrieveDatabaseQueue.isEmpty {
@@ -32,6 +34,9 @@ final class MockNotionAPIClient: NotionAPIClient {
     }
 
     func createPage(databaseId: String, properties: [String: Any]) async throws -> NotionPage {
+        if !createPageErrors.isEmpty {
+            throw createPageErrors.removeFirst()
+        }
         createdPages.append((databaseId: databaseId, properties: properties))
         return NotionPage(
             id: "remote-\(createdPages.count)",
@@ -42,6 +47,9 @@ final class MockNotionAPIClient: NotionAPIClient {
     }
 
     func updatePage(pageId: String, properties: [String: Any]) async throws -> NotionPage {
+        if !updatePageErrors.isEmpty {
+            throw updatePageErrors.removeFirst()
+        }
         updatedPages.append((pageId: pageId, properties: properties))
         return NotionPage(
             id: pageId,

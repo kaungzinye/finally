@@ -43,7 +43,7 @@ xcodebuild build -project Finally.xcodeproj -scheme Finally \
   -destination 'generic/platform=iOS' CODE_SIGNING_ALLOWED=NO -quiet
 
 # Unit test compile check
-xcodebuild build-for-testing -project Finally.xcodeproj -scheme FinallyTests \
+xcodebuild build-for-testing -project Finally.xcodeproj -scheme Finally \
   -destination 'generic/platform=iOS' CODE_SIGNING_ALLOWED=NO -quiet
 ```
 
