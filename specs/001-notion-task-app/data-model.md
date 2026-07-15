@@ -1,7 +1,6 @@
 # Data Model: Finally
 
 **Date**: 2026-03-13
-**Updated**: 2026-04-14
 **Feature**: 001-notion-task-app
 
 ## Entity Relationship Diagram
@@ -11,9 +10,12 @@
 │     UserSession       │
 │──────────────────────│
 │ id: UUID (PK)         │
-│ accessToken: String   │
 │ workspaceId: String   │
 │ workspaceName: String │
+│ providerRaw: String   │
+│ serverBaseURL: String?│
+│ serverProjectID: Int? │
+│ isSelected: Bool      │
 │ tasksDatabaseId: Str  │
 │ projectsDatabaseId: S │
 │ propertyMappings: JSON│
@@ -25,6 +27,7 @@
 │     ProjectItem       │
 │──────────────────────│
 │ notionPageId: String  │
+│ providerWorkspaceId:  │
 │ title: String         │
 │ iconEmoji: String?    │
 │ lastEditedTime: Date? │
@@ -35,7 +38,8 @@
 ┌──────────────────────────────────────────────┐
 │                  TaskItem                    │
 │──────────────────────────────────────────────│
-│ notionPageId: String                         │
+│ externalTaskID: String                       │
+│ providerWorkspaceId: String?                 │
 │ title: String                                │
 │ status: TaskStatus                           │
 │ dueDate: Date?                               │
@@ -63,11 +67,12 @@
 
 ### TaskItem
 
-The primary task entity synced from Notion. Subtasks are also `TaskItem` records; they are distinguished by having a `parentId`.
+The canonical task entity synced by a task provider. Subtasks are also `TaskItem` records; they are distinguished by having a `parentId`.
 
 | Field | Type | Source | Notes |
 |-------|------|--------|-------|
-| notionPageId | String | Notion | Unique sync key. Notion page UUID. |
+| externalTaskID | String | Provider | Sync key inside the owning provider workspace. |
+| providerWorkspaceId | String? | Provider session | Owning workspace used for every local query and mutation. |
 | title | String | Notion | From the `title` property. |
 | status | TaskStatus | Notion | Enum: `.notStarted`, `.inProgress`, `.done`. |
 | dueDate | Date? | Notion | Official deadline synced to Notion `Due`. This is the primary task date in the app. |
@@ -80,7 +85,7 @@ The primary task entity synced from Notion. Subtasks are also `TaskItem` records
 | customRecurrenceJSON | String? | Local | JSON-encoded custom recurrence rule when `recurrence == .custom`. |
 | lastEditedTime | Date? | Notion | `last_edited_time` from Notion for conflict detection. |
 | lastSyncedAt | Date? | Local | Timestamp of last successful sync. |
-| isDirty | Bool | Local | True when local changes have not yet been pushed to Notion. |
+| isDirty | Bool | Local | True when local changes have not yet been pushed to the provider. |
 | isDeleted | Bool | Local | Soft-delete flag for optimistic deletion before sync confirms. |
 | parentId | String? | Notion | Parent task page ID for subtasks. Nil for top-level tasks. |
 | sortIndex | Int | Local | Ordering index for subtasks under the same parent. |
@@ -93,7 +98,8 @@ The primary task entity synced from Notion. Subtasks are also `TaskItem` records
 - `effectiveSuggestedDate = suggestedDateOverride ?? computedFromParentWindow`
 
 **Validation rules:**
-- `notionPageId` must be non-empty and unique
+- `externalTaskID` must be non-empty and unique inside its provider workspace
+- `providerWorkspaceId` identifies the owning connected workspace
 - `title` must be non-empty
 - `dueDate` is the primary planning date
 - `targetDate`, when set, must be strictly earlier than `dueDate`
@@ -106,6 +112,7 @@ A grouping entity for tasks, synced from Notion.
 | Field | Type | Source | Notes |
 |-------|------|--------|-------|
 | notionPageId | String | Notion | Unique sync key. Notion page UUID. |
+| providerWorkspaceId | String? | Provider session | Owning workspace used to scope project browsing and selection. |
 | title | String | Notion | From the `title` property. |
 | iconEmoji | String? | Notion | Emoji from the Notion page icon, if set. |
 | lastEditedTime | Date? | Notion | For sync conflict detection. |
@@ -155,19 +162,24 @@ A local-only exact-time reminder descriptor that also lives inside `TaskItem.rem
 
 ### UserSession
 
-Authentication and configuration state. Stored in Keychain (token) and UserDefaults/SwiftData (metadata).
+Authentication and configuration state. SwiftData stores workspace metadata; Keychain stores one credential per workspace.
 
 | Field | Type | Source | Notes |
 |-------|------|--------|-------|
 | id | UUID | Local | Auto-generated. |
-| accessToken | String | Notion OAuth | Stored in Keychain, not in SwiftData. |
-| workspaceId | String | Notion OAuth | From token exchange response. |
-| workspaceName | String | Notion OAuth | Display name for connected workspace. |
+| workspaceId | String | Provider | Stable local scope for provider data. |
+| workspaceName | String | Provider/user | Display name for the connected workspace. |
+| providerRaw | String | Provider | Selects the adapter for this workspace. |
+| serverBaseURL | String? | Finally Server | HTTPS server origin. |
+| serverProjectID | Int64? | Finally Server | Writable project selected from authenticated discovery. |
+| isSelected | Bool | Local | Identifies the workspace shown throughout the app. |
 | tasksDatabaseId | String | User selection | Notion database ID for Tasks. |
 | projectsDatabaseId | String | User selection | Notion database ID for Projects. |
 | propertyMappings | PropertyMappings | User/auto | Maps Notion property names to app fields. |
 | lastFullSyncAt | Date? | Local | When the last full sync was performed. |
 | createdAt | Date | Local | When the session was established. |
+
+Finally Server authentication validates HTTPS before sending a password or token. The app authenticates, lists writable projects, requires an explicit selection, and stores the resulting token under the selected workspace identifier.
 
 ## Enums
 

@@ -9,6 +9,7 @@ struct TodayView: View {
         sort: \TaskItem.dueDate
     )
     private var nonDoneTasks: [TaskItem]
+    @Query private var sessions: [UserSession]
     @Environment(TaskProviderCoordinator.self) private var taskProvider
     @Environment(\.modelContext) private var modelContext
 
@@ -27,6 +28,7 @@ struct TodayView: View {
     /// Visible tasks: hide parents with active subtasks, include subtasks with actionable suggestedDate
     private var visibleTasks: [TaskItem] {
         nonDoneTasks.filter { task in
+            guard task.belongs(to: selectedWorkspace) else { return false }
             // Hide parents that have incomplete subtasks (Trojan Horse)
             if task.hasSubtasks && !task.allSubtasksComplete { return false }
             return true
@@ -38,10 +40,13 @@ struct TodayView: View {
         let calendar = Calendar.current
         let endOfToday = calendar.startOfDay(for: Date().addingTimeInterval(86400))
         return nonDoneTasks.filter { task in
+            guard task.belongs(to: selectedWorkspace) else { return false }
             guard task.isSubtask, let suggested = task.suggestedDate else { return false }
             return suggested < endOfToday
         }
     }
+
+    private var selectedWorkspace: UserSession? { sessions.selectedProviderWorkspace }
 
     private var overdueTasks: [TaskItem] {
         let parentOverdue = sortStack.sorted(visibleTasks.filter { $0.isOverdue && !$0.isSubtask })
@@ -78,7 +83,7 @@ struct TodayView: View {
                         if !overdueTasks.isEmpty {
                             Section {
                                 if expandedSections.contains("Overdue") {
-                                    ForEach(overdueTasks, id: \.notionPageId) { task in
+                                    ForEach(overdueTasks, id: \.externalTaskID) { task in
                                         taskRow(task)
                                     }
                                 }
@@ -88,7 +93,7 @@ struct TodayView: View {
                         }
                         Section {
                             if expandedSections.contains("Today") {
-                                ForEach(todayTasks, id: \.notionPageId) { task in
+                                ForEach(todayTasks, id: \.externalTaskID) { task in
                                     taskRow(task)
                                 }
                             }
@@ -99,8 +104,8 @@ struct TodayView: View {
                 }
             }
             .listStyle(.plain)
-            .animation(.default, value: todayTasks.map(\.notionPageId))
-            .animation(.default, value: overdueTasks.map(\.notionPageId))
+            .animation(.default, value: todayTasks.map(\.externalTaskID))
+            .animation(.default, value: overdueTasks.map(\.externalTaskID))
             .navigationTitle(isSelectionMode ? "Select Tasks (\(selectedTasks.count))" : "Today")
             .refreshable {
                 try? await taskProvider.synchronize(.launch, store: modelContext)
@@ -178,17 +183,17 @@ struct TodayView: View {
     private func taskRow(_ task: TaskItem) -> some View {
         TaskRowView(task: task)
         .listRowBackground(
-            isSelectionMode && selectedTasks.contains(task.notionPageId)
+            isSelectionMode && selectedTasks.contains(task.externalTaskID)
                 ? Color.blue.opacity(0.15)
                 : Color(.systemBackground)
         )
         .contentShape(Rectangle())
         .onTapGesture {
             if isSelectionMode {
-                if selectedTasks.contains(task.notionPageId) {
-                    selectedTasks.remove(task.notionPageId)
+                if selectedTasks.contains(task.externalTaskID) {
+                    selectedTasks.remove(task.externalTaskID)
                 } else {
-                    selectedTasks.insert(task.notionPageId)
+                    selectedTasks.insert(task.externalTaskID)
                 }
             } else {
                 selectedTask = task
@@ -199,7 +204,7 @@ struct TodayView: View {
             generator.impactOccurred()
             withAnimation {
                 isSelectionMode = true
-                selectedTasks.insert(task.notionPageId)
+                selectedTasks.insert(task.externalTaskID)
             }
         }
     }
@@ -229,7 +234,7 @@ struct TodayView: View {
     // MARK: - Bulk Actions
 
     private func bulkDeleteTasks() {
-        let tasksToDelete = nonDoneTasks.filter { selectedTasks.contains($0.notionPageId) }
+        let tasksToDelete = nonDoneTasks.filter { selectedTasks.contains($0.externalTaskID) }
         for task in tasksToDelete {
             task.isDeleted = true
             task.isDirty = true
@@ -242,7 +247,7 @@ struct TodayView: View {
     }
 
     private func bulkCompleteTasks() {
-        let tasksToComplete = nonDoneTasks.filter { selectedTasks.contains($0.notionPageId) }
+        let tasksToComplete = nonDoneTasks.filter { selectedTasks.contains($0.externalTaskID) }
         for task in tasksToComplete {
             let recycled = task.complete()
             if recycled {

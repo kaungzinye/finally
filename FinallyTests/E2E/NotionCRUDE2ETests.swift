@@ -9,13 +9,13 @@ final class NotionCRUDE2ETests: NotionE2ETestCase {
     func testCreate_LocalToNotion_CreatesPageWithCorrectTitle() async throws {
         let task = try await pushLocalTask(title: "E2E Create Test")
 
-        XCTAssertFalse(task.notionPageId.isEmpty, "notionPageId should be set after push")
+        XCTAssertFalse(task.externalTaskID.isEmpty, "externalTaskID should be set after push")
         XCTAssertFalse(task.isDirty, "isDirty should be false after successful push")
         XCTAssertNotNil(task.lastSyncedAt)
 
         // Verify the page exists in Notion
         let pages = try await api.queryAllPages(databaseId: session.tasksDatabaseId, filter: nil, sorts: nil)
-        let found = pages.first { $0.id == task.notionPageId }
+        let found = pages.first { $0.id == task.externalTaskID }
         XCTAssertNotNil(found, "Page should exist in Notion after push")
     }
 
@@ -34,7 +34,7 @@ final class NotionCRUDE2ETests: NotionE2ETestCase {
         // Full sync should pull it into local context
         try await syncService.fullSync(session: session, modelContext: modelContext)
 
-        let task = try fetchTask(notionPageId: page.id)
+        let task = try fetchTask(externalTaskID: page.id)
         XCTAssertNotNil(task, "Task should exist locally after fullSync")
         XCTAssertEqual(task?.title, "E2E Read Test")
     }
@@ -52,7 +52,7 @@ final class NotionCRUDE2ETests: NotionE2ETestCase {
 
         // Verify Notion reflects the update
         let pages = try await api.queryAllPages(databaseId: session.tasksDatabaseId, filter: nil, sorts: nil)
-        let found = pages.first { $0.id == task.notionPageId }
+        let found = pages.first { $0.id == task.externalTaskID }
         XCTAssertNotNil(found)
 
         let mappings = session.propertyMappings
@@ -71,7 +71,7 @@ final class NotionCRUDE2ETests: NotionE2ETestCase {
         let updatedProps: [String: Any] = [
             mappings.taskTitleProperty: ["title": [["text": ["content": "E2E Remote Updated Title"]]]]
         ]
-        _ = try await api.updatePage(pageId: task.notionPageId, properties: updatedProps)
+        _ = try await api.updatePage(pageId: task.externalTaskID, properties: updatedProps)
 
         // Reset lastFullSyncAt to allow incremental sync to see the edit
         session.lastFullSyncAt = Date.distantPast
@@ -79,7 +79,7 @@ final class NotionCRUDE2ETests: NotionE2ETestCase {
 
         try await syncService.fullSync(session: session, modelContext: modelContext)
 
-        let updated = try fetchTask(notionPageId: task.notionPageId)
+        let updated = try fetchTask(externalTaskID: task.externalTaskID)
         XCTAssertEqual(updated?.title, "E2E Remote Updated Title")
     }
 
@@ -98,14 +98,14 @@ final class NotionCRUDE2ETests: NotionE2ETestCase {
         let remoteProps: [String: Any] = [
             mappings.taskTitleProperty: ["title": [["text": ["content": "E2E Remote Version"]]]]
         ]
-        _ = try await api.updatePage(pageId: task.notionPageId, properties: remoteProps)
+        _ = try await api.updatePage(pageId: task.externalTaskID, properties: remoteProps)
 
         // incrementalSync should skip the dirty task (local wins)
         session.lastFullSyncAt = Date.distantPast
         try modelContext.save()
         try await syncService.fullSync(session: session, modelContext: modelContext)
 
-        let afterSync = try XCTUnwrap(try fetchTask(notionPageId: task.notionPageId))
+        let afterSync = try XCTUnwrap(try fetchTask(externalTaskID: task.externalTaskID))
         XCTAssertEqual(afterSync.title, "E2E Local Version", "Local version should be preserved during sync")
         XCTAssertTrue(afterSync.isDirty, "isDirty should remain true until pushed")
 
@@ -113,7 +113,7 @@ final class NotionCRUDE2ETests: NotionE2ETestCase {
         try await syncService.pushDirtyChanges(session: session, modelContext: modelContext)
 
         let pages = try await api.queryAllPages(databaseId: session.tasksDatabaseId, filter: nil, sorts: nil)
-        let found = pages.first { $0.id == task.notionPageId }
+        let found = pages.first { $0.id == task.externalTaskID }
         let remoteTitle = found?.properties[mappings.taskTitleProperty]?.title?.map(\.plainText).joined() ?? ""
         XCTAssertEqual(remoteTitle, "E2E Local Version", "Notion should have local version after push")
     }
@@ -131,7 +131,7 @@ final class NotionCRUDE2ETests: NotionE2ETestCase {
         try modelContext.save()
         try await syncService.fullSync(session: session, modelContext: modelContext)
 
-        let afterSync = try XCTUnwrap(try fetchTask(notionPageId: task.notionPageId))
+        let afterSync = try XCTUnwrap(try fetchTask(externalTaskID: task.externalTaskID))
         XCTAssertTrue(afterSync.isDirty, "isDirty should remain true after sync skips the task")
         XCTAssertEqual(afterSync.title, originalTitle, "Title should not be overwritten by sync")
     }
@@ -140,7 +140,7 @@ final class NotionCRUDE2ETests: NotionE2ETestCase {
 
     func testDelete_ArchivedInNotion_RemovedLocallyAfterFullSync() async throws {
         let task = try await pushLocalTask(title: "E2E Delete Stale")
-        let pageId = task.notionPageId
+        let pageId = task.externalTaskID
 
         // Archive in Notion (removes it from query results)
         try await api.archivePage(pageId: pageId)
@@ -148,7 +148,7 @@ final class NotionCRUDE2ETests: NotionE2ETestCase {
 
         try await syncService.fullSync(session: session, modelContext: modelContext)
 
-        let afterSync = try fetchTask(notionPageId: pageId)
+        let afterSync = try fetchTask(externalTaskID: pageId)
         XCTAssertNil(afterSync, "Task should be deleted locally after being archived in Notion")
     }
 
@@ -156,7 +156,7 @@ final class NotionCRUDE2ETests: NotionE2ETestCase {
 
     func testDelete_DirtyTaskPreservedWhenArchivedInNotion() async throws {
         let task = try await pushLocalTask(title: "E2E Dirty Not Deleted")
-        let pageId = task.notionPageId
+        let pageId = task.externalTaskID
 
         // Archive in Notion
         try await api.archivePage(pageId: pageId)
@@ -168,7 +168,7 @@ final class NotionCRUDE2ETests: NotionE2ETestCase {
 
         try await syncService.fullSync(session: session, modelContext: modelContext)
 
-        let afterSync = try fetchTask(notionPageId: pageId)
+        let afterSync = try fetchTask(externalTaskID: pageId)
         XCTAssertNotNil(afterSync, "Dirty task should NOT be deleted even if archived in Notion")
         XCTAssertTrue(afterSync?.isDirty == true)
     }
@@ -192,7 +192,7 @@ final class NotionCRUDE2ETests: NotionE2ETestCase {
         try await syncService.fullSync(session: session, modelContext: modelContext)
 
         for pageId in pageIds {
-            let task = try fetchTask(notionPageId: pageId)
+            let task = try fetchTask(externalTaskID: pageId)
             XCTAssertNotNil(task, "Task \(pageId) should exist locally after fullSync")
         }
     }
@@ -223,13 +223,13 @@ final class NotionCRUDE2ETests: NotionE2ETestCase {
 
         try await syncService.incrementalSync(session: session, modelContext: modelContext)
 
-        let editedTask = try fetchTask(notionPageId: pageIds[0])
+        let editedTask = try fetchTask(externalTaskID: pageIds[0])
         XCTAssertEqual(editedTask?.title, "E2E Inc Task 1 Edited")
 
-        let untouched2 = try fetchTask(notionPageId: pageIds[1])
+        let untouched2 = try fetchTask(externalTaskID: pageIds[1])
         XCTAssertEqual(untouched2?.title, "E2E Inc Task 2")
 
-        let untouched3 = try fetchTask(notionPageId: pageIds[2])
+        let untouched3 = try fetchTask(externalTaskID: pageIds[2])
         XCTAssertEqual(untouched3?.title, "E2E Inc Task 3")
     }
 }

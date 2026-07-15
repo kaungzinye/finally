@@ -175,7 +175,7 @@ struct DatabasePickerView: View {
 
             // Save to session
             let descriptor = FetchDescriptor<UserSession>()
-            if let session = try? modelContext.fetch(descriptor).first {
+            if let session = try? modelContext.fetch(descriptor).first(where: { $0.providerIdentity == .notion }) {
                 session.tasksDatabaseId = tasksDbId
                 session.projectsDatabaseId = selectedProjectsDb ?? ""
                 session.propertyMappings = finalMappings

@@ -8,6 +8,7 @@ final class ProjectItem {
     var iconEmoji: String?
     var lastEditedTime: Date?
     var lastSyncedAt: Date?
+    var providerWorkspaceId: String?
 
     @Relationship(deleteRule: .nullify, inverse: \TaskItem.project)
     var tasks: [TaskItem] = []

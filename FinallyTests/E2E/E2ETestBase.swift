@@ -52,7 +52,7 @@ class NotionE2ETestCase: XCTestCase {
     /// Insert a local TaskItem, run pushDirtyChanges, and record the Notion page ID for cleanup.
     @discardableResult
     func pushLocalTask(title: String, configure: (TaskItem) -> Void = { _ in }) async throws -> TaskItem {
-        let task = TaskItem(notionPageId: "", title: title)
+        let task = TaskItem(externalTaskID: "", title: title)
         task.isDirty = true
         configure(task)
         modelContext.insert(task)
@@ -60,17 +60,17 @@ class NotionE2ETestCase: XCTestCase {
 
         try await syncService.pushDirtyChanges(session: session, modelContext: modelContext)
 
-        if !task.notionPageId.isEmpty {
-            createdPageIds.append(task.notionPageId)
+        if !task.externalTaskID.isEmpty {
+            createdPageIds.append(task.externalTaskID)
         }
         return task
     }
 
     /// Fetch a single TaskItem from the in-memory context matching a Notion page ID.
-    func fetchTask(notionPageId: String) throws -> TaskItem? {
-        let id = notionPageId
+    func fetchTask(externalTaskID: String) throws -> TaskItem? {
+        let id = externalTaskID
         let descriptor = FetchDescriptor<TaskItem>(
-            predicate: #Predicate<TaskItem> { $0.notionPageId == id }
+            predicate: #Predicate<TaskItem> { $0.externalTaskID == id }
         )
         return try modelContext.fetch(descriptor).first
     }

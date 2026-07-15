@@ -21,7 +21,7 @@ final class NotificationServiceUnitTests: XCTestCase {
         let scheduler = MockNotificationScheduler()
         let now = referenceDate
 
-        let task = TaskItem(notionPageId: "t-1", title: "Buy milk")
+        let task = TaskItem(externalTaskID: "t-1", title: "Buy milk")
         task.dueDate = now.addingTimeInterval(3600)
         task.dueDateHasTime = true
         ctx.insert(task)
@@ -42,7 +42,7 @@ final class NotificationServiceUnitTests: XCTestCase {
         let scheduler = MockNotificationScheduler()
         let now = referenceDate
 
-        let task = TaskItem(notionPageId: "t-2", title: "Old task")
+        let task = TaskItem(externalTaskID: "t-2", title: "Old task")
         task.dueDate = now.addingTimeInterval(-1800)
         ctx.insert(task)
 
@@ -57,7 +57,7 @@ final class NotificationServiceUnitTests: XCTestCase {
     }
 
     func testNotificationBody_WhenDueDateHasTime_ShowsDueAtTime() throws {
-        let task = TaskItem(notionPageId: "t-body-time", title: "Meeting")
+        let task = TaskItem(externalTaskID: "t-body-time", title: "Meeting")
         task.dueDate = referenceDate.addingTimeInterval(7200)
         task.dueDateHasTime = true
 
@@ -67,7 +67,7 @@ final class NotificationServiceUnitTests: XCTestCase {
 
     func testNotificationBody_WhenDateOnlyAndDueDateIsToday_ShowsDueToday() throws {
         let today = Calendar.current.startOfDay(for: Date())
-        let task = TaskItem(notionPageId: "t-body-today", title: "Grocery run")
+        let task = TaskItem(externalTaskID: "t-body-today", title: "Grocery run")
         task.dueDate = today
         task.dueDateHasTime = false
 
@@ -76,14 +76,14 @@ final class NotificationServiceUnitTests: XCTestCase {
     }
 
     func testNotificationBody_WhenNoDueDate_ReturnsEmptyString() {
-        let task = TaskItem(notionPageId: "t-body-nil", title: "No date task")
+        let task = TaskItem(externalTaskID: "t-body-nil", title: "No date task")
         let body = NotificationService().notificationBody(for: task, using: referenceDate)
         XCTAssertEqual(body, "")
     }
 
     func testCancelRemindersForTask_RemovesAllIdentifiers() throws {
         let scheduler = MockNotificationScheduler()
-        let task = TaskItem(notionPageId: "t-cancel", title: "Cancel me")
+        let task = TaskItem(externalTaskID: "t-cancel", title: "Cancel me")
         task.taskReminders = [
             TaskReminder.presetOneDayBeforeDue(),
             TaskReminder.presetThirtyMinutesBeforeDue(),
@@ -99,7 +99,7 @@ final class NotificationServiceUnitTests: XCTestCase {
         let scheduler = MockNotificationScheduler()
         let now = referenceDate
 
-        let task = TaskItem(notionPageId: "t-reschedule", title: "Reschedule me")
+        let task = TaskItem(externalTaskID: "t-reschedule", title: "Reschedule me")
         task.dueDate = now.addingTimeInterval(2 * 86_400)
         task.dueDateHasTime = true
         task.taskReminders = [TaskReminder.presetOneDayBeforeDue()]
@@ -115,7 +115,7 @@ final class NotificationServiceUnitTests: XCTestCase {
         let scheduler = MockNotificationScheduler()
         let now = referenceDate
 
-        let task = TaskItem(notionPageId: "t-done", title: "Done task")
+        let task = TaskItem(externalTaskID: "t-done", title: "Done task")
         task.dueDate = now.addingTimeInterval(7200)
         task.status = .done
         task.taskReminders = [TaskReminder.presetOneDayBeforeDue()]
@@ -133,7 +133,7 @@ final class NotificationServiceUnitTests: XCTestCase {
         let limit = AppConstants.maxScheduledNotifications
 
         for i in 0..<(limit + 5) {
-            let task = TaskItem(notionPageId: "t-limit-\(i)", title: "Task \(i)")
+            let task = TaskItem(externalTaskID: "t-limit-\(i)", title: "Task \(i)")
             task.dueDate = now.addingTimeInterval(2 * 86_400 + Double(i + 1) * 3600)
             task.dueDateHasTime = true
             task.taskReminders = [TaskReminder.presetOneDayBeforeDue()]

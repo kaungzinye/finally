@@ -6,13 +6,14 @@ struct ParentTaskPicker: View {
         filter: #Predicate<TaskItem> { $0.isDeleted == false }
     )
     private var allTasks: [TaskItem]
+    @Query private var sessions: [UserSession]
     @Binding var selection: TaskItem?
     @Environment(\.dismiss) private var dismiss
 
     @State private var searchText = ""
 
     private var eligibleTasks: [TaskItem] {
-        allTasks.filter { !$0.isSubtask }
+        allTasks.scoped(to: sessions.selectedProviderWorkspace).filter { !$0.isSubtask }
     }
 
     private var filteredTasks: [TaskItem] {
@@ -47,7 +48,7 @@ struct ParentTaskPicker: View {
                 }
 
                 Section {
-                    ForEach(filteredTasks, id: \.notionPageId) { task in
+                    ForEach(filteredTasks, id: \.externalTaskID) { task in
                         Button {
                             selection = task
                             dismiss()
@@ -69,7 +70,7 @@ struct ParentTaskPicker: View {
                                     }
                                 }
                                 Spacer()
-                                if selection?.notionPageId == task.notionPageId {
+                                if selection?.externalTaskID == task.externalTaskID {
                                     Image(systemName: "checkmark")
                                         .foregroundStyle(.blue)
                                 }

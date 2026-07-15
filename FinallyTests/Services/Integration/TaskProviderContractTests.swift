@@ -3,6 +3,59 @@ import XCTest
 @testable import Finally
 
 final class TaskProviderContractTests: XCTestCase {
+    func testUnsyncedCreateIsDurableBeforeThrowingProviderPush() async throws {
+        let (container, context) = try makeInMemoryStore()
+        let adapter = AlwaysFailingTaskProviderAdapter()
+        let coordinator = TaskProviderCoordinator(adapter: adapter)
+        let workspace = UserSession(workspaceId: "workspace", workspaceName: "Workspace")
+        context.insert(workspace)
+        let task = TaskItem(externalTaskID: "local-draft", title: "Draft survives")
+        task.providerWorkspaceId = workspace.workspaceId
+        task.isDirty = true
+        context.insert(task)
+
+        XCTAssertEqual(try ModelContext(container).fetchCount(FetchDescriptor<TaskItem>()), 0)
+        try coordinator.persistPendingChanges(store: context)
+        do {
+            try await coordinator.synchronize(.push, workspace: workspace, store: context)
+            XCTFail("Expected provider failure")
+        } catch AlwaysFailingTaskProviderAdapter.Failure.offline {
+            let persisted = try ModelContext(container).fetch(FetchDescriptor<TaskItem>())
+            XCTAssertEqual(persisted.map(\.title), ["Draft survives"])
+            XCTAssertTrue(try XCTUnwrap(persisted.first).isDirty)
+            XCTAssertEqual(adapter.synchronizeCallCount, 1)
+        }
+    }
+
+    func testUnsyncedEditIsDurableBeforeThrowingProviderPush() async throws {
+        let (container, context) = try makeInMemoryStore()
+        let adapter = AlwaysFailingTaskProviderAdapter()
+        let coordinator = TaskProviderCoordinator(adapter: adapter)
+        let workspace = UserSession(workspaceId: "workspace", workspaceName: "Workspace")
+        let task = TaskItem(externalTaskID: "remote-task", title: "Original")
+        task.providerWorkspaceId = workspace.workspaceId
+        context.insert(workspace)
+        context.insert(task)
+        try context.save()
+
+        task.title = "Edited while offline"
+        task.isDirty = true
+        XCTAssertEqual(
+            try XCTUnwrap(ModelContext(container).fetch(FetchDescriptor<TaskItem>()).first).title,
+            "Original"
+        )
+        try coordinator.persistPendingChanges(store: context)
+        do {
+            try await coordinator.synchronize(.push, workspace: workspace, store: context)
+            XCTFail("Expected provider failure")
+        } catch AlwaysFailingTaskProviderAdapter.Failure.offline {
+            let persisted = try ModelContext(container).fetch(FetchDescriptor<TaskItem>())
+            XCTAssertEqual(try XCTUnwrap(persisted.first).title, "Edited while offline")
+            XCTAssertTrue(try XCTUnwrap(persisted.first).isDirty)
+            XCTAssertEqual(adapter.synchronizeCallCount, 1)
+        }
+    }
+
     func testProviderCoordinatorPushMakesLocalDraftProviderBacked() async throws {
         let mock = MockNotionAPIClient()
         let coordinator = TaskProviderCoordinator(adapter: SyncService(api: mock))
@@ -10,14 +63,14 @@ final class TaskProviderContractTests: XCTestCase {
         let workspace = UserSession(workspaceId: "notion-workspace", workspaceName: "Shared")
         workspace.tasksDatabaseId = "tasks-db"
         context.insert(workspace)
-        let task = TaskItem(notionPageId: UUID().uuidString, title: "Review proposal")
+        let task = TaskItem(externalTaskID: UUID().uuidString, title: "Review proposal")
         task.isDirty = true
         context.insert(task)
         try context.save()
 
         try await coordinator.synchronize(.push, workspace: workspace, store: context)
 
-        XCTAssertEqual(task.notionPageId, "remote-1")
+        XCTAssertEqual(task.externalTaskID, "remote-1")
         XCTAssertFalse(task.isDirty)
     }
 
@@ -52,7 +105,7 @@ final class TaskProviderContractTests: XCTestCase {
     func testNotionAdapterMapsStoredWorkspaceAndTaskIntoProviderNeutralIdentities() {
         let adapter = SyncService(api: MockNotionAPIClient())
         let session = UserSession(workspaceId: "notion-workspace", workspaceName: "Shared")
-        let task = TaskItem(notionPageId: "notion-page", title: "Review proposal")
+        let task = TaskItem(externalTaskID: "notion-page", title: "Review proposal")
 
         let workspaceIdentity = adapter.workspaceIdentity(for: session)
         let taskIdentity = adapter.taskIdentity(for: task, in: workspaceIdentity)
@@ -77,7 +130,7 @@ final class TaskProviderContractTests: XCTestCase {
         let session = UserSession(workspaceId: "notion-workspace", workspaceName: "Shared")
         session.tasksDatabaseId = "tasks-db"
         context.insert(session)
-        let task = TaskItem(notionPageId: UUID().uuidString, title: "Review proposal")
+        let task = TaskItem(externalTaskID: UUID().uuidString, title: "Review proposal")
 
         try await assertCanonicalTaskLifecycle(
             using: TaskProviderLifecycleHarness(
@@ -129,6 +182,58 @@ final class TaskProviderContractTests: XCTestCase {
         )
     }
 
+    func testFinallyServerAdapterSatisfiesCanonicalTaskLifecycleContract() async throws {
+        let api = MockFinallyServerAPIClient()
+        let adapter = FinallyServerTaskProviderAdapter(api: api)
+        let context = try makeInMemoryContext()
+        let session = UserSession(workspaceId: "server-workspace", workspaceName: "Personal")
+        session.providerIdentity = .finallyServer
+        session.serverBaseURL = "https://tasks.example.com"
+        session.serverProjectID = 42
+        context.insert(session)
+        let task = TaskItem(externalTaskID: UUID().uuidString, title: "Review proposal")
+        task.providerWorkspaceId = session.workspaceId
+
+        try await assertCanonicalTaskLifecycle(
+            using: TaskProviderLifecycleHarness(
+                adapter: adapter,
+                workspace: session,
+                store: context,
+                createDraft: {
+                    task.isDirty = true
+                    context.insert(task)
+                    try context.save()
+                },
+                createdTaskIdentity: {
+                    adapter.taskIdentity(
+                        for: task,
+                        in: adapter.workspaceIdentity(for: session)
+                    )
+                },
+                expectedCreatedExternalID: "1",
+                publishRemoteUpdate: {
+                    api.tasks["1"] = FinallyServerTask(
+                        id: "1",
+                        projectID: 42,
+                        title: "Review revised proposal",
+                        isCompleted: false
+                    )
+                },
+                hasRemoteUpdate: {
+                    task.title == "Review revised proposal" && task.status == .notStarted
+                },
+                completeTask: { task.complete() },
+                isComplete: { task.status == .done && !task.isDirty },
+                deleteTask: {
+                    task.isDeleted = true
+                    task.isDirty = true
+                },
+                archivedTaskIDs: { api.tasks["1"] == nil ? ["1"] : [] },
+                localTaskCount: { try context.fetchCount(FetchDescriptor<TaskItem>()) }
+            )
+        )
+    }
+
     private func assertCanonicalTaskLifecycle<Adapter: TaskProviderAdapter>(
         using harness: TaskProviderLifecycleHarness<Adapter>
     ) async throws {
@@ -173,6 +278,10 @@ final class TaskProviderContractTests: XCTestCase {
     }
 
     private func makeInMemoryContext() throws -> ModelContext {
+        try makeInMemoryStore().context
+    }
+
+    private func makeInMemoryStore() throws -> (container: ModelContainer, context: ModelContext) {
         let schema = Schema([
             TaskItem.self,
             ProjectItem.self,
@@ -180,7 +289,32 @@ final class TaskProviderContractTests: XCTestCase {
         ])
         let configuration = ModelConfiguration(isStoredInMemoryOnly: true)
         let container = try ModelContainer(for: schema, configurations: [configuration])
-        return ModelContext(container)
+        return (container, ModelContext(container))
+    }
+}
+
+private final class AlwaysFailingTaskProviderAdapter: TaskProviderAdapter {
+    enum Failure: Error { case offline }
+
+    let providerIdentity = TaskProviderIdentity.finallyServer
+    let capabilities: Set<TaskProviderCapability> = [.createTasks, .updateTasks]
+    private(set) var synchronizeCallCount = 0
+
+    func workspaceIdentity(for workspace: UserSession) -> ProviderWorkspaceIdentity {
+        ProviderWorkspaceIdentity(provider: providerIdentity, externalID: workspace.workspaceId)
+    }
+
+    func taskIdentity(for task: TaskItem, in workspace: ProviderWorkspaceIdentity) -> ProviderTaskIdentity {
+        ProviderTaskIdentity(workspace: workspace, externalID: task.externalTaskID)
+    }
+
+    func synchronize(
+        _ intent: TaskProviderSyncIntent,
+        workspace: UserSession?,
+        store: ModelContext
+    ) async throws {
+        synchronizeCallCount += 1
+        throw Failure.offline
     }
 }
 

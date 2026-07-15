@@ -11,6 +11,10 @@ final class UserSession {
     var propertyMappingsData: Data?
     var lastFullSyncAt: Date?
     var createdAt: Date = Date()
+    var providerRaw: String = TaskProviderIdentity.notion.rawValue
+    var serverBaseURL: String?
+    var serverProjectID: Int64?
+    var isSelected: Bool = true
 
     init(workspaceId: String, workspaceName: String) {
         self.workspaceId = workspaceId
@@ -25,6 +29,11 @@ final class UserSession {
         set {
             propertyMappingsData = try? JSONEncoder().encode(newValue)
         }
+    }
+
+    var providerIdentity: TaskProviderIdentity {
+        get { TaskProviderIdentity(rawValue: providerRaw) }
+        set { providerRaw = newValue.rawValue }
     }
 }
 

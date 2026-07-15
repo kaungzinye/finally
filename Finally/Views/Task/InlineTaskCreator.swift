@@ -6,6 +6,7 @@ struct InlineTaskCreator: View {
     @Environment(TaskProviderCoordinator.self) private var taskProvider
     @Query(sort: \ProjectItem.title) private var allProjects: [ProjectItem]
     @Query(filter: #Predicate<TaskItem> { $0.isDeleted == false }) private var allTasks: [TaskItem]
+    @Query private var sessions: [UserSession]
 
     @State private var taskTitle = ""
     @State private var dueDate: Date?
@@ -41,6 +42,14 @@ struct InlineTaskCreator: View {
     @State private var syncErrorMessage: String?
 
     var presetProject: ProjectItem?
+
+    private var selectedProjects: [ProjectItem] {
+        allProjects.scoped(to: sessions.selectedProviderWorkspace)
+    }
+
+    private var selectedTasks: [TaskItem] {
+        allTasks.scoped(to: sessions.selectedProviderWorkspace)
+    }
 
     var body: some View {
         VStack(spacing: 10) {
@@ -279,7 +288,9 @@ struct InlineTaskCreator: View {
         }
         guard !title.isEmpty else { return }
 
-        let task = TaskItem(notionPageId: UUID().uuidString, title: title)
+        let task = TaskItem(externalTaskID: UUID().uuidString, title: title)
+        let selectedWorkspace = try? modelContext.selectedProviderWorkspace()
+        task.providerWorkspaceId = selectedWorkspace?.workspaceId
         task.dueDate = dueDate
         task.targetDate = targetDate
         task.validateTargetDate()
@@ -291,7 +302,7 @@ struct InlineTaskCreator: View {
         task.isDirty = true
 
         if let parent = parentTask {
-            task.parentId = parent.notionPageId
+            task.parentId = parent.externalTaskID
             task.parent = parent
             task.sortIndex = parent.subtasks.count
         }
@@ -308,16 +319,23 @@ struct InlineTaskCreator: View {
             NotificationService.shared.rescheduleAllReminders(modelContext: modelContext)
         }
 
-        // Push to Notion in background
+        do {
+            try taskProvider.persistPendingChanges(store: modelContext)
+        } catch {
+            syncErrorMessage = error.localizedDescription
+            return
+        }
+
+        // Push to the selected task provider in the background.
         let context = modelContext
         Task {
-            guard let session = try? context.fetch(FetchDescriptor<UserSession>()).first else { return }
+            guard let session = try? context.selectedProviderWorkspace() else { return }
             do {
                 try await taskProvider.synchronize(.push, workspace: session, store: context)
             } catch let error as TaskSyncError {
                 syncErrorMessage = error.localizedDescription
             } catch {
-                print("[InlineTaskCreator] Failed to push task: \(error)")
+                syncErrorMessage = error.localizedDescription
             }
         }
 
@@ -366,7 +384,7 @@ struct InlineTaskCreator: View {
 
         // Auto-populate project from name
         if let name = result.detectedProjectName, !nlpDetectedProject, project == nil {
-            if let matched = allProjects.first(where: { $0.title.localizedCaseInsensitiveContains(name) }) {
+            if let matched = selectedProjects.first(where: { $0.title.localizedCaseInsensitiveContains(name) }) {
                 project = matched
                 nlpDetectedProject = true
             }
@@ -393,7 +411,7 @@ struct InlineTaskCreator: View {
             let afterAt = String(text[text.index(after: atIndex)...])
             if !afterAt.contains(" ") || afterAt.isEmpty {
                 let query = afterAt.lowercased()
-                projectSuggestions = allProjects.filter { proj in
+                projectSuggestions = selectedProjects.filter { proj in
                     query.isEmpty || proj.title.lowercased().contains(query)
                 }
                 showProjectSuggestions = true
@@ -407,7 +425,7 @@ struct InlineTaskCreator: View {
             let afterHash = String(text[text.index(after: hashIndex)...])
             if !afterHash.contains(" ") || afterHash.isEmpty {
                 let query = afterHash.lowercased()
-                let existingTags = Set(allTasks.flatMap(\.tags))
+                let existingTags = Set(selectedTasks.flatMap(\.tags))
                 tagSuggestions = existingTags.filter { tag in
                     query.isEmpty || tag.lowercased().contains(query)
                 }.sorted()

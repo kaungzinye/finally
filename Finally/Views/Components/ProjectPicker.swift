@@ -5,14 +5,16 @@ struct ProjectPicker: View {
     @Binding var selection: ProjectItem?
     @Environment(\.dismiss) private var dismiss
     @Query(sort: \ProjectItem.title) private var projects: [ProjectItem]
+    @Query private var sessions: [UserSession]
 
     @State private var query: String = ""
 
     private var filteredProjects: [ProjectItem] {
+        let selectedProjects = projects.scoped(to: sessions.selectedProviderWorkspace)
         let trimmed = query.trimmingCharacters(in: .whitespaces)
-        guard !trimmed.isEmpty else { return projects }
+        guard !trimmed.isEmpty else { return selectedProjects }
         let lowercasedQuery = trimmed.lowercased()
-        return projects.filter { $0.title.lowercased().contains(lowercasedQuery) }
+        return selectedProjects.filter { $0.title.lowercased().contains(lowercasedQuery) }
     }
 
     var body: some View {

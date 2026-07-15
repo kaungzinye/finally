@@ -15,7 +15,7 @@ final class Phase6BTaskReminderTests: XCTestCase {
     // MARK: - Anchored fire dates
 
     func testAnchoredReminder_FiresBeforeDueDate() {
-        let task = TaskItem(notionPageId: "t-1", title: "Task")
+        let task = TaskItem(externalTaskID: "t-1", title: "Task")
         task.dueDate = makeDate(year: 2026, month: 6, day: 15, hour: 17)
         task.dueDateHasTime = true
 
@@ -28,7 +28,7 @@ final class Phase6BTaskReminderTests: XCTestCase {
     }
 
     func testAnchoredReminder_FiresAfterDueDate() {
-        let task = TaskItem(notionPageId: "t-2", title: "Task")
+        let task = TaskItem(externalTaskID: "t-2", title: "Task")
         task.dueDate = makeDate(year: 2026, month: 6, day: 15, hour: 17)
         task.dueDateHasTime = true
 
@@ -41,7 +41,7 @@ final class Phase6BTaskReminderTests: XCTestCase {
     }
 
     func testAnchoredReminder_UsesTargetAnchorWhenPresent() {
-        let task = TaskItem(notionPageId: "t-3", title: "Task")
+        let task = TaskItem(externalTaskID: "t-3", title: "Task")
         task.targetDate = makeDate(year: 2026, month: 6, day: 10)
         task.dueDate = makeDate(year: 2026, month: 6, day: 20)
 
@@ -59,7 +59,7 @@ final class Phase6BTaskReminderTests: XCTestCase {
     }
 
     func testAnchoredReminder_ReturnsNilWhenAnchorDateMissing() {
-        let task = TaskItem(notionPageId: "t-4", title: "No dates")
+        let task = TaskItem(externalTaskID: "t-4", title: "No dates")
         let reminder = TaskReminder.anchored(
             AnchoredReminder(anchor: .due, value: 1, unit: .days, direction: .before)
         )
@@ -67,7 +67,7 @@ final class Phase6BTaskReminderTests: XCTestCase {
     }
 
     func testExplicitDateReminder_IsIndependentOfTaskDates() {
-        let task = TaskItem(notionPageId: "t-5", title: "Task")
+        let task = TaskItem(externalTaskID: "t-5", title: "Task")
         let fixed = makeDate(year: 2026, month: 7, day: 4, hour: 8)
         let reminder = TaskReminder.explicitDate(ExplicitDateReminder(dateTime: fixed))
 

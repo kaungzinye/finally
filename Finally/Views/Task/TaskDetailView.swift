@@ -185,7 +185,7 @@ struct TaskDetailView: View {
 
                         // Subtask list
                         let sortedSubtasks = task.subtasks.sorted { $0.sortIndex < $1.sortIndex }
-                        ForEach(sortedSubtasks, id: \.notionPageId) { subtask in
+                        ForEach(sortedSubtasks, id: \.externalTaskID) { subtask in
                             HStack(spacing: 10) {
                                 Button {
                                     withAnimation {
@@ -327,8 +327,8 @@ struct TaskDetailView: View {
         let title = newSubtaskTitle.trimmingCharacters(in: .whitespaces)
         guard !title.isEmpty else { return }
 
-        let subtask = TaskItem(notionPageId: UUID().uuidString, title: title)
-        subtask.parentId = task.notionPageId
+        let subtask = TaskItem(externalTaskID: UUID().uuidString, title: title)
+        subtask.parentId = task.externalTaskID
         subtask.parent = task
         subtask.isDirty = true
         subtask.sortIndex = task.subtasks.count
@@ -365,15 +365,22 @@ struct TaskDetailView: View {
             }
         }
 
+        do {
+            try taskProvider.persistPendingChanges(store: modelContext)
+        } catch {
+            syncErrorMessage = error.localizedDescription
+            return
+        }
+
         // Synchronize before dismissing so failures remain visible.
         let context = modelContext
-        guard let session = try? context.fetch(FetchDescriptor<UserSession>()).first else { return }
+        guard let session = try? context.selectedProviderWorkspace() else { return }
         do {
             try await taskProvider.synchronize(.push, workspace: session, store: context)
         } catch let error as TaskSyncError {
             syncErrorMessage = error.localizedDescription
         } catch {
-            print("[TaskDetailView] Failed to push task: \(error)")
+            syncErrorMessage = error.localizedDescription
         }
     }
 }

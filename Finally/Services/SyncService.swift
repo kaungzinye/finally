@@ -104,13 +104,13 @@ final class SyncService {
         if !session.projectsDatabaseId.isEmpty {
             let projectPages = try await api.queryAllPages(databaseId: session.projectsDatabaseId, filter: filter, sorts: nil)
             print("[Sync] Incremental: fetched \(projectPages.count) updated projects")
-            upsertProjects(projectPages, mappings: mappings, modelContext: modelContext)
+            upsertProjects(projectPages, mappings: mappings, workspaceID: session.workspaceId, modelContext: modelContext)
         }
 
         if !session.tasksDatabaseId.isEmpty {
             let taskPages = try await api.queryAllPages(databaseId: session.tasksDatabaseId, filter: filter, sorts: nil)
             print("[Sync] Incremental: fetched \(taskPages.count) updated tasks")
-            upsertTasks(taskPages, mappings: mappings, modelContext: modelContext)
+            upsertTasks(taskPages, mappings: mappings, workspaceID: session.workspaceId, modelContext: modelContext)
         }
 
         session.lastFullSyncAt = Date()
@@ -133,8 +133,8 @@ final class SyncService {
             print("[Sync] Fetched \(allProjectPages.count) project pages from Notion")
             let remoteProjectIds = Set(allProjectPages.map(\.id))
 
-            upsertProjects(allProjectPages, mappings: mappings, modelContext: modelContext)
-            deleteStaleItems(ProjectItem.self, remoteIds: remoteProjectIds, modelContext: modelContext)
+            upsertProjects(allProjectPages, mappings: mappings, workspaceID: session.workspaceId, modelContext: modelContext)
+            deleteStaleItems(ProjectItem.self, remoteIds: remoteProjectIds, workspaceID: session.workspaceId, modelContext: modelContext)
         } else {
             print("[Sync] No projects DB configured, skipping")
         }
@@ -145,8 +145,8 @@ final class SyncService {
             print("[Sync] Fetched \(allTaskPages.count) task pages from Notion")
             let remoteTaskIds = Set(allTaskPages.map(\.id))
 
-            upsertTasks(allTaskPages, mappings: mappings, modelContext: modelContext)
-            deleteStaleItems(TaskItem.self, remoteIds: remoteTaskIds, modelContext: modelContext)
+            upsertTasks(allTaskPages, mappings: mappings, workspaceID: session.workspaceId, modelContext: modelContext)
+            deleteStaleItems(TaskItem.self, remoteIds: remoteTaskIds, workspaceID: session.workspaceId, modelContext: modelContext)
 
             let localCount = (try? modelContext.fetchCount(FetchDescriptor<TaskItem>())) ?? 0
             print("[Sync] Local task count after upsert: \(localCount)")
@@ -171,7 +171,9 @@ final class SyncService {
 
     private func pushDirtyChangesUsingProvider(session: UserSession, modelContext: ModelContext) async throws {
         let descriptor = FetchDescriptor<TaskItem>(predicate: #Predicate { $0.isDirty == true })
-        let dirtyTasks = try modelContext.fetch(descriptor)  // Bug 2 fix: propagate fetch errors instead of silently returning []
+        let dirtyTasks = try modelContext.fetch(descriptor).filter {
+            $0.providerWorkspaceId == nil || $0.providerWorkspaceId == session.workspaceId
+        }
 
         var mappings = session.propertyMappings
         mappings = try await refreshTaskStatusSchemaIfNeeded(
@@ -212,7 +214,7 @@ final class SyncService {
     ) async throws {
         if task.isDeleted {
             if task.lastSyncedAt != nil {
-                try await api.archivePage(pageId: task.notionPageId)
+                try await api.archivePage(pageId: task.externalTaskID)
             }
             modelContext.delete(task)
             try modelContext.save()
@@ -222,11 +224,11 @@ final class SyncService {
         let properties = buildNotionProperties(for: task, mappings: mappings)
         if task.lastSyncedAt == nil, !session.tasksDatabaseId.isEmpty {
             let created = try await api.createPage(databaseId: session.tasksDatabaseId, properties: properties)
-            task.notionPageId = created.id
+            task.externalTaskID = created.id
         } else if task.lastSyncedAt == nil {
             return
         } else {
-            _ = try await api.updatePage(pageId: task.notionPageId, properties: properties)
+            _ = try await api.updatePage(pageId: task.externalTaskID, properties: properties)
         }
         task.isDirty = false
         task.lastSyncedAt = Date()
@@ -250,7 +252,12 @@ final class SyncService {
 
     // MARK: - Upsert Projects
 
-    private func upsertProjects(_ pages: [NotionPage], mappings: PropertyMappings, modelContext: ModelContext) {
+    private func upsertProjects(
+        _ pages: [NotionPage],
+        mappings: PropertyMappings,
+        workspaceID: String,
+        modelContext: ModelContext
+    ) {
         for page in pages {
             let title = extractTitle(from: page, propertyName: mappings.projectTitleProperty)
             let editedTime = parseDate(page.lastEditedTime)
@@ -264,10 +271,12 @@ final class SyncService {
             if let existing = (try? modelContext.fetch(descriptor))?.first {
                 existing.title = title
                 existing.iconEmoji = emoji
+                existing.providerWorkspaceId = workspaceID
                 existing.lastEditedTime = editedTime
                 existing.lastSyncedAt = Date()
             } else {
                 let project = ProjectItem(notionPageId: page.id, title: title, iconEmoji: emoji)
+                project.providerWorkspaceId = workspaceID
                 project.lastEditedTime = editedTime
                 project.lastSyncedAt = Date()
                 modelContext.insert(project)
@@ -277,14 +286,19 @@ final class SyncService {
 
     // MARK: - Upsert Tasks
 
-    private func upsertTasks(_ pages: [NotionPage], mappings: PropertyMappings, modelContext: ModelContext) {
+    private func upsertTasks(
+        _ pages: [NotionPage],
+        mappings: PropertyMappings,
+        workspaceID: String,
+        modelContext: ModelContext
+    ) {
         for page in pages {
             let title = extractTitle(from: page, propertyName: mappings.taskTitleProperty)
             let editedTime = parseDate(page.lastEditedTime)
 
             let pageId = page.id
             let descriptor = FetchDescriptor<TaskItem>(predicate: #Predicate<TaskItem> { item in
-                item.notionPageId == pageId
+                item.externalTaskID == pageId
             })
 
             let task: TaskItem
@@ -296,11 +310,12 @@ final class SyncService {
                 }
                 task = existing
             } else {
-                task = TaskItem(notionPageId: page.id, title: title)
+                task = TaskItem(externalTaskID: page.id, title: title)
                 modelContext.insert(task)
             }
 
             task.title = title
+            task.providerWorkspaceId = workspaceID
             task.lastEditedTime = editedTime
             task.lastSyncedAt = Date()
 
@@ -384,7 +399,7 @@ final class SyncService {
                 let parentId = firstRelation.id
                 task.parentId = parentId
                 let parentDescriptor = FetchDescriptor<TaskItem>(predicate: #Predicate<TaskItem> { item in
-                    item.notionPageId == parentId
+                    item.externalTaskID == parentId
                 })
                 task.parent = (try? modelContext.fetch(parentDescriptor))?.first
             } else if task.parentId == nil {
@@ -402,7 +417,7 @@ final class SyncService {
         for task in tasks {
             guard let parentId = task.parentId else { continue }
             let parentDescriptor = FetchDescriptor<TaskItem>(predicate: #Predicate<TaskItem> { item in
-                item.notionPageId == parentId
+                item.externalTaskID == parentId
             })
             if let parent = try? modelContext.fetch(parentDescriptor).first {
                 task.parent = parent
@@ -412,14 +427,25 @@ final class SyncService {
 
     // MARK: - Delete Stale Items
 
-    private func deleteStaleItems<T: PersistentModel>(_ type: T.Type, remoteIds: Set<String>, modelContext: ModelContext) where T: NotionSyncable {
+    private func deleteStaleItems<T: PersistentModel>(
+        _ type: T.Type,
+        remoteIds: Set<String>,
+        workspaceID: String? = nil,
+        modelContext: ModelContext
+    ) where T: ProviderSyncable {
         let descriptor = FetchDescriptor<T>()
         guard let locals = try? modelContext.fetch(descriptor) else { return }
 
         for item in locals {
             // Bug 4 fix: don't delete tasks with unsaved local edits
-            if let task = item as? TaskItem, task.isDirty { continue }
-            if !remoteIds.contains(item.notionPageId) {
+            if let task = item as? TaskItem {
+                guard task.providerWorkspaceId == nil || task.providerWorkspaceId == workspaceID else { continue }
+                if task.isDirty { continue }
+            }
+            if let project = item as? ProjectItem {
+                guard project.providerWorkspaceId == nil || project.providerWorkspaceId == workspaceID else { continue }
+            }
+            if !remoteIds.contains(item.externalProviderID) {
                 modelContext.delete(item)
             }
         }
@@ -508,7 +534,10 @@ final class SyncService {
 
     private func fetchSession(modelContext: ModelContext) -> UserSession? {
         let descriptor = FetchDescriptor<UserSession>()
-        return (try? modelContext.fetch(descriptor))?.first
+        let sessions = try? modelContext.fetch(descriptor)
+        guard let selected = sessions?.selectedProviderWorkspace,
+              selected.providerIdentity == .notion else { return nil }
+        return selected
     }
 
     private func refreshTaskStatusSchemaIfNeeded(
@@ -579,11 +608,16 @@ final class SyncService {
     }
 }
 
-// MARK: - NotionSyncable Protocol
+// MARK: - ProviderSyncable Protocol
 
-protocol NotionSyncable {
-    var notionPageId: String { get }
+protocol ProviderSyncable {
+    var externalProviderID: String { get }
 }
 
-extension TaskItem: NotionSyncable {}
-extension ProjectItem: NotionSyncable {}
+extension TaskItem: ProviderSyncable {
+    var externalProviderID: String { externalTaskID }
+}
+
+extension ProjectItem: ProviderSyncable {
+    var externalProviderID: String { notionPageId }
+}
