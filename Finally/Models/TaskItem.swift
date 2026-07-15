@@ -10,8 +10,6 @@ final class TaskItem {
     var dueDateHasTime: Bool = false
     var targetDate: Date?
     var targetDateHasTime: Bool = false
-    /// Legacy field — migrated to `targetDate` on first launch after Phase 6B.
-    var startDate: Date?
     var priorityRaw: String?
     var tags: [String] = []
     var tagColors: [String] = []
@@ -22,10 +20,8 @@ final class TaskItem {
     var lastSyncedAt: Date?
     var isDirty: Bool = false
     var isDeleted: Bool = false
-    var isLocalOnly: Bool = false
 
     var parentId: String?
-    /// Legacy field — migrated to `suggestedDateOverride`.
     var suggestedDate: Date?
     var suggestedDateOverride: Date?
     var sortIndex: Int = 0
@@ -36,11 +32,7 @@ final class TaskItem {
     @Relationship(deleteRule: .cascade, inverse: \TaskItem.parent)
     var subtasks: [TaskItem] = []
 
-    // Legacy relationship — kept for one-time migration from ReminderItem rows.
-    @Relationship(deleteRule: .cascade, inverse: \ReminderItem.task)
-    var reminders: [ReminderItem] = []
-
-    // MARK: - Reminder storage (Phase 6B)
+    // MARK: - Reminder storage
 
     var taskReminders: [TaskReminder] {
         get { TaskReminderCodec.decode(from: remindersJSON) }
@@ -114,9 +106,6 @@ final class TaskItem {
     var effectiveDate: Date? {
         isSubtask ? (effectiveSuggestedDate ?? dueDate) : dueDate
     }
-
-    var legacyStartDate: Date? { startDate }
-    var legacySuggestedDate: Date? { suggestedDate }
 
     // MARK: - Init
 

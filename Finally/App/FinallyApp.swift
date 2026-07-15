@@ -13,8 +13,6 @@ struct FinallyApp: App {
     @State private var hasSession = false
     @State private var needsDatabaseSetup = false
     @State private var isLoading = true
-    @State private var showSubtaskMigrationPrompt = false
-    @State private var pendingLocalSubtaskCount = 0
     @State private var notificationDelegate: NotificationDelegate?
     @AppStorage("appearanceMode") private var appearanceMode: Int = 0 // 0=system, 1=light, 2=dark
 
@@ -61,13 +59,6 @@ struct FinallyApp: App {
             }
             .onReceive(NotificationCenter.default.publisher(for: .notionDatabasesReset)) { _ in
                 needsDatabaseSetup = true
-            }
-            .sheet(isPresented: $showSubtaskMigrationPrompt) {
-                SubtaskMigrationPromptView(
-                    subtaskCount: pendingLocalSubtaskCount,
-                    onPromote: { promoteLocalSubtasks() },
-                    onDismiss: { showSubtaskMigrationPrompt = false }
-                )
             }
             .task {
                 await checkSession()
@@ -123,11 +114,6 @@ struct FinallyApp: App {
 
         isLoading = false
 
-        DataMigrationService.runIfNeeded(modelContext: context)
-        let pending = DataMigrationService.localOnlySubtasks(in: context)
-        pendingLocalSubtaskCount = pending.count
-        showSubtaskMigrationPrompt = pendingLocalSubtaskCount > 0
-
         // Trigger sync on launch if we have a session with databases configured
         if hasSession && !needsDatabaseSetup {
             await syncService.syncOnLaunch(modelContext: context)
@@ -176,21 +162,6 @@ struct FinallyApp: App {
             try? await Task.sleep(for: .seconds(AppConstants.syncIntervalSeconds))
             if scenePhase == .active {
                 await runIncrementalSyncIfPossible()
-            }
-        }
-    }
-
-    @MainActor
-    private func promoteLocalSubtasks() {
-        let context = ModelContext(appContainer)
-        let pending = DataMigrationService.localOnlySubtasks(in: context)
-        DataMigrationService.promoteLocalSubtasks(pending, modelContext: context)
-        showSubtaskMigrationPrompt = false
-        pendingLocalSubtaskCount = 0
-
-        Task {
-            if let session = try? context.fetch(FetchDescriptor<UserSession>()).first {
-                try? await syncService.pushDirtyChanges(session: session, modelContext: context)
             }
         }
     }

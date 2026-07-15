@@ -10,7 +10,7 @@ The product interface depends on a task-provider contract. The Notion provider i
 ## Supporting artifacts
 
 - [Implementation plan](plan.md) records the current Swift implementation structure.
-- [Data model](data-model.md) records the current Notion-backed SwiftData representation pending the provider-neutral model migration.
+- [Data model](data-model.md) records the current Notion-backed SwiftData representation that the provider-neutral model replaces before release.
 - [Research](research.md) records implementation research for persistence, notifications, widgets, and Notion synchronization.
 - [Task checklist](tasks.md) tracks implementation work for this package.
 - [Notion API contract](contracts/notion-api.md) defines remote request and response shapes.

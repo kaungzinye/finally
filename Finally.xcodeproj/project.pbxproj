@@ -24,7 +24,6 @@
 		39ABF7688CFAFFBB508BBEC7 /* ReminderListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A9D29A2B7B51E63416C26971 /* ReminderListView.swift */; };
 		4504EC7F248400D129B20F3E /* Constants.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7EAF47BA098BEE13C1604C57 /* Constants.swift */; };
 		4772476F586F0B8090B14981 /* TodayView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE35E78EBFD4FC0E67ED2B37 /* TodayView.swift */; };
-		49DA9021FEC87B474C93CAA8 /* ReminderItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = F83F0FD2052643F53C3EA362 /* ReminderItem.swift */; };
 		4C9FDBE28EDFC4F8476D0B60 /* NotionAPIService.swift in Sources */ = {isa = PBXBuildFile; fileRef = EEA8E930574A524BDEF99456 /* NotionAPIService.swift */; };
 		4D86D0AA132A80D5C3114505 /* NotionDataShapeUnitTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6BE4BD53E8A06D86F228E95E /* NotionDataShapeUnitTests.swift */; };
 		52469454C0DEBCBA523CA6D1 /* FinallyApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 704CA9D55BA23389B037E759 /* FinallyApp.swift */; };
@@ -40,7 +39,6 @@
 		5E0CDA7D321610870C57B80D /* Phase6BSubtaskSchedulerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 51287207D87EE2EEC6133185 /* Phase6BSubtaskSchedulerTests.swift */; };
 		68989CD7315513B128C2F221 /* NotificationServiceUnitTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3C603D9DD83AEBE3EBCFE5F8 /* NotificationServiceUnitTests.swift */; };
 		6B3F6A15D72DE7B329EEAFBE /* TaskRowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EAD355905598E97021A8F3AB /* TaskRowView.swift */; };
-		725CDACB9D379F21C39840FE /* SubtaskMigrationPromptView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DF529E92964538459E8C3B60 /* SubtaskMigrationPromptView.swift */; };
 		72B3C47A213C17281F6CC2C9 /* NotionAuthService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9407C09D8E6E212AB6455934 /* NotionAuthService.swift */; };
 		72B9521C2F06649A0FBFF458 /* KanbanView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7BCA58CAA6230EA38C28E288 /* KanbanView.swift */; };
 		743614B7C47D1C37E35131B8 /* InlineTaskCreator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 837D45B286A6CB5EEF5A4D27 /* InlineTaskCreator.swift */; };
@@ -65,9 +63,7 @@
 		B2F654397FD23CCA177DA1AE /* SchemaValidatorUnitTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 695A63457914D18721BF9D98 /* SchemaValidatorUnitTests.swift */; };
 		B82E053654B7E4DE04A680E3 /* Phase6BNotificationServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4D6A9D885F54EDA96C38C007 /* Phase6BNotificationServiceTests.swift */; };
 		C0379921229816BF7E3D44E2 /* KeychainHelper.swift in Sources */ = {isa = PBXBuildFile; fileRef = 19D6396C60EC66DD7C32ED4D /* KeychainHelper.swift */; };
-		C7ACBAABC4718562EB1EA677 /* DataMigrationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0EA7BB212F8C5AED6DD6A667 /* DataMigrationService.swift */; };
 		CAAB2900354A6287A3F6EE19 /* SyncService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6195045508D41FC6C8438C7F /* SyncService.swift */; };
-		D312FD1DB5A154E7D2393CF3 /* Phase6BDataMigrationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C351473581EB59CF2683A6A6 /* Phase6BDataMigrationTests.swift */; };
 		D5423739046AE1DC495CD241 /* ParentTaskPicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = CCE5F29F716D6CB80D87B657 /* ParentTaskPicker.swift */; };
 		D684A2A1AEB4D0DD228DF4E2 /* MockNotificationScheduler.swift in Sources */ = {isa = PBXBuildFile; fileRef = B3D49B256E36F33AAD2C9991 /* MockNotificationScheduler.swift */; };
 		D6D0544538223C2E6CF6F0E6 /* ProjectPicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = 832612E5901E80295CD69C97 /* ProjectPicker.swift */; };
@@ -119,7 +115,6 @@
 		076DC8A4A8CF43403DD2050E /* RecurrencePicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecurrencePicker.swift; sourceTree = "<group>"; };
 		08A9E12B9A89E0FDD5D30146 /* ChipView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChipView.swift; sourceTree = "<group>"; };
 		0B13C11F80B93B61065C6CAD /* DatabasePickerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DatabasePickerView.swift; sourceTree = "<group>"; };
-		0EA7BB212F8C5AED6DD6A667 /* DataMigrationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DataMigrationService.swift; sourceTree = "<group>"; };
 		142A6914DF4321AEE4F34A6F /* TaskTitleParser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskTitleParser.swift; sourceTree = "<group>"; };
 		158DECFE945C100843221172 /* TaskListWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskListWidget.swift; sourceTree = "<group>"; };
 		17927D5217F64C91979B6708 /* MockNotionAPIClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MockNotionAPIClient.swift; sourceTree = "<group>"; };
@@ -172,13 +167,11 @@
 		B3D49B256E36F33AAD2C9991 /* MockNotificationScheduler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MockNotificationScheduler.swift; sourceTree = "<group>"; };
 		B810A6DFB04DE19772B99FA3 /* NotionCRUDE2ETests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotionCRUDE2ETests.swift; sourceTree = "<group>"; };
 		BDF3A5C0B718FB3F9D18C039 /* RecurrenceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecurrenceTests.swift; sourceTree = "<group>"; };
-		C351473581EB59CF2683A6A6 /* Phase6BDataMigrationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Phase6BDataMigrationTests.swift; sourceTree = "<group>"; };
 		C63916107F517C4530A21E31 /* Finally.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Finally.entitlements; sourceTree = "<group>"; };
 		C9438CA4430DF5A84E08C34F /* NetworkService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetworkService.swift; sourceTree = "<group>"; };
 		CCE5F29F716D6CB80D87B657 /* ParentTaskPicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ParentTaskPicker.swift; sourceTree = "<group>"; };
 		D0D27B0A70BF946EBDF00B56 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		D3442B96662ADFB087A822D4 /* DatabaseSetupGuideView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DatabaseSetupGuideView.swift; sourceTree = "<group>"; };
-		DF529E92964538459E8C3B60 /* SubtaskMigrationPromptView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubtaskMigrationPromptView.swift; sourceTree = "<group>"; };
 		DFAA764278E2B2298E8B7404 /* ProjectItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProjectItem.swift; sourceTree = "<group>"; };
 		E210597AFF8D4995D1175AA3 /* InlineReminderPicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InlineReminderPicker.swift; sourceTree = "<group>"; };
 		E23557EFB66C7C96C459D609 /* TaskReminder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskReminder.swift; sourceTree = "<group>"; };
@@ -188,7 +181,6 @@
 		EE35E78EBFD4FC0E67ED2B37 /* TodayView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TodayView.swift; sourceTree = "<group>"; };
 		EEA8E930574A524BDEF99456 /* NotionAPIService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotionAPIService.swift; sourceTree = "<group>"; };
 		EFCAC682CEE30C58506E0425 /* UserSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserSession.swift; sourceTree = "<group>"; };
-		F83F0FD2052643F53C3EA362 /* ReminderItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReminderItem.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXGroup section */
@@ -197,7 +189,6 @@
 			children = (
 				5DF9E28C5C320BE1EE73448A /* Enums.swift */,
 				DFAA764278E2B2298E8B7404 /* ProjectItem.swift */,
-				F83F0FD2052643F53C3EA362 /* ReminderItem.swift */,
 				E3DCE4B37409BDE28BFD5686 /* TaskItem.swift */,
 				E23557EFB66C7C96C459D609 /* TaskReminder.swift */,
 				EFCAC682CEE30C58506E0425 /* UserSession.swift */,
@@ -291,7 +282,6 @@
 		7546296734B297B476A5029E /* Services */ = {
 			isa = PBXGroup;
 			children = (
-				0EA7BB212F8C5AED6DD6A667 /* DataMigrationService.swift */,
 				19D6396C60EC66DD7C32ED4D /* KeychainHelper.swift */,
 				C9438CA4430DF5A84E08C34F /* NetworkService.swift */,
 				945D47BECC130042350E778B /* NotificationService.swift */,
@@ -340,7 +330,6 @@
 				0B13C11F80B93B61065C6CAD /* DatabasePickerView.swift */,
 				6491D6ECA6018FBC712CEEE1 /* NotionConnectView.swift */,
 				02F22C959A8815F6DCE53E20 /* SchemaErrorView.swift */,
-				DF529E92964538459E8C3B60 /* SubtaskMigrationPromptView.swift */,
 			);
 			path = Onboarding;
 			sourceTree = "<group>";
@@ -382,7 +371,6 @@
 			children = (
 				3C603D9DD83AEBE3EBCFE5F8 /* NotificationServiceUnitTests.swift */,
 				6BE4BD53E8A06D86F228E95E /* NotionDataShapeUnitTests.swift */,
-				C351473581EB59CF2683A6A6 /* Phase6BDataMigrationTests.swift */,
 				4D6A9D885F54EDA96C38C007 /* Phase6BNotificationServiceTests.swift */,
 				51287207D87EE2EEC6133185 /* Phase6BSubtaskSchedulerTests.swift */,
 				695A63457914D18721BF9D98 /* SchemaValidatorUnitTests.swift */,
@@ -549,7 +537,6 @@
 				68989CD7315513B128C2F221 /* NotificationServiceUnitTests.swift in Sources */,
 				1A1EF31471916736EF4376BA /* NotionCRUDE2ETests.swift in Sources */,
 				4D86D0AA132A80D5C3114505 /* NotionDataShapeUnitTests.swift in Sources */,
-				D312FD1DB5A154E7D2393CF3 /* Phase6BDataMigrationTests.swift in Sources */,
 				B82E053654B7E4DE04A680E3 /* Phase6BNotificationServiceTests.swift in Sources */,
 				5E0CDA7D321610870C57B80D /* Phase6BSubtaskSchedulerTests.swift in Sources */,
 				ADEA4999510EE5FB567BDFEE /* Phase6BTaskItemTests.swift in Sources */,
@@ -579,7 +566,6 @@
 				55F711B9628F214966D1A267 /* ChipView.swift in Sources */,
 				4504EC7F248400D129B20F3E /* Constants.swift in Sources */,
 				14783BBA2AA4669DF1A810EA /* ContentView.swift in Sources */,
-				C7ACBAABC4718562EB1EA677 /* DataMigrationService.swift in Sources */,
 				F7E273C1E9278F742980DFFE /* DatabasePickerView.swift in Sources */,
 				FE95AFD6F231DE3D95AA2783 /* DatabaseSetupGuideView.swift in Sources */,
 				A9060BC5E46C493F61E105DD /* DatePickerSheet.swift in Sources */,
@@ -605,14 +591,12 @@
 				531A6FD89E09145823875703 /* ProjectItem.swift in Sources */,
 				D6D0544538223C2E6CF6F0E6 /* ProjectPicker.swift in Sources */,
 				8BEADA09B000D070B0722900 /* RecurrencePicker.swift in Sources */,
-				49DA9021FEC87B474C93CAA8 /* ReminderItem.swift in Sources */,
 				39ABF7688CFAFFBB508BBEC7 /* ReminderListView.swift in Sources */,
 				97F8D8ECF949758077A23F6B /* SchemaErrorView.swift in Sources */,
 				5370AD49C76C17C138092D04 /* SchemaValidator.swift in Sources */,
 				575E87DEC706424074C2A57A /* SearchFilterView.swift in Sources */,
 				29E5ADA85E0F38D1F3E98CB0 /* SettingsView.swift in Sources */,
 				9255166257397CF0AE207DFD /* SortConfigView.swift in Sources */,
-				725CDACB9D379F21C39840FE /* SubtaskMigrationPromptView.swift in Sources */,
 				75C247FB0B0194F59F0C4E73 /* SubtaskScheduler.swift in Sources */,
 				A7A759AD35ADFF96495DD15D /* SyncErrorBanner.swift in Sources */,
 				CAAB2900354A6287A3F6EE19 /* SyncService.swift in Sources */,

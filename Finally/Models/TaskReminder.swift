@@ -190,29 +190,6 @@ enum TaskReminder: Codable, Equatable, Identifiable {
         .anchored(AnchoredReminder(anchor: .due, value: 30, unit: .minutes, direction: .before))
     }
 
-    static func fromLegacy(intervalSeconds: Int, absoluteDate: Date?) -> TaskReminder? {
-        if let absoluteDate {
-            return .explicitDate(ExplicitDateReminder(dateTime: absoluteDate))
-        }
-        guard intervalSeconds >= 0 else { return nil }
-        if intervalSeconds == 0 {
-            return .anchored(AnchoredReminder(anchor: .due, value: 0, unit: .minutes, direction: .before))
-        }
-        let seconds = intervalSeconds
-        if seconds % 604_800 == 0 {
-            return .anchored(AnchoredReminder(anchor: .due, value: seconds / 604_800, unit: .weeks, direction: .before))
-        }
-        if seconds % 86_400 == 0 {
-            return .anchored(AnchoredReminder(anchor: .due, value: seconds / 86_400, unit: .days, direction: .before))
-        }
-        if seconds % 3_600 == 0 {
-            return .anchored(AnchoredReminder(anchor: .due, value: seconds / 3_600, unit: .hours, direction: .before))
-        }
-        if seconds % 60 == 0 {
-            return .anchored(AnchoredReminder(anchor: .due, value: seconds / 60, unit: .minutes, direction: .before))
-        }
-        return .anchored(AnchoredReminder(anchor: .due, value: max(1, seconds / 60), unit: .minutes, direction: .before))
-    }
 }
 
 enum TaskReminderCodec {
