@@ -73,7 +73,7 @@ struct InlineTaskCreator: View {
             if showProjectSuggestions && !projectSuggestions.isEmpty {
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: 6) {
-                        ForEach(projectSuggestions.prefix(5), id: \.notionPageId) { proj in
+                        ForEach(projectSuggestions.prefix(5), id: \.externalProjectID) { proj in
                             Button {
                                 selectProjectSuggestion(proj)
                             } label: {

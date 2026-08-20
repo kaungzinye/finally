@@ -124,13 +124,13 @@ struct TaskRowView: View {
                 .font(.caption)
                 .buttonStyle(.plain)
 
-                // Tags — only show if not empty, with Notion colors
+                // Tags
                 if !task.tags.isEmpty {
                     Button { showTagPicker = true } label: {
                         HStack(spacing: 4) {
                             ForEach(Array(task.tags.prefix(2).enumerated()), id: \.offset) { index, tag in
                                 let colorName = index < task.tagColors.count ? task.tagColors[index] : "default"
-                                let tagColor = NotionColor.swiftUIColor(for: colorName)
+                                let tagColor = TaskTagColor.swiftUIColor(for: colorName)
                                 Text(tag)
                                     .padding(.horizontal, 4)
                                     .padding(.vertical, 1)

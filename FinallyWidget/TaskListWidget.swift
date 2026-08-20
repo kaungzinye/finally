@@ -1,6 +1,5 @@
 import WidgetKit
 import SwiftUI
-import SwiftData
 import AppIntents
 
 // MARK: - Shared Constants (duplicated for widget target)
@@ -10,12 +9,15 @@ private let urlScheme = "finally"
 
 // MARK: - Lightweight Task for Widget Display
 
-struct WidgetTask: Identifiable {
-    let id: String
+struct WidgetTask: Codable, Identifiable {
+    let providerWorkspaceID: String
+    let externalTaskID: String
     let title: String
     let dueDate: Date?
     let priorityRaw: String?
     let isComplete: Bool
+
+    var id: String { "\(providerWorkspaceID):\(externalTaskID)" }
 
     var priorityColor: Color {
         switch priorityRaw {
@@ -39,14 +41,28 @@ struct TaskEntry: TimelineEntry {
 struct TaskTimelineProvider: TimelineProvider {
     func placeholder(in context: Context) -> TaskEntry {
         TaskEntry(date: .now, tasks: [
-            WidgetTask(id: "1", title: "Sample task", dueDate: .now, priorityRaw: "Medium", isComplete: false),
-            WidgetTask(id: "2", title: "Another task", dueDate: .now, priorityRaw: nil, isComplete: false),
+            WidgetTask(
+                providerWorkspaceID: "preview",
+                externalTaskID: "1",
+                title: "Sample task",
+                dueDate: .now,
+                priorityRaw: "Medium",
+                isComplete: false
+            ),
+            WidgetTask(
+                providerWorkspaceID: "preview",
+                externalTaskID: "2",
+                title: "Another task",
+                dueDate: .now,
+                priorityRaw: nil,
+                isComplete: false
+            ),
         ])
     }
 
     func getSnapshot(in context: Context, completion: @escaping (TaskEntry) -> Void) {
         let tasks = loadTasks()
-        completion(TaskEntry(date: .now, tasks: tasks.isEmpty ? placeholder(in: context).tasks : tasks))
+        completion(TaskEntry(date: .now, tasks: context.isPreview ? placeholder(in: context).tasks : tasks))
     }
 
     func getTimeline(in context: Context, completion: @escaping (Timeline<TaskEntry>) -> Void) {
@@ -59,17 +75,9 @@ struct TaskTimelineProvider: TimelineProvider {
     }
 
     private func loadTasks() -> [WidgetTask] {
-        guard let containerURL = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroupID) else {
-            return []
-        }
-
-        let storeURL = containerURL.appendingPathComponent("Finally.store")
-        guard FileManager.default.fileExists(atPath: storeURL.path) else { return [] }
-
-        // Use raw SQLite or return empty — SwiftData in widget requires the model types
-        // For now, return placeholder data since the model classes aren't shared
-        // TODO: Share model files via target membership for real data access
-        return []
+        guard let defaults = UserDefaults(suiteName: appGroupID),
+              let data = defaults.data(forKey: "taskPresentationSummaries") else { return [] }
+        return (try? JSONDecoder().decode([WidgetTask].self, from: data)) ?? []
     }
 }
 

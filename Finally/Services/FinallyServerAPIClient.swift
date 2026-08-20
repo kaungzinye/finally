@@ -19,6 +19,7 @@ enum FinallyServerClientError: Error, LocalizedError {
     case unauthorized
     case forbidden
     case notFound
+    case duplicateLocalTaskIdentity(String)
     case serverUnavailable
 
     var errorDescription: String? {
@@ -35,6 +36,8 @@ enum FinallyServerClientError: Error, LocalizedError {
             return "This account cannot edit the selected Finally Server project."
         case .notFound:
             return "This task is no longer available from Finally Server."
+        case let .duplicateLocalTaskIdentity(taskID):
+            return "Finally found multiple local tasks for server task \(taskID). Remove the duplicate and sync again."
         case .serverUnavailable:
             return "Finally Server is unavailable. Your changes remain on this device."
         }
@@ -44,6 +47,7 @@ enum FinallyServerClientError: Error, LocalizedError {
 protocol FinallyServerAPIClient: AnyObject {
     func login(username: String, password: String) async throws -> String
     func listProjects() async throws -> [FinallyServerProject]
+    func listTasks(projectID: Int64) async throws -> [FinallyServerTask]
     func createTask(projectID: Int64, title: String) async throws -> FinallyServerTask
     func readTask(id: String) async throws -> FinallyServerTask
     func updateTask(id: String, title: String, isCompleted: Bool) async throws -> FinallyServerTask
@@ -53,6 +57,17 @@ protocol FinallyServerAPIClient: AnyObject {
 
 final class URLSessionFinallyServerAPIClient: FinallyServerAPIClient {
     private struct LoginResponse: Decodable { let token: String }
+    private struct PaginatedTasksResponse: Decodable {
+        let items: [RemoteTask]
+        let page: Int
+        let totalPages: Int
+
+        enum CodingKeys: String, CodingKey {
+            case items, page
+            case totalPages = "total_pages"
+        }
+    }
+
     private struct RemoteTask: Decodable {
         let id: Int64
         let projectID: Int64
@@ -95,6 +110,28 @@ final class URLSessionFinallyServerAPIClient: FinallyServerAPIClient {
         try await send(path: "projects", method: "GET")
     }
 
+    func listTasks(projectID: Int64) async throws -> [FinallyServerTask] {
+        var page = 1
+        var tasks: [FinallyServerTask] = []
+        repeat {
+            let response: PaginatedTasksResponse = try await send(
+                path: "projects/\(projectID)/tasks",
+                method: "GET",
+                queryItems: [
+                    URLQueryItem(name: "page", value: String(page)),
+                    URLQueryItem(name: "per_page", value: "1000"),
+                ]
+            )
+            guard response.page == page, (0...10_000).contains(response.totalPages) else {
+                throw FinallyServerClientError.invalidResponse
+            }
+            tasks.append(contentsOf: response.items.map(\.task))
+            page += 1
+            if page > response.totalPages { break }
+        } while true
+        return tasks
+    }
+
     func createTask(projectID: Int64, title: String) async throws -> FinallyServerTask {
         let response: RemoteTask = try await send(
             path: "projects/\(projectID)/tasks",
@@ -132,6 +169,7 @@ final class URLSessionFinallyServerAPIClient: FinallyServerAPIClient {
     private func send<Response: Decodable>(
         path: String,
         method: String,
+        queryItems: [URLQueryItem] = [],
         body: [String: any Encodable]? = nil,
         authenticated: Bool = true
     ) async throws -> Response {
@@ -139,7 +177,11 @@ final class URLSessionFinallyServerAPIClient: FinallyServerAPIClient {
             throw FinallyServerClientError.invalidConfiguration
         }
         let apiRoot = baseURL.appending(path: "api/v2/finally")
-        var request = URLRequest(url: apiRoot.appending(path: path))
+        let endpoint = apiRoot.appending(path: path)
+        var components = URLComponents(url: endpoint, resolvingAgainstBaseURL: false)
+        components?.queryItems = queryItems.isEmpty ? nil : queryItems
+        guard let url = components?.url else { throw FinallyServerClientError.invalidConfiguration }
+        var request = URLRequest(url: url)
         request.httpMethod = method
         request.setValue("application/json", forHTTPHeaderField: "Accept")
         if authenticated {

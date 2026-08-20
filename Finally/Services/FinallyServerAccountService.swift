@@ -82,6 +82,12 @@ final class FinallyServerAccountService {
         workspace.isSelected = true
         try credentials.saveToken(account.token, workspaceID: workspace.workspaceId)
         store.insert(workspace)
+        let localProject = ProjectItem(
+            externalProjectID: String(project.id),
+            title: project.title
+        )
+        localProject.providerWorkspaceId = workspace.workspaceId
+        store.insert(localProject)
         try store.save()
         return workspace
     }

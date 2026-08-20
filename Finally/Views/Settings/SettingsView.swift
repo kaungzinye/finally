@@ -146,6 +146,7 @@ struct SettingsView: View {
 private struct FinallyServerConnectView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var modelContext
+    @Environment(TaskProviderCoordinator.self) private var taskProvider
 
     @State private var name = "Finally Server"
     @State private var address = ""
@@ -156,6 +157,7 @@ private struct FinallyServerConnectView: View {
     @State private var isWorking = false
     @State private var errorMessage: String?
     @State private var connectionTask: Task<Void, Never>?
+    @State private var connectedWorkspace: UserSession?
 
     var body: some View {
         Form {
@@ -192,6 +194,7 @@ private struct FinallyServerConnectView: View {
                     Button("Use a different account") {
                         authenticatedAccount = nil
                         selectedProject = nil
+                        connectedWorkspace = nil
                         password = ""
                     }
                 }
@@ -309,17 +312,38 @@ private struct FinallyServerConnectView: View {
         guard let url = validatedURL,
               let account = authenticatedAccount,
               let selectedProject else { return }
+        isWorking = true
+        errorMessage = nil
+        connectionTask?.cancel()
         do {
-            _ = try accountService(for: url).connect(
-                name: name.trimmingCharacters(in: .whitespacesAndNewlines),
-                baseURL: url,
-                project: selectedProject,
-                account: account,
-                store: modelContext
-            )
-            dismiss()
+            let workspace: UserSession
+            if let connectedWorkspace {
+                workspace = connectedWorkspace
+            } else {
+                workspace = try accountService(for: url).connect(
+                    name: name.trimmingCharacters(in: .whitespacesAndNewlines),
+                    baseURL: url,
+                    project: selectedProject,
+                    account: account,
+                    store: modelContext
+                )
+                connectedWorkspace = workspace
+            }
+            connectionTask = Task {
+                do {
+                    try await taskProvider.synchronize(.launch, workspace: workspace, store: modelContext)
+                    guard !Task.isCancelled else { return }
+                    dismiss()
+                } catch is CancellationError {
+                    isWorking = false
+                } catch {
+                    errorMessage = error.localizedDescription
+                    isWorking = false
+                }
+            }
         } catch {
             errorMessage = error.localizedDescription
+            isWorking = false
         }
     }
 

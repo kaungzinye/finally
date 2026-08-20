@@ -64,11 +64,11 @@ enum TaskPriority: String, Codable, CaseIterable {
     }
 }
 
-// MARK: - Notion Color Mapping
+// MARK: - Tag Color Mapping
 
-enum NotionColor {
-    static func swiftUIColor(for notionColor: String) -> Color {
-        switch notionColor.lowercased() {
+enum TaskTagColor {
+    static func swiftUIColor(for colorName: String) -> Color {
+        switch colorName.lowercased() {
         case "blue": return .blue
         case "brown": return .brown
         case "gray", "grey": return .gray

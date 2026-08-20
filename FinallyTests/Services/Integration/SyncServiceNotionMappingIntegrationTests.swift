@@ -64,7 +64,7 @@ final class SyncServiceNotionMappingIntegrationTests: XCTestCase {
         XCTAssertEqual(task.priority, .high)
         XCTAssertEqual(task.tags, ["Bills", "Home"])
         XCTAssertEqual(task.recurrence, .monthly)
-        XCTAssertEqual(task.project?.notionPageId, "proj-1")
+        XCTAssertEqual(task.project?.externalProjectID, "proj-1")
         XCTAssertNotNil(task.dueDate)
     }
 
@@ -180,7 +180,7 @@ final class SyncServiceNotionMappingIntegrationTests: XCTestCase {
         ]
         try await syncService.fullSync(session: session, modelContext: context)
         var task = try XCTUnwrap(try context.fetch(FetchDescriptor<TaskItem>()).first)
-        XCTAssertEqual(task.project?.notionPageId, "proj-1")
+        XCTAssertEqual(task.project?.externalProjectID, "proj-1")
 
         mock.queryAllPagesResult["tasks-db"] = [
             NotionTestFactory.page(

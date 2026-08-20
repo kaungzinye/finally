@@ -45,9 +45,9 @@ final class FinallyServerTaskProviderAdapter: TaskProviderAdapter {
             try await pushChanges(workspaceID: workspace.workspaceId, projectID: projectID, store: store)
         case .launch, .incremental:
             try await pushChanges(workspaceID: workspace.workspaceId, projectID: projectID, store: store)
-            try await pullKnownTasks(workspaceID: workspace.workspaceId, store: store)
+            try await pullTasks(workspaceID: workspace.workspaceId, projectID: projectID, store: store)
         case .full:
-            try await pullKnownTasks(workspaceID: workspace.workspaceId, store: store)
+            try await pullTasks(workspaceID: workspace.workspaceId, projectID: projectID, store: store)
         }
     }
 
@@ -91,27 +91,60 @@ final class FinallyServerTaskProviderAdapter: TaskProviderAdapter {
                     isCompleted: false
                 )
             }
-            apply(remote, to: task)
+            try apply(remote, to: task, workspaceID: workspaceID, store: store)
             task.isDirty = false
             task.lastSyncedAt = Date()
             try store.save()
         }
     }
 
-    private func pullKnownTasks(workspaceID: String, store: ModelContext) async throws {
-        let tasks = try store.fetch(FetchDescriptor<TaskItem>()).filter {
-            $0.providerWorkspaceId == workspaceID && $0.lastSyncedAt != nil && !$0.isDirty && !$0.isDeleted
+    private func pullTasks(workspaceID: String, projectID: Int64, store: ModelContext) async throws {
+        let localTasks = try store.fetch(FetchDescriptor<TaskItem>()).filter {
+            $0.providerWorkspaceId == workspaceID
         }
-        for task in tasks {
-            let remote = try await api.readTask(id: task.externalTaskID)
-            apply(remote, to: task)
+        var tasksByExternalID: [String: TaskItem] = [:]
+        for task in localTasks {
+            guard tasksByExternalID.updateValue(task, forKey: task.externalTaskID) == nil else {
+                throw FinallyServerClientError.duplicateLocalTaskIdentity(task.externalTaskID)
+            }
+        }
+        let remoteTasks = try await api.listTasks(projectID: projectID)
+        let remoteTaskIDs = Set(remoteTasks.map(\.id))
+        for remote in remoteTasks {
+            let task: TaskItem
+            if let existing = tasksByExternalID[remote.id] {
+                guard !existing.isDirty, !existing.isDeleted else { continue }
+                task = existing
+            } else {
+                task = TaskItem(externalTaskID: remote.id, title: remote.title)
+                task.providerWorkspaceId = workspaceID
+                store.insert(task)
+            }
+            try apply(remote, to: task, workspaceID: workspaceID, store: store)
             task.lastSyncedAt = Date()
+        }
+        for task in localTasks where
+            task.lastSyncedAt != nil &&
+            !task.isDirty &&
+            !task.isDeleted &&
+            !remoteTaskIDs.contains(task.externalTaskID) {
+            store.delete(task)
         }
         try store.save()
     }
 
-    private func apply(_ remote: FinallyServerTask, to task: TaskItem) {
+    private func apply(
+        _ remote: FinallyServerTask,
+        to task: TaskItem,
+        workspaceID: String,
+        store: ModelContext
+    ) throws {
         task.title = remote.title
         task.status = remote.isCompleted ? .done : .notStarted
+        let remoteProjectID = String(remote.projectID)
+        let descriptor = FetchDescriptor<ProjectItem>(predicate: #Predicate<ProjectItem> { project in
+            project.externalProjectID == remoteProjectID && project.providerWorkspaceId == workspaceID
+        })
+        task.project = try store.fetch(descriptor).first
     }
 }

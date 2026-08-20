@@ -265,7 +265,7 @@ final class SyncService {
 
             let pageId = page.id
             let descriptor = FetchDescriptor<ProjectItem>(predicate: #Predicate<ProjectItem> { item in
-                item.notionPageId == pageId
+                item.externalProjectID == pageId && item.providerWorkspaceId == workspaceID
             })
 
             if let existing = (try? modelContext.fetch(descriptor))?.first {
@@ -275,7 +275,7 @@ final class SyncService {
                 existing.lastEditedTime = editedTime
                 existing.lastSyncedAt = Date()
             } else {
-                let project = ProjectItem(notionPageId: page.id, title: title, iconEmoji: emoji)
+                let project = ProjectItem(externalProjectID: page.id, title: title, iconEmoji: emoji)
                 project.providerWorkspaceId = workspaceID
                 project.lastEditedTime = editedTime
                 project.lastSyncedAt = Date()
@@ -298,7 +298,7 @@ final class SyncService {
 
             let pageId = page.id
             let descriptor = FetchDescriptor<TaskItem>(predicate: #Predicate<TaskItem> { item in
-                item.externalTaskID == pageId
+                item.externalTaskID == pageId && item.providerWorkspaceId == workspaceID
             })
 
             let task: TaskItem
@@ -384,7 +384,7 @@ final class SyncService {
                let firstRelation = relations.first {
                 let relationId = firstRelation.id
                 let projectDescriptor = FetchDescriptor<ProjectItem>(predicate: #Predicate<ProjectItem> { item in
-                    item.notionPageId == relationId
+                    item.externalProjectID == relationId && item.providerWorkspaceId == workspaceID
                 })
                 task.project = (try? modelContext.fetch(projectDescriptor))?.first
             } else {
@@ -399,7 +399,7 @@ final class SyncService {
                 let parentId = firstRelation.id
                 task.parentId = parentId
                 let parentDescriptor = FetchDescriptor<TaskItem>(predicate: #Predicate<TaskItem> { item in
-                    item.externalTaskID == parentId
+                    item.externalTaskID == parentId && item.providerWorkspaceId == workspaceID
                 })
                 task.parent = (try? modelContext.fetch(parentDescriptor))?.first
             } else if task.parentId == nil {
@@ -407,17 +407,19 @@ final class SyncService {
             }
         }
 
-        linkPendingSubtaskParents(modelContext: modelContext)
+        linkPendingSubtaskParents(workspaceID: workspaceID, modelContext: modelContext)
     }
 
-    private func linkPendingSubtaskParents(modelContext: ModelContext) {
-        let descriptor = FetchDescriptor<TaskItem>(predicate: #Predicate { $0.parentId != nil })
+    private func linkPendingSubtaskParents(workspaceID: String, modelContext: ModelContext) {
+        let descriptor = FetchDescriptor<TaskItem>(predicate: #Predicate {
+            $0.parentId != nil && $0.providerWorkspaceId == workspaceID
+        })
         guard let tasks = try? modelContext.fetch(descriptor) else { return }
 
         for task in tasks {
             guard let parentId = task.parentId else { continue }
             let parentDescriptor = FetchDescriptor<TaskItem>(predicate: #Predicate<TaskItem> { item in
-                item.externalTaskID == parentId
+                item.externalTaskID == parentId && item.providerWorkspaceId == workspaceID
             })
             if let parent = try? modelContext.fetch(parentDescriptor).first {
                 task.parent = parent
@@ -521,7 +523,7 @@ final class SyncService {
         // Project Relation
         if let projectKey = mappings.taskProjectProperty {
             if let project = task.project {
-                props[projectKey] = ["relation": [["id": project.notionPageId]]]
+                props[projectKey] = ["relation": [["id": project.externalProjectID]]]
             } else {
                 props[projectKey] = ["relation": []]
             }
@@ -619,5 +621,5 @@ extension TaskItem: ProviderSyncable {
 }
 
 extension ProjectItem: ProviderSyncable {
-    var externalProviderID: String { notionPageId }
+    var externalProviderID: String { externalProjectID }
 }

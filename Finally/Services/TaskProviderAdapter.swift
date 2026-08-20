@@ -165,8 +165,6 @@ final class TaskProviderCoordinator {
         let selectedWorkspace: UserSession?
         if let workspace {
             selectedWorkspace = workspace
-        } else if intent == .launch {
-            selectedWorkspace = nil
         } else {
             selectedWorkspace = try store.selectedProviderWorkspace()
         }
@@ -195,6 +193,7 @@ final class TaskProviderCoordinator {
         }
         do {
             try await synchronization.value
+            try? WidgetTaskSnapshotStore.publish(store: store)
         } catch is CancellationError {
             return
         } catch {
@@ -291,6 +290,7 @@ final class TaskProviderCoordinator {
 
     func persistPendingChanges(store: ModelContext) throws {
         try store.save()
+        try? WidgetTaskSnapshotStore.publish(store: store)
     }
 
     func clearError() {

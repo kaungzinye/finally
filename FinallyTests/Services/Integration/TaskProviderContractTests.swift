@@ -94,6 +94,23 @@ final class TaskProviderContractTests: XCTestCase {
         XCTAssertEqual(adapter.workspaceIDs, ["task-workspace"])
     }
 
+    func testWorkspaceFreeLaunchUsesTheSelectedProviderWorkspace() async throws {
+        let adapter = RecordingTaskProviderAdapter()
+        let coordinator = TaskProviderCoordinator(adapter: adapter)
+        let context = try makeInMemoryContext()
+        let selected = UserSession(
+            workspaceId: "server-workspace",
+            workspaceName: "Personal",
+            providerIdentity: .finallyServer
+        )
+        selected.isSelected = true
+        context.insert(selected)
+
+        try await coordinator.synchronize(.launch, store: context)
+
+        XCTAssertEqual(adapter.workspaceIDs, [selected.workspaceId])
+    }
+
     func testFailedMutationSubmissionRemainsDurableAndRetriesWithoutDuplicateTask() async throws {
         let api = MockFinallyServerAPIClient()
         api.error = FinallyServerClientError.serverUnavailable

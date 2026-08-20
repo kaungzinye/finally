@@ -23,6 +23,13 @@ final class MockFinallyServerAPIClient: FinallyServerAPIClient {
         return projects
     }
 
+    func listTasks(projectID: Int64) async throws -> [FinallyServerTask] {
+        if let error { throw error }
+        return tasks.values
+            .filter { $0.projectID == projectID }
+            .sorted { $0.id.localizedStandardCompare($1.id) == .orderedAscending }
+    }
+
     func createTask(projectID: Int64, title: String) async throws -> FinallyServerTask {
         if let error { throw error }
         let task = FinallyServerTask(id: String(nextTaskID), projectID: projectID, title: title, isCompleted: false)
