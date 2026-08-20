@@ -79,7 +79,7 @@ final class NotificationService {
         content.title = task.title
         content.body = notificationBody(for: task, using: now())
         content.sound = .default
-        content.userInfo = ["taskId": task.notionPageId]
+        content.userInfo = ["taskId": task.externalTaskID]
 
         let components = Calendar.current.dateComponents(
             [.year, .month, .day, .hour, .minute, .second],

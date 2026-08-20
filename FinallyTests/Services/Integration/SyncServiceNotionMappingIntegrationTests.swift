@@ -372,10 +372,10 @@ final class SyncServiceNotionMappingIntegrationTests: XCTestCase {
         try await syncService.fullSync(session: session, modelContext: context)
 
         let tasks = try context.fetch(FetchDescriptor<TaskItem>())
-        let child = try XCTUnwrap(tasks.first { $0.notionPageId == "child-1" })
-        XCTAssertEqual(child.parent?.notionPageId, "parent-1")
+        let child = try XCTUnwrap(tasks.first { $0.externalTaskID == "child-1" })
+        XCTAssertEqual(child.parent?.externalTaskID, "parent-1")
         XCTAssertEqual(child.parentId, "parent-1")
-        XCTAssertEqual(child.parent?.subtasks.map(\.notionPageId), ["child-1"])
+        XCTAssertEqual(child.parent?.subtasks.map(\.externalTaskID), ["child-1"])
     }
 
     private func makeInMemoryContext() throws -> ModelContext {

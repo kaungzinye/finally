@@ -3,6 +3,7 @@ import SwiftData
 
 struct KanbanView: View {
     @Query(filter: #Predicate<TaskItem> { $0.isDeleted == false }) private var allTasks: [TaskItem]
+    @Query private var sessions: [UserSession]
     @Environment(TaskProviderCoordinator.self) private var taskProvider
     @Environment(\.modelContext) private var modelContext
 
@@ -14,7 +15,9 @@ struct KanbanView: View {
     @State private var filterPriorities: Set<String> = []
 
     private var topLevelTasks: [TaskItem] {
-        allTasks.filter { !$0.isSubtask }
+        allTasks.filter {
+            $0.belongs(to: sessions.selectedProviderWorkspace) && !$0.isSubtask
+        }
     }
 
     private var filteredTasks: [TaskItem] {
@@ -128,9 +131,9 @@ struct KanbanView: View {
             // Cards
             ScrollView(.vertical, showsIndicators: false) {
                 LazyVStack(spacing: 8) {
-                    ForEach(tasks, id: \.notionPageId) { task in
+                    ForEach(tasks, id: \.externalTaskID) { task in
                                 kanbanCard(task, isLandscape: isLandscape)
-                            .draggable(task.notionPageId) {
+                            .draggable(task.externalTaskID) {
                                 // Drag preview
                                 Text(task.title)
                                     .font(.caption)
@@ -141,10 +144,10 @@ struct KanbanView: View {
                                     .onAppear {
                                         let generator = UIImpactFeedbackGenerator(style: .medium)
                                         generator.impactOccurred()
-                                        draggingTaskId = task.notionPageId
+                                        draggingTaskId = task.externalTaskID
                                     }
                             }
-                            .opacity(draggingTaskId == task.notionPageId ? 0.4 : 1.0)
+                            .opacity(draggingTaskId == task.externalTaskID ? 0.4 : 1.0)
                     }
                 }
                 .padding(.horizontal, 8)
@@ -157,7 +160,7 @@ struct KanbanView: View {
         .clipShape(RoundedRectangle(cornerRadius: 12))
         .dropDestination(for: String.self) { droppedIds, _ in
             guard let taskId = droppedIds.first,
-                  let task = allTasks.first(where: { $0.notionPageId == taskId }) else { return false }
+                  let task = allTasks.first(where: { $0.externalTaskID == taskId }) else { return false }
             withAnimation {
                 task.status = status
                 task.isDirty = true

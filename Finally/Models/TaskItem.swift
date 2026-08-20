@@ -3,7 +3,7 @@ import SwiftData
 
 @Model
 final class TaskItem {
-    @Attribute(.unique) var notionPageId: String
+    var externalTaskID: String
     var title: String
     var statusRaw: String = TaskStatus.notStarted.rawValue
     var dueDate: Date?
@@ -20,6 +20,7 @@ final class TaskItem {
     var lastSyncedAt: Date?
     var isDirty: Bool = false
     var isDeleted: Bool = false
+    var providerWorkspaceId: String?
 
     var parentId: String?
     var suggestedDate: Date?
@@ -109,8 +110,8 @@ final class TaskItem {
 
     // MARK: - Init
 
-    init(notionPageId: String, title: String) {
-        self.notionPageId = notionPageId
+    init(externalTaskID: String, title: String) {
+        self.externalTaskID = externalTaskID
         self.title = title
     }
 
@@ -151,7 +152,7 @@ final class TaskItem {
         let sorted = parent.subtasks
             .filter { $0.status != .done }
             .sorted { $0.sortIndex < $1.sortIndex }
-        guard let index = sorted.firstIndex(where: { $0.notionPageId == notionPageId }) else { return nil }
+        guard let index = sorted.firstIndex(where: { $0.externalTaskID == externalTaskID }) else { return nil }
 
         let planningDate = parent.targetDate ?? parent.dueDate
         guard let planningDate else { return nil }
@@ -221,7 +222,7 @@ extension TaskItem {
 
 enum DeadlineDemoFixture {
     static func makeTask(referenceDate: Date = Date(), calendar: Calendar = .current) -> TaskItem {
-        let task = TaskItem(notionPageId: "deadline-demo-parent", title: "Ship the project proposal")
+        let task = TaskItem(externalTaskID: "deadline-demo-parent", title: "Ship the project proposal")
         task.status = .inProgress
         task.priority = .urgent
         task.tags = ["Launch", "Client"]
@@ -240,8 +241,8 @@ enum DeadlineDemoFixture {
         ]
 
         task.subtasks = subtaskDefinitions.map { title, index, status in
-            let subtask = TaskItem(notionPageId: "deadline-demo-subtask-\(index)", title: title)
-            subtask.parentId = task.notionPageId
+            let subtask = TaskItem(externalTaskID: "deadline-demo-subtask-\(index)", title: title)
+            subtask.parentId = task.externalTaskID
             subtask.parent = task
             subtask.sortIndex = index
             subtask.status = status

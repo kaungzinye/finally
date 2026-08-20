@@ -7,6 +7,7 @@ struct BrowseProjectsView: View {
         filter: #Predicate<TaskItem> { $0.isDeleted == false && $0.statusRaw != "Complete" }
     )
     private var allActiveTasks: [TaskItem]
+    @Query private var sessions: [UserSession]
     @Environment(TaskProviderCoordinator.self) private var taskProvider
     @Environment(\.modelContext) private var modelContext
 
@@ -21,11 +22,21 @@ struct BrowseProjectsView: View {
     }
 
     private var inboxTasks: [TaskItem] {
-        sortStack.sorted(allActiveTasks.filter { $0.project == nil })
+        sortStack.sorted(selectedTasks.filter { $0.project == nil })
     }
 
     private var backlogTasks: [TaskItem] {
-        sortStack.sorted(allActiveTasks.filter { $0.dueDate == nil })
+        sortStack.sorted(selectedTasks.filter { $0.dueDate == nil })
+    }
+
+    private var selectedWorkspace: UserSession? { sessions.selectedProviderWorkspace }
+
+    private var selectedTasks: [TaskItem] {
+        allActiveTasks.scoped(to: selectedWorkspace)
+    }
+
+    private var selectedProjects: [ProjectItem] {
+        projects.scoped(to: selectedWorkspace)
     }
 
     var body: some View {
@@ -39,7 +50,7 @@ struct BrowseProjectsView: View {
                                 .foregroundStyle(.secondary)
                                 .font(.caption)
                         } else {
-                            ForEach(inboxTasks, id: \.notionPageId) { task in
+                            ForEach(inboxTasks, id: \.externalTaskID) { task in
                                 TaskRowView(task: task)
                                     .contentShape(Rectangle())
                                     .onTapGesture { selectedTask = task }
@@ -58,7 +69,7 @@ struct BrowseProjectsView: View {
                                 .foregroundStyle(.secondary)
                                 .font(.caption)
                         } else {
-                            ForEach(backlogTasks, id: \.notionPageId) { task in
+                            ForEach(backlogTasks, id: \.externalTaskID) { task in
                                 TaskRowView(task: task)
                                     .contentShape(Rectangle())
                                     .onTapGesture { selectedTask = task }
@@ -72,12 +83,12 @@ struct BrowseProjectsView: View {
                 // Projects section — collapsible list of projects
                 Section {
                     if expandedSections.contains("Projects") {
-                        if projects.isEmpty {
+                        if selectedProjects.isEmpty {
                             Text("No projects from Notion")
                                 .foregroundStyle(.secondary)
                                 .font(.caption)
                         } else {
-                            ForEach(projects, id: \.notionPageId) { project in
+                            ForEach(selectedProjects, id: \.notionPageId) { project in
                                 NavigationLink(value: project.notionPageId) {
                                     HStack {
                                         if let emoji = project.iconEmoji {
@@ -168,6 +179,7 @@ struct ProjectDetailView: View {
 
     @Query private var allTasks: [TaskItem]
     @Query private var allProjects: [ProjectItem]
+    @Query private var sessions: [UserSession]
     @Environment(TaskProviderCoordinator.self) private var taskProvider
     @Environment(\.modelContext) private var modelContext
 
@@ -175,16 +187,18 @@ struct ProjectDetailView: View {
     @State private var showCreator = false
 
     private var project: ProjectItem? {
-        allProjects.first { $0.notionPageId == projectId }
+        allProjects.scoped(to: sessions.selectedProviderWorkspace).first { $0.notionPageId == projectId }
     }
 
     private var projectTasks: [TaskItem] {
-        allTasks.filter { $0.project?.notionPageId == projectId && !$0.isDeleted }
+        allTasks.scoped(to: sessions.selectedProviderWorkspace).filter {
+            $0.project?.notionPageId == projectId && !$0.isDeleted
+        }
     }
 
     var body: some View {
         List {
-            ForEach(projectTasks, id: \.notionPageId) { task in
+            ForEach(projectTasks, id: \.externalTaskID) { task in
                 TaskRowView(task: task)
                     .contentShape(Rectangle())
                     .onTapGesture { selectedTask = task }

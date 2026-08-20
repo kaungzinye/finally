@@ -13,7 +13,7 @@ final class Phase6BTaskItemTests: XCTestCase {
     }
 
     func testValidateTargetDate_KeepsTargetEarlierThanDue() {
-        let task = TaskItem(notionPageId: "t-1", title: "Task")
+        let task = TaskItem(externalTaskID: "t-1", title: "Task")
         task.dueDate = makeDate(year: 2026, month: 6, day: 20)
         task.targetDate = makeDate(year: 2026, month: 6, day: 25)
 
@@ -24,7 +24,7 @@ final class Phase6BTaskItemTests: XCTestCase {
     }
 
     func testIsInActiveWindow_RequiresTargetAndDueSpanningToday() {
-        let task = TaskItem(notionPageId: "t-2", title: "Task")
+        let task = TaskItem(externalTaskID: "t-2", title: "Task")
         let today = calendar.startOfDay(for: Date())
         task.targetDate = calendar.date(byAdding: .day, value: -2, to: today)
         task.dueDate = calendar.date(byAdding: .day, value: 2, to: today)
@@ -34,7 +34,7 @@ final class Phase6BTaskItemTests: XCTestCase {
     }
 
     func testComplete_RecurringTaskCarriesTargetDateOffset() {
-        let task = TaskItem(notionPageId: "t-3", title: "Weekly")
+        let task = TaskItem(externalTaskID: "t-3", title: "Weekly")
         // Use a past due date so recurrence advances to the next cycle.
         task.dueDate = calendar.date(byAdding: .day, value: -1, to: Date())
         task.targetDate = calendar.date(byAdding: .day, value: -8, to: Date())
@@ -53,12 +53,12 @@ final class Phase6BTaskItemTests: XCTestCase {
     }
 
     func testComplete_RecurringTaskResetsSubtasksToNotStarted() {
-        let parent = TaskItem(notionPageId: "parent", title: "Parent")
+        let parent = TaskItem(externalTaskID: "parent", title: "Parent")
         parent.dueDate = makeDate(year: 2026, month: 6, day: 20)
         parent.recurrence = .weekly
 
-        let subtask = TaskItem(notionPageId: "sub-1", title: "Sub")
-        subtask.parentId = parent.notionPageId
+        let subtask = TaskItem(externalTaskID: "sub-1", title: "Sub")
+        subtask.parentId = parent.externalTaskID
         subtask.parent = parent
         subtask.status = .done
         parent.subtasks = [subtask]
@@ -69,7 +69,7 @@ final class Phase6BTaskItemTests: XCTestCase {
     }
 
     func testTaskReminders_PersistsOnTaskItem() {
-        let task = TaskItem(notionPageId: "t-4", title: "Task")
+        let task = TaskItem(externalTaskID: "t-4", title: "Task")
         task.taskReminders = [
             TaskReminder.presetThirtyMinutesBeforeDue(),
             .explicitDate(ExplicitDateReminder(dateTime: Date(timeIntervalSince1970: 1_700_000_000))),

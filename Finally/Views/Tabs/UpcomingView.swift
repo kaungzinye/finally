@@ -9,6 +9,7 @@ struct UpcomingView: View {
         sort: \TaskItem.dueDate
     )
     private var allFutureTasks: [TaskItem]
+    @Query private var sessions: [UserSession]
     @Environment(TaskProviderCoordinator.self) private var taskProvider
     @Environment(\.modelContext) private var modelContext
 
@@ -25,7 +26,11 @@ struct UpcomingView: View {
     }
 
     private var upcomingTasks: [TaskItem] {
-        allFutureTasks.filter { ($0.dueDate ?? .distantFuture) > Date() && !$0.isSubtask }
+        allFutureTasks.filter {
+            $0.belongs(to: sessions.selectedProviderWorkspace) &&
+                ($0.dueDate ?? .distantFuture) > Date() &&
+                !$0.isSubtask
+        }
     }
 
     private var groupedByDate: [(String, [TaskItem])] {
@@ -63,7 +68,7 @@ struct UpcomingView: View {
                     ForEach(groupedByDate, id: \.0) { dateString, tasks in
                         Section {
                             if expandedSections.contains(dateString) {
-                                ForEach(tasks, id: \.notionPageId) { task in
+                                ForEach(tasks, id: \.externalTaskID) { task in
                                     taskRow(task)
                                 }
                             }
@@ -167,17 +172,17 @@ struct UpcomingView: View {
     private func taskRow(_ task: TaskItem) -> some View {
         TaskRowView(task: task)
         .listRowBackground(
-            isSelectionMode && selectedTasks.contains(task.notionPageId)
+            isSelectionMode && selectedTasks.contains(task.externalTaskID)
                 ? Color.blue.opacity(0.15)
                 : Color(.systemBackground)
         )
         .contentShape(Rectangle())
         .onTapGesture {
             if isSelectionMode {
-                if selectedTasks.contains(task.notionPageId) {
-                    selectedTasks.remove(task.notionPageId)
+                if selectedTasks.contains(task.externalTaskID) {
+                    selectedTasks.remove(task.externalTaskID)
                 } else {
-                    selectedTasks.insert(task.notionPageId)
+                    selectedTasks.insert(task.externalTaskID)
                 }
             } else {
                 selectedTask = task
@@ -188,7 +193,7 @@ struct UpcomingView: View {
             generator.impactOccurred()
             withAnimation {
                 isSelectionMode = true
-                selectedTasks.insert(task.notionPageId)
+                selectedTasks.insert(task.externalTaskID)
             }
         }
     }
@@ -196,7 +201,7 @@ struct UpcomingView: View {
     // MARK: - Bulk Actions
 
     private func bulkDeleteTasks() {
-        let tasksToDelete = allFutureTasks.filter { selectedTasks.contains($0.notionPageId) }
+        let tasksToDelete = allFutureTasks.filter { selectedTasks.contains($0.externalTaskID) }
         for task in tasksToDelete {
             task.isDeleted = true
             task.isDirty = true
@@ -209,7 +214,7 @@ struct UpcomingView: View {
     }
 
     private func bulkCompleteTasks() {
-        let tasksToComplete = allFutureTasks.filter { selectedTasks.contains($0.notionPageId) }
+        let tasksToComplete = allFutureTasks.filter { selectedTasks.contains($0.externalTaskID) }
         for task in tasksToComplete {
             let recycled = task.complete()
             if recycled {

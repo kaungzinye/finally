@@ -10,6 +10,11 @@ struct TaskProviderIdentity: RawRepresentable, Codable, Hashable, Sendable {
     }
 }
 
+extension TaskProviderIdentity {
+    static let notion = TaskProviderIdentity(rawValue: "notion")
+    static let finallyServer = TaskProviderIdentity(rawValue: "finally-server")
+}
+
 struct ProviderWorkspaceIdentity: Codable, Hashable, Sendable {
     let provider: TaskProviderIdentity
     let externalID: String
@@ -66,7 +71,7 @@ extension SyncService: TaskProviderAdapter {
     typealias LocalStore = ModelContext
 
     var providerIdentity: TaskProviderIdentity {
-        TaskProviderIdentity(rawValue: "notion")
+        .notion
     }
 
     var capabilities: Set<TaskProviderCapability> {
@@ -88,7 +93,7 @@ extension SyncService: TaskProviderAdapter {
     }
 
     func taskIdentity(for task: TaskItem, in workspace: ProviderWorkspaceIdentity) -> ProviderTaskIdentity {
-        ProviderTaskIdentity(workspace: workspace, externalID: task.notionPageId)
+        ProviderTaskIdentity(workspace: workspace, externalID: task.externalTaskID)
     }
 
     func synchronize(
@@ -116,21 +121,33 @@ extension SyncService: TaskProviderAdapter {
 final class TaskProviderCoordinator {
     let providerIdentity: TaskProviderIdentity
     let capabilities: Set<TaskProviderCapability>
-    private let synchronizeProvider: (TaskProviderSyncIntent, UserSession?, ModelContext) async throws -> Void
+    private let synchronizeProvider: ((TaskProviderSyncIntent, UserSession?, ModelContext) async throws -> Void)?
+    private let notionAdapter: SyncService
+    private let credentials: FinallyServerCredentialStore
 
     var isSyncing = false
+    var lastError: String?
 
     init<Adapter: TaskProviderAdapter>(adapter: Adapter)
     where Adapter.WorkspaceState == UserSession, Adapter.LocalStore == ModelContext {
         providerIdentity = adapter.providerIdentity
         capabilities = adapter.capabilities
+        notionAdapter = SyncService()
+        credentials = KeychainFinallyServerCredentialStore()
         synchronizeProvider = { intent, workspace, store in
             try await adapter.synchronize(intent, workspace: workspace, store: store)
         }
     }
 
-    convenience init() {
-        self.init(adapter: SyncService())
+    init(
+        notionAdapter: SyncService = SyncService(),
+        credentials: FinallyServerCredentialStore = KeychainFinallyServerCredentialStore()
+    ) {
+        providerIdentity = .notion
+        capabilities = notionAdapter.capabilities
+        self.notionAdapter = notionAdapter
+        self.credentials = credentials
+        synchronizeProvider = nil
     }
 
     func synchronize(
@@ -139,7 +156,48 @@ final class TaskProviderCoordinator {
         store: ModelContext
     ) async throws {
         isSyncing = true
+        lastError = nil
         defer { isSyncing = false }
-        try await synchronizeProvider(intent, workspace, store)
+        do {
+            if let synchronizeProvider {
+                try await synchronizeProvider(intent, workspace, store)
+                return
+            }
+            let selectedWorkspace: UserSession?
+            if let workspace {
+                selectedWorkspace = workspace
+            } else {
+                selectedWorkspace = try store.selectedProviderWorkspace()
+            }
+            guard let workspace = selectedWorkspace else { throw TaskProviderAdapterError.workspaceRequired }
+            switch workspace.providerIdentity {
+            case .notion:
+                try await notionAdapter.synchronize(intent, workspace: workspace, store: store)
+            case .finallyServer:
+                guard let urlString = workspace.serverBaseURL,
+                      let baseURL = URL(string: urlString),
+                      let token = credentials.token(workspaceID: workspace.workspaceId) else {
+                    throw FinallyServerClientError.unauthorized
+                }
+                let api = URLSessionFinallyServerAPIClient(baseURL: baseURL, token: token)
+                try await FinallyServerTaskProviderAdapter(api: api)
+                    .synchronize(intent, workspace: workspace, store: store)
+            default:
+                throw FinallyServerClientError.invalidResponse
+            }
+        } catch is CancellationError {
+            return
+        } catch {
+            lastError = error.localizedDescription
+            throw error
+        }
+    }
+
+    func persistPendingChanges(store: ModelContext) throws {
+        try store.save()
+    }
+
+    func clearError() {
+        lastError = nil
     }
 }

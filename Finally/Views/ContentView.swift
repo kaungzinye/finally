@@ -3,6 +3,7 @@ import SwiftUI
 struct ContentView: View {
     @Environment(NavigationRouter.self) private var router
     @Environment(NetworkService.self) private var networkService
+    @Environment(TaskProviderCoordinator.self) private var taskProvider
 
     @State private var showCreator = false
 
@@ -19,6 +20,14 @@ struct ContentView: View {
                         .background(Color.orange.opacity(0.2))
                         .foregroundStyle(.orange)
                         .transition(.move(edge: .top).combined(with: .opacity))
+                }
+
+                if let message = taskProvider.lastError {
+                    SyncErrorBanner(message: message) {
+                        taskProvider.clearError()
+                    }
+                    .padding(.horizontal)
+                    .padding(.vertical, 8)
                 }
 
                 TabView(selection: $router.selectedTab) {

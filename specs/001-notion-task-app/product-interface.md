@@ -38,6 +38,8 @@ Finally presents one provider-independent task experience backed by a local Swif
 26. As a user, I want widget actions to open the relevant task or capture flow, so that the widget provides a useful entry point.
 27. As a user, I want notification taps to open the relevant task, so that I can act immediately.
 28. As a user, I want clear provider and permission errors, so that failures identify an actionable next step.
+29. As a user, I want to discover the writable Finally Server projects available to my account, so that I select a real workspace instead of entering an internal identifier.
+30. As a user, I want switching or removing a workspace to leave every other workspace untouched, so that provider data never appears in the wrong context.
 
 ## Implementation Decisions
 
@@ -49,6 +51,10 @@ Finally presents one provider-independent task experience backed by a local Swif
 - Recurrence and reminders remain separate concerns.
 - Subtasks are tasks with parent relationships. Local presentation metadata may include subtask order and a suggested-day override.
 - Provider adapters map canonical tasks to remote systems. Provider identifiers, authentication sessions, schema mappings, and synchronization cursors remain outside provider-independent views and models.
+- `TaskItem.externalTaskID` identifies a task inside its provider workspace. `providerWorkspaceId` scopes tasks and projects to the selected session.
+- Finally Server credentials travel only over HTTPS. Authentication discovers writable projects, and connection requires an explicit project selection from that response.
+- Inbox, Today, Upcoming, Search, Board, Browse, pickers, and inline suggestions read only the selected workspace.
+- Removing a workspace deletes its local tasks, projects, session metadata, and Keychain credential while preserving other workspaces.
 - The local cache retains dirty edits and provider revision metadata required for safe synchronization.
 - Finally follows the system appearance by default and offers explicit light and dark overrides.
 - The widget reads from shared app-group storage and deep-links into Finally for mutation flows that require the main app.
@@ -71,7 +77,3 @@ Finally presents one provider-independent task experience backed by a local Swif
 - A full calendar grid inside Finally
 - Real-time collaborative text editing
 - Provider-specific database creation
-
-## Further Notes
-
-The current SwiftData implementation still uses Notion-specific identifiers in shared entities. The provider-neutral model replaces that unreleased representation directly rather than preserving it as a compatibility layer.

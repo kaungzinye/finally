@@ -5,11 +5,12 @@ struct TagPicker: View {
     @Binding var selectedTags: [String]
     @Environment(\.dismiss) private var dismiss
     @Query private var tasks: [TaskItem]
+    @Query private var sessions: [UserSession]
 
     @State private var query = ""
 
     private var availableTags: [String] {
-        let allTags = tasks.flatMap(\.tags)
+        let allTags = tasks.scoped(to: sessions.selectedProviderWorkspace).flatMap(\.tags)
         return Array(Set(allTags)).sorted()
     }
 

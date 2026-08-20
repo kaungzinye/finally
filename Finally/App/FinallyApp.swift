@@ -96,15 +96,29 @@ struct FinallyApp: App {
         UNUserNotificationCenter.current().delegate = delegate
 
         let token = KeychainHelper.readNotionToken()
+        let serverCredentials = KeychainFinallyServerCredentialStore()
         let context = ModelContext(appContainer)
         let sessions = (try? context.fetch(FetchDescriptor<UserSession>())) ?? []
-        let hasLocalSession = !sessions.isEmpty
-        hasSession = token != nil && hasLocalSession
+        let usableSessions = sessions.filter { session in
+            switch session.providerIdentity {
+            case .notion: token != nil
+            case .finallyServer: serverCredentials.token(workspaceID: session.workspaceId) != nil
+            default: false
+            }
+        }
+        hasSession = !usableSessions.isEmpty
+        if usableSessions.selectedProviderWorkspace == nil, let first = usableSessions.first {
+            sessions.forEach { $0.isSelected = $0.id == first.id }
+            try? context.save()
+        }
+        let selectedSession = usableSessions.selectedProviderWorkspace ?? usableSessions.first
 
         print("[FinallyApp] checkSession: token=\(token != nil), sessions=\(sessions.count), hasSession=\(hasSession)")
 
         // Check if database IDs are configured
-        if let session = sessions.first, session.tasksDatabaseId.isEmpty {
+        if let session = selectedSession,
+           session.providerIdentity == .notion,
+           session.tasksDatabaseId.isEmpty {
             needsDatabaseSetup = true
             print("[FinallyApp] needsDatabaseSetup=true (tasksDatabaseId is empty)")
         }
@@ -115,8 +129,8 @@ struct FinallyApp: App {
         isLoading = false
 
         // Trigger sync on launch if we have a session with databases configured
-        if hasSession && !needsDatabaseSetup {
-            try? await taskProvider.synchronize(.launch, store: context)
+        if hasSession && !needsDatabaseSetup, let selectedSession {
+            try? await taskProvider.synchronize(.launch, workspace: selectedSession, store: context)
         }
     }
 
@@ -126,7 +140,9 @@ struct FinallyApp: App {
         let success = await authService.completeOAuth(withCode: code, modelContext: context)
         if success {
             hasSession = true
-            try? await taskProvider.synchronize(.launch, store: context)
+            if let session = try? context.selectedProviderWorkspace() {
+                try? await taskProvider.synchronize(.launch, workspace: session, store: context)
+            }
         }
         router.pendingOAuthCode = nil
     }
@@ -135,25 +151,30 @@ struct FinallyApp: App {
     private func handleSessionExpired() {
         let context = ModelContext(appContainer)
         if let sessions = try? context.fetch(FetchDescriptor<UserSession>()) {
-            for session in sessions {
+            for session in sessions where session.providerIdentity == .notion {
                 context.delete(session)
+            }
+            if let firstRemaining = sessions.first(where: { $0.providerIdentity != .notion }) {
+                firstRemaining.isSelected = true
             }
             try? context.save()
         }
-        hasSession = false
+        let remaining = (try? context.fetchCount(FetchDescriptor<UserSession>())) ?? 0
+        hasSession = remaining > 0
         router.showReauthPrompt = true
     }
 
     @MainActor
     private func triggerSync() async {
         let context = ModelContext(appContainer)
-        try? await taskProvider.synchronize(.launch, store: context)
+        guard let session = try? context.selectedProviderWorkspace() else { return }
+        try? await taskProvider.synchronize(.launch, workspace: session, store: context)
     }
 
     private func runIncrementalSyncIfPossible() async {
         guard hasSession else { return }
         let context = ModelContext(appContainer)
-        guard let session = ((try? context.fetch(FetchDescriptor<UserSession>())) ?? []).first else { return }
+        guard let session = try? context.selectedProviderWorkspace() else { return }
         try? await taskProvider.synchronize(.incremental, workspace: session, store: context)
     }
 

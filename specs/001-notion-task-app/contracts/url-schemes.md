@@ -12,7 +12,7 @@
 |-----|--------|--------|
 | `finally://oauth-callback?code={code}` | Notion OAuth redirect | Extract `code`, exchange for token via Vercel function |
 | `finally://tasks/new` | Widget "+" button | Open app, present inline task creation |
-| `finally://tasks/{notionPageId}` | Notification tap, widget task tap | Open app, navigate to task detail view |
+| `finally://tasks/{externalTaskID}` | Notification tap, widget task tap | Open app, navigate to the task inside the selected provider workspace |
 
 ### Handling
 

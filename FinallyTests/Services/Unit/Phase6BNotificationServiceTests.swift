@@ -17,7 +17,7 @@ final class Phase6BNotificationServiceTests: XCTestCase {
         let scheduler = MockNotificationScheduler()
         let now = referenceDate
 
-        let task = TaskItem(notionPageId: "t-1", title: "Buy milk")
+        let task = TaskItem(externalTaskID: "t-1", title: "Buy milk")
         task.dueDate = now.addingTimeInterval(3600)
         task.dueDateHasTime = true
         ctx.insert(task)
@@ -38,7 +38,7 @@ final class Phase6BNotificationServiceTests: XCTestCase {
         let scheduler = MockNotificationScheduler()
         let now = referenceDate
 
-        let task = TaskItem(notionPageId: "t-2", title: "Future task")
+        let task = TaskItem(externalTaskID: "t-2", title: "Future task")
         task.dueDate = now.addingTimeInterval(2 * 86_400)
         task.dueDateHasTime = true
         task.taskReminders = [TaskReminder.presetOneDayBeforeDue()]
@@ -53,7 +53,7 @@ final class Phase6BNotificationServiceTests: XCTestCase {
 
     func testCancelRemindersForTask_RemovesAnchoredNotificationIds() throws {
         let scheduler = MockNotificationScheduler()
-        let task = TaskItem(notionPageId: "t-3", title: "Task")
+        let task = TaskItem(externalTaskID: "t-3", title: "Task")
         task.taskReminders = [
             TaskReminder.presetThirtyMinutesBeforeDue(),
             .explicitDate(ExplicitDateReminder(dateTime: referenceDate.addingTimeInterval(5000))),

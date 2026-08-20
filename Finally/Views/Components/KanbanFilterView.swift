@@ -3,6 +3,7 @@ import SwiftData
 
 struct KanbanFilterView: View {
     @Query(sort: \ProjectItem.title) private var projects: [ProjectItem]
+    @Query private var sessions: [UserSession]
     @Binding var filterProjects: Set<String>
     @Binding var filterPriorities: Set<String>
     @Environment(\.dismiss) private var dismiss
@@ -11,7 +12,7 @@ struct KanbanFilterView: View {
         NavigationStack {
             List {
                 Section("Projects") {
-                    ForEach(projects, id: \.notionPageId) { project in
+                    ForEach(projects.scoped(to: sessions.selectedProviderWorkspace), id: \.notionPageId) { project in
                         Button {
                             if filterProjects.contains(project.notionPageId) {
                                 filterProjects.remove(project.notionPageId)

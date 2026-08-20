@@ -9,6 +9,7 @@ struct InboxView: View {
         sort: \TaskItem.dueDate
     )
     private var allNonDoneTasks: [TaskItem]
+    @Query private var sessions: [UserSession]
     @Environment(TaskProviderCoordinator.self) private var taskProvider
     @Environment(\.modelContext) private var modelContext
 
@@ -17,7 +18,9 @@ struct InboxView: View {
     @State private var selectedTasks: Set<String> = []
 
     private var inboxTasks: [TaskItem] {
-        allNonDoneTasks.filter { $0.project == nil }
+        allNonDoneTasks.filter {
+            $0.belongs(to: sessions.selectedProviderWorkspace) && $0.project == nil
+        }
     }
 
     var body: some View {
@@ -34,9 +37,9 @@ struct InboxView: View {
                 .navigationTitle("Inbox")
             } else {
                 List {
-                    ForEach(inboxTasks, id: \.notionPageId) { task in
+                    ForEach(inboxTasks, id: \.externalTaskID) { task in
                         ZStack(alignment: .leading) {
-                            if isSelectionMode && selectedTasks.contains(task.notionPageId) {
+                            if isSelectionMode && selectedTasks.contains(task.externalTaskID) {
                                 Color.blue.opacity(0.1)
                             }
                             TaskRowView(task: task)
@@ -44,10 +47,10 @@ struct InboxView: View {
                         .contentShape(Rectangle())
                         .onTapGesture {
                             if isSelectionMode {
-                                if selectedTasks.contains(task.notionPageId) {
-                                    selectedTasks.remove(task.notionPageId)
+                                if selectedTasks.contains(task.externalTaskID) {
+                                    selectedTasks.remove(task.externalTaskID)
                                 } else {
-                                    selectedTasks.insert(task.notionPageId)
+                                    selectedTasks.insert(task.externalTaskID)
                                 }
                             } else {
                                 selectedTask = task
@@ -58,7 +61,7 @@ struct InboxView: View {
                             generator.impactOccurred()
                             withAnimation {
                                 isSelectionMode = true
-                                selectedTasks.insert(task.notionPageId)
+                                selectedTasks.insert(task.externalTaskID)
                             }
                         }
                     }
@@ -115,7 +118,7 @@ struct InboxView: View {
     }
 
     private func bulkDeleteTasks() {
-        let tasksToDelete = inboxTasks.filter { selectedTasks.contains($0.notionPageId) }
+        let tasksToDelete = inboxTasks.filter { selectedTasks.contains($0.externalTaskID) }
         for task in tasksToDelete {
             task.isDeleted = true
             task.isDirty = true
@@ -128,7 +131,7 @@ struct InboxView: View {
     }
 
     private func bulkCompleteTasks() {
-        let tasksToComplete = inboxTasks.filter { selectedTasks.contains($0.notionPageId) }
+        let tasksToComplete = inboxTasks.filter { selectedTasks.contains($0.externalTaskID) }
         for task in tasksToComplete {
             let recycled = task.complete()
             if recycled {

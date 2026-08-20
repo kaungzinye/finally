@@ -3,19 +3,21 @@ import SwiftData
 
 struct SearchFilterView: View {
     @Query(sort: \TaskItem.dueDate) private var allTasks: [TaskItem]
+    @Query private var sessions: [UserSession]
     @State private var searchText = ""
 
     private var filteredTasks: [TaskItem] {
         guard !searchText.isEmpty else { return [] }
         return allTasks.filter { task in
-            task.title.localizedCaseInsensitiveContains(searchText)
+            task.belongs(to: sessions.selectedProviderWorkspace) &&
+                task.title.localizedCaseInsensitiveContains(searchText)
         }
     }
 
     var body: some View {
         NavigationStack {
             List {
-                ForEach(filteredTasks, id: \.notionPageId) { task in
+                ForEach(filteredTasks, id: \.externalTaskID) { task in
                     TaskRowView(task: task)
                 }
             }

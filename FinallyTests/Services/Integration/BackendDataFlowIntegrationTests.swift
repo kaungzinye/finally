@@ -45,7 +45,7 @@ final class BackendDataFlowIntegrationTests: XCTestCase {
         session.tasksDatabaseId = "tasks-db"
         context.insert(session)
 
-        let task = TaskItem(notionPageId: UUID().uuidString, title: "Recurring bill")
+        let task = TaskItem(externalTaskID: UUID().uuidString, title: "Recurring bill")
         task.status = .notStarted
         task.dueDate = Date(timeIntervalSince1970: 1_700_000_000)
         task.recurrence = .weekly
@@ -59,7 +59,7 @@ final class BackendDataFlowIntegrationTests: XCTestCase {
         XCTAssertEqual(mock.createdPages.count, 1)
         XCTAssertEqual(mock.updatedPages.count, 0)
         XCTAssertFalse(task.isDirty)
-        XCTAssertEqual(task.notionPageId, "remote-1")
+        XCTAssertEqual(task.externalTaskID, "remote-1")
         XCTAssertNotNil(task.lastSyncedAt)
 
         // Simulate recurring completion update (status reset + due date in one PATCH payload)
@@ -84,7 +84,7 @@ final class BackendDataFlowIntegrationTests: XCTestCase {
         session.tasksDatabaseId = ""
         context.insert(session)
 
-        let task = TaskItem(notionPageId: UUID().uuidString, title: "Offline draft")
+        let task = TaskItem(externalTaskID: UUID().uuidString, title: "Offline draft")
         task.isDirty = true
         task.lastSyncedAt = nil
         context.insert(task)
@@ -108,7 +108,7 @@ final class BackendDataFlowIntegrationTests: XCTestCase {
         session.tasksDatabaseId = "tasks-db"
         context.insert(session)
 
-        let task = TaskItem(notionPageId: UUID().uuidString, title: "Protected task")
+        let task = TaskItem(externalTaskID: UUID().uuidString, title: "Protected task")
         task.isDirty = true
         context.insert(task)
         try context.save()
@@ -139,7 +139,7 @@ final class BackendDataFlowIntegrationTests: XCTestCase {
         session.tasksDatabaseId = "tasks-db"
         context.insert(session)
 
-        let task = TaskItem(notionPageId: UUID().uuidString, title: "Protected task")
+        let task = TaskItem(externalTaskID: UUID().uuidString, title: "Protected task")
         task.isDirty = true
         context.insert(task)
         try context.save()
@@ -166,7 +166,7 @@ final class BackendDataFlowIntegrationTests: XCTestCase {
         session.lastFullSyncAt = Date(timeIntervalSince1970: 1_700_000_000)
         context.insert(session)
 
-        let local = TaskItem(notionPageId: "task-1", title: "Old title")
+        let local = TaskItem(externalTaskID: "task-1", title: "Old title")
         local.status = .notStarted
         local.lastSyncedAt = Date(timeIntervalSince1970: 1_700_000_000)
         context.insert(local)
@@ -207,7 +207,7 @@ final class BackendDataFlowIntegrationTests: XCTestCase {
         session.tasksDatabaseId = "tasks-db"
         context.insert(session)
 
-        let staleTask = TaskItem(notionPageId: "task-stale", title: "Should disappear")
+        let staleTask = TaskItem(externalTaskID: "task-stale", title: "Should disappear")
         context.insert(staleTask)
         try context.save()
 
@@ -229,7 +229,7 @@ final class BackendDataFlowIntegrationTests: XCTestCase {
         session.lastFullSyncAt = Date(timeIntervalSince1970: 1_700_000_000)
         context.insert(session)
 
-        let local = TaskItem(notionPageId: "task-1", title: "Local stays on incremental")
+        let local = TaskItem(externalTaskID: "task-1", title: "Local stays on incremental")
         context.insert(local)
         try context.save()
 
@@ -254,7 +254,7 @@ final class BackendDataFlowIntegrationTests: XCTestCase {
         session.lastFullSyncAt = Date(timeIntervalSince1970: 1_700_000_000)
         context.insert(session)
 
-        let local = TaskItem(notionPageId: "task-1", title: "Local draft title")
+        let local = TaskItem(externalTaskID: "task-1", title: "Local draft title")
         local.status = .inProgress
         local.isDirty = true
         local.lastSyncedAt = Date(timeIntervalSince1970: 1_700_000_000)
@@ -321,7 +321,7 @@ final class BackendDataFlowIntegrationTests: XCTestCase {
         session.propertyMappings = PropertyMappings()
         context.insert(session)
 
-        let task = TaskItem(notionPageId: "task-1", title: "Ship release")
+        let task = TaskItem(externalTaskID: "task-1", title: "Ship release")
         task.status = .done
         task.isDirty = true
         task.lastSyncedAt = Date(timeIntervalSince1970: 1_700_000_000)

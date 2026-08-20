@@ -151,14 +151,17 @@ final class NotionAuthService: NSObject {
         context.autosaveEnabled = false
 
         let existing = try context.fetch(FetchDescriptor<UserSession>())
-        for session in existing {
+        for session in existing where session.providerIdentity == .notion {
             context.delete(session)
         }
+        existing.forEach { $0.isSelected = false }
 
         let session = UserSession(
             workspaceId: tokenResponse.workspaceId,
             workspaceName: tokenResponse.workspaceName
         )
+        session.providerIdentity = .notion
+        session.isSelected = true
         context.insert(session)
         try context.save()
         print("[OAuth] Session saved successfully")

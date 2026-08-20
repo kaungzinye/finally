@@ -48,7 +48,7 @@ struct SubtaskScheduler {
         let deadline = parent.targetDate ?? parent.dueDate ?? Date.distantFuture
 
         let remaining = parent.subtasks
-            .filter { $0.status != .done && $0.notionPageId != completedSubtask.notionPageId }
+            .filter { $0.status != .done && $0.externalTaskID != completedSubtask.externalTaskID }
             .sorted { $0.sortIndex < $1.sortIndex }
 
         for subtask in remaining {

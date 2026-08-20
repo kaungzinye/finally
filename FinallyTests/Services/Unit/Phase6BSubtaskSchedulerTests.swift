@@ -9,16 +9,16 @@ final class Phase6BSubtaskSchedulerTests: XCTestCase {
     }()
 
     func testDistributeSubtaskDates_PrefersTargetDateOverDueDate() {
-        let parent = TaskItem(notionPageId: "parent", title: "Parent")
+        let parent = TaskItem(externalTaskID: "parent", title: "Parent")
         parent.targetDate = calendar.date(from: DateComponents(year: 2026, month: 12, day: 1))!
         parent.dueDate = calendar.date(from: DateComponents(year: 2026, month: 12, day: 31))!
 
-        let sub1 = TaskItem(notionPageId: "sub-1", title: "First")
-        sub1.parentId = parent.notionPageId
+        let sub1 = TaskItem(externalTaskID: "sub-1", title: "First")
+        sub1.parentId = parent.externalTaskID
         sub1.sortIndex = 0
 
-        let sub2 = TaskItem(notionPageId: "sub-2", title: "Second")
-        sub2.parentId = parent.notionPageId
+        let sub2 = TaskItem(externalTaskID: "sub-2", title: "Second")
+        sub2.parentId = parent.externalTaskID
         sub2.sortIndex = 1
 
         parent.subtasks = [sub1, sub2]
@@ -34,11 +34,11 @@ final class Phase6BSubtaskSchedulerTests: XCTestCase {
     }
 
     func testDistributeSubtaskDates_RespectsSuggestedDateOverride() {
-        let parent = TaskItem(notionPageId: "parent", title: "Parent")
+        let parent = TaskItem(externalTaskID: "parent", title: "Parent")
         parent.dueDate = calendar.date(byAdding: .day, value: 14, to: Date())!
 
-        let sub = TaskItem(notionPageId: "sub-1", title: "Locked")
-        sub.parentId = parent.notionPageId
+        let sub = TaskItem(externalTaskID: "sub-1", title: "Locked")
+        sub.parentId = parent.externalTaskID
         sub.sortIndex = 0
         let override = calendar.date(byAdding: .day, value: 3, to: Date())!
         sub.suggestedDateOverride = override

@@ -10,7 +10,7 @@ final class PropertyRoundtripE2ETests: NotionE2ETestCase {
     func testRoundtrip_Title_PlainText() async throws {
         let task = try await pushLocalTask(title: "Simple roundtrip title")
         try await syncService.fullSync(session: session, modelContext: modelContext)
-        let synced = try XCTUnwrap(try fetchTask(notionPageId: task.notionPageId))
+        let synced = try XCTUnwrap(try fetchTask(externalTaskID: task.externalTaskID))
         XCTAssertEqual(synced.title, "Simple roundtrip title")
     }
 
@@ -18,7 +18,7 @@ final class PropertyRoundtripE2ETests: NotionE2ETestCase {
         let title = "Roundtrip: éàü & symbols 🎉 <test>"
         let task = try await pushLocalTask(title: title)
         try await syncService.fullSync(session: session, modelContext: modelContext)
-        let synced = try XCTUnwrap(try fetchTask(notionPageId: task.notionPageId))
+        let synced = try XCTUnwrap(try fetchTask(externalTaskID: task.externalTaskID))
         XCTAssertEqual(synced.title, title)
     }
 
@@ -26,7 +26,7 @@ final class PropertyRoundtripE2ETests: NotionE2ETestCase {
         let title = String(repeating: "Long title word ", count: 20).trimmingCharacters(in: .whitespaces)
         let task = try await pushLocalTask(title: title)
         try await syncService.fullSync(session: session, modelContext: modelContext)
-        let synced = try XCTUnwrap(try fetchTask(notionPageId: task.notionPageId))
+        let synced = try XCTUnwrap(try fetchTask(externalTaskID: task.externalTaskID))
         XCTAssertEqual(synced.title, title)
     }
 
@@ -37,7 +37,7 @@ final class PropertyRoundtripE2ETests: NotionE2ETestCase {
             t.status = .notStarted
         }
         try await syncService.fullSync(session: session, modelContext: modelContext)
-        let synced = try XCTUnwrap(try fetchTask(notionPageId: task.notionPageId))
+        let synced = try XCTUnwrap(try fetchTask(externalTaskID: task.externalTaskID))
         XCTAssertEqual(synced.status, .notStarted)
     }
 
@@ -46,7 +46,7 @@ final class PropertyRoundtripE2ETests: NotionE2ETestCase {
             t.status = .inProgress
         }
         try await syncService.fullSync(session: session, modelContext: modelContext)
-        let synced = try XCTUnwrap(try fetchTask(notionPageId: task.notionPageId))
+        let synced = try XCTUnwrap(try fetchTask(externalTaskID: task.externalTaskID))
         XCTAssertEqual(synced.status, .inProgress)
     }
 
@@ -55,7 +55,7 @@ final class PropertyRoundtripE2ETests: NotionE2ETestCase {
             t.status = .done
         }
         try await syncService.fullSync(session: session, modelContext: modelContext)
-        let synced = try XCTUnwrap(try fetchTask(notionPageId: task.notionPageId))
+        let synced = try XCTUnwrap(try fetchTask(externalTaskID: task.externalTaskID))
         XCTAssertEqual(synced.status, .done)
     }
 
@@ -70,7 +70,7 @@ final class PropertyRoundtripE2ETests: NotionE2ETestCase {
             t.dueDate = dueDate
         }
         try await syncService.fullSync(session: session, modelContext: modelContext)
-        let synced = try XCTUnwrap(try fetchTask(notionPageId: task.notionPageId))
+        let synced = try XCTUnwrap(try fetchTask(externalTaskID: task.externalTaskID))
 
         let syncedComponents = cal.dateComponents([.year, .month, .day], from: try XCTUnwrap(synced.dueDate))
         XCTAssertEqual(syncedComponents.year, 2026)
@@ -89,7 +89,7 @@ final class PropertyRoundtripE2ETests: NotionE2ETestCase {
             t.dueDate = endDate
         }
         try await syncService.fullSync(session: session, modelContext: modelContext)
-        let synced = try XCTUnwrap(try fetchTask(notionPageId: task.notionPageId))
+        let synced = try XCTUnwrap(try fetchTask(externalTaskID: task.externalTaskID))
 
         let targetComponents = cal.dateComponents([.year, .month, .day], from: try XCTUnwrap(synced.targetDate))
         let endComponents = cal.dateComponents([.year, .month, .day], from: try XCTUnwrap(synced.dueDate))
@@ -111,7 +111,7 @@ final class PropertyRoundtripE2ETests: NotionE2ETestCase {
                 t.priority = priority
             }
             try await syncService.fullSync(session: session, modelContext: modelContext)
-            let synced = try XCTUnwrap(try fetchTask(notionPageId: task.notionPageId))
+            let synced = try XCTUnwrap(try fetchTask(externalTaskID: task.externalTaskID))
             XCTAssertEqual(synced.priority, priority, "Priority \(label) should roundtrip")
         }
     }
@@ -121,7 +121,7 @@ final class PropertyRoundtripE2ETests: NotionE2ETestCase {
             t.priority = nil
         }
         try await syncService.fullSync(session: session, modelContext: modelContext)
-        let synced = try XCTUnwrap(try fetchTask(notionPageId: task.notionPageId))
+        let synced = try XCTUnwrap(try fetchTask(externalTaskID: task.externalTaskID))
         XCTAssertNil(synced.priority)
     }
 
@@ -132,7 +132,7 @@ final class PropertyRoundtripE2ETests: NotionE2ETestCase {
             t.tags = ["Work", "Urgent", "Review"]
         }
         try await syncService.fullSync(session: session, modelContext: modelContext)
-        let synced = try XCTUnwrap(try fetchTask(notionPageId: task.notionPageId))
+        let synced = try XCTUnwrap(try fetchTask(externalTaskID: task.externalTaskID))
         XCTAssertEqual(Set(synced.tags), Set(["Work", "Urgent", "Review"]))
     }
 
@@ -141,7 +141,7 @@ final class PropertyRoundtripE2ETests: NotionE2ETestCase {
             t.tags = ["Alpha", "Beta"]
         }
         try await syncService.fullSync(session: session, modelContext: modelContext)
-        let synced = try XCTUnwrap(try fetchTask(notionPageId: task.notionPageId))
+        let synced = try XCTUnwrap(try fetchTask(externalTaskID: task.externalTaskID))
         // Colors are assigned by Notion; just verify they are non-empty strings
         XCTAssertEqual(synced.tagColors.count, synced.tags.count)
         XCTAssertTrue(synced.tagColors.allSatisfy { !$0.isEmpty })
@@ -156,7 +156,7 @@ final class PropertyRoundtripE2ETests: NotionE2ETestCase {
                 t.recurrence = recurrence
             }
             try await syncService.fullSync(session: session, modelContext: modelContext)
-            let synced = try XCTUnwrap(try fetchTask(notionPageId: task.notionPageId))
+            let synced = try XCTUnwrap(try fetchTask(externalTaskID: task.externalTaskID))
             XCTAssertEqual(synced.recurrence, recurrence, "Recurrence \(recurrence.rawValue) should roundtrip")
         }
     }
@@ -193,7 +193,7 @@ final class PropertyRoundtripE2ETests: NotionE2ETestCase {
 
         // Full sync again and verify the relation roundtrips
         try await syncService.fullSync(session: session, modelContext: modelContext)
-        let synced = try XCTUnwrap(try fetchTask(notionPageId: task.notionPageId))
+        let synced = try XCTUnwrap(try fetchTask(externalTaskID: task.externalTaskID))
         XCTAssertEqual(synced.project?.notionPageId, projectPage.id)
     }
 }
