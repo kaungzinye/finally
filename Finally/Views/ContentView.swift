@@ -35,6 +35,15 @@ struct ContentView: View {
                     .padding(.vertical, 8)
                 }
 
+                if let message = taskProvider.lastWarning {
+                    SyncErrorBanner(
+                        message: message,
+                        onDismiss: { taskProvider.clearWarning() }
+                    )
+                    .padding(.horizontal)
+                    .padding(.vertical, 8)
+                }
+
                 TabView(selection: $router.selectedTab) {
                     KanbanView()
                         .tabItem {

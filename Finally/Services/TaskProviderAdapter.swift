@@ -37,6 +37,27 @@ enum TaskProviderCapability: String, Codable, Hashable, Sendable {
     case recurrence
 }
 
+enum CanonicalTaskField: String, Codable, CaseIterable, Hashable, Sendable {
+    case title
+    case plannedDay
+    case deadline
+    case state
+    case project
+    case labels
+    case priority
+    case estimate
+    case subtasks
+    case recurrence
+    case reminders
+    case externalReferences
+}
+
+enum TaskProviderFieldSupport: Codable, Equatable, Sendable {
+    case lossless
+    case lossy(reason: String)
+    case unsupported(reason: String)
+}
+
 enum TaskProviderSyncIntent: Hashable, Sendable {
     case launch
     case incremental
@@ -55,6 +76,7 @@ protocol TaskProviderAdapter: AnyObject {
 
     var providerIdentity: TaskProviderIdentity { get }
     var capabilities: Set<TaskProviderCapability> { get }
+    var fieldSupport: [CanonicalTaskField: TaskProviderFieldSupport] { get }
 
     func workspaceIdentity(for workspace: WorkspaceState) -> ProviderWorkspaceIdentity
     func taskIdentity(for task: TaskState, in workspace: ProviderWorkspaceIdentity) -> ProviderTaskIdentity
@@ -63,6 +85,14 @@ protocol TaskProviderAdapter: AnyObject {
         workspace: WorkspaceState?,
         store: LocalStore
     ) async throws
+}
+
+extension TaskProviderAdapter {
+    var fieldSupport: [CanonicalTaskField: TaskProviderFieldSupport] {
+        Dictionary(uniqueKeysWithValues: CanonicalTaskField.allCases.map { field in
+            (field, .unsupported(reason: "The adapter does not declare support for this field."))
+        })
+    }
 }
 
 extension SyncService: TaskProviderAdapter {
@@ -85,6 +115,25 @@ extension SyncService: TaskProviderAdapter {
             .labels,
             .subtasks,
             .recurrence,
+        ]
+    }
+
+    var fieldSupport: [CanonicalTaskField: TaskProviderFieldSupport] {
+        [
+            .title: .lossless,
+            .plannedDay: .lossy(
+                reason: "A separate Target date property is required to preserve every planned-day shape."
+            ),
+            .deadline: .lossless,
+            .state: .lossless,
+            .project: .lossless,
+            .labels: .lossless,
+            .priority: .lossless,
+            .estimate: .unsupported(reason: "No estimate property is configured."),
+            .subtasks: .lossless,
+            .recurrence: .lossless,
+            .reminders: .unsupported(reason: "Reminders are scheduled by Finally on-device."),
+            .externalReferences: .unsupported(reason: "No external-reference property is configured."),
         ]
     }
 
@@ -133,6 +182,7 @@ final class TaskProviderCoordinator {
 
     var isSyncing = false
     var lastError: String?
+    var lastWarning: String?
 
     init<Adapter: TaskProviderAdapter>(adapter: Adapter)
     where Adapter.WorkspaceState == UserSession, Adapter.LocalStore == ModelContext {
@@ -232,6 +282,7 @@ final class TaskProviderCoordinator {
             for workspace in workspaces {
                 try await synchronize(.push, workspace: workspace, store: store)
             }
+            lastWarning = unsupportedFieldWarning(for: tasks, workspaces: workspaces)
         } catch {
             lastError = error.localizedDescription
             throw error
@@ -295,5 +346,56 @@ final class TaskProviderCoordinator {
 
     func clearError() {
         lastError = nil
+    }
+
+    func clearWarning() {
+        lastWarning = nil
+    }
+
+    private func unsupportedFieldWarning(
+        for tasks: [TaskItem],
+        workspaces: [UserSession]
+    ) -> String? {
+        let workspaceByID = Dictionary(uniqueKeysWithValues: workspaces.map { ($0.workspaceId, $0) })
+        var unsupportedFields: Set<CanonicalTaskField> = []
+        for task in tasks {
+            guard let workspaceID = task.providerWorkspaceId,
+                  let workspace = workspaceByID[workspaceID] else { continue }
+            let support: [CanonicalTaskField: TaskProviderFieldSupport]
+            switch workspace.providerIdentity {
+            case .notion:
+                support = notionAdapter.fieldSupport
+            case .finallyServer:
+                support = FinallyServerTaskProviderAdapter.canonicalFieldSupport
+            default:
+                support = [:]
+            }
+            for field in populatedFields(in: task) {
+                if case .unsupported = support[field] {
+                    unsupportedFields.insert(field)
+                }
+            }
+        }
+        guard !unsupportedFields.isEmpty else { return nil }
+        let names = unsupportedFields
+            .map(\.rawValue)
+            .sorted()
+            .joined(separator: ", ")
+        return "This provider keeps these fields on this device: \(names)."
+    }
+
+    private func populatedFields(in task: TaskItem) -> Set<CanonicalTaskField> {
+        var fields: Set<CanonicalTaskField> = [.title, .state]
+        if task.targetDate != nil { fields.insert(.plannedDay) }
+        if task.dueDate != nil { fields.insert(.deadline) }
+        if task.project != nil { fields.insert(.project) }
+        if !task.tags.isEmpty { fields.insert(.labels) }
+        if task.priority != nil { fields.insert(.priority) }
+        if task.estimateMinutes != nil { fields.insert(.estimate) }
+        if task.isSubtask || task.hasSubtasks { fields.insert(.subtasks) }
+        if task.recurrence != .none { fields.insert(.recurrence) }
+        if !task.taskReminders.isEmpty { fields.insert(.reminders) }
+        if !task.externalReferences.isEmpty { fields.insert(.externalReferences) }
+        return fields
     }
 }

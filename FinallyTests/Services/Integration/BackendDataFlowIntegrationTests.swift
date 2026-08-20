@@ -76,6 +76,37 @@ final class BackendDataFlowIntegrationTests: XCTestCase {
         XCTAssertNotNil(properties[session.propertyMappings.taskDueDateProperty])
     }
 
+    func testNotionPushPreservesDateOnlyAndTimedPlanningSemantics() async throws {
+        let mock = MockNotionAPIClient()
+        let syncService = SyncService(api: mock)
+        let context = try makeInMemoryContext()
+        let session = UserSession(
+            workspaceId: "ws-1",
+            workspaceName: "Workspace",
+            providerIdentity: .notion
+        )
+        session.tasksDatabaseId = "tasks-db"
+        context.insert(session)
+        let task = TaskItem(externalTaskID: UUID().uuidString, title: "Timed deadline")
+        task.providerWorkspaceId = session.workspaceId
+        task.targetDate = Date(timeIntervalSince1970: 1_780_000_000)
+        task.targetDateHasTime = false
+        task.dueDate = Date(timeIntervalSince1970: 1_780_086_400)
+        task.dueDateHasTime = true
+        task.isDirty = true
+        context.insert(task)
+
+        try await syncService.pushDirtyChanges(session: session, modelContext: context)
+
+        let properties = try XCTUnwrap(mock.createdPages.first?.properties)
+        let due = try XCTUnwrap(properties["Due Date"] as? [String: Any])
+        let dueValue = try XCTUnwrap(due["date"] as? [String: String])
+        let target = try XCTUnwrap(properties["Target"] as? [String: Any])
+        let targetValue = try XCTUnwrap(target["date"] as? [String: String])
+        XCTAssertTrue(try XCTUnwrap(dueValue["start"]).contains("T"))
+        XCTAssertEqual(try XCTUnwrap(targetValue["start"]).count, 10)
+    }
+
     func testPushDirtyChanges_WhenNoTasksDatabaseId_LeavesUnsyncedTaskDirty() async throws {
         let mock = MockNotionAPIClient()
         let syncService = SyncService(api: mock)

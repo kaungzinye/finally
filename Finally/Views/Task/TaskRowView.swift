@@ -17,20 +17,23 @@ struct TaskRowView: View {
         guard let dueDate = task.dueDate else { return "—" }
 
         let calendar = Calendar.current
+        let time = task.dueDateHasTime
+            ? " \(dueDate.formatted(date: .omitted, time: .shortened))"
+            : ""
         if calendar.isDateInToday(dueDate) {
-            return "Today"
+            return "Today\(time)"
         } else if calendar.isDateInTomorrow(dueDate) {
-            return "Tomorrow"
+            return "Tomorrow\(time)"
         } else if calendar.isDateInYesterday(dueDate) {
-            return "Yesterday"
+            return "Yesterday\(time)"
         } else {
             let daysFromNow = calendar.dateComponents([.day], from: calendar.startOfDay(for: Date()), to: dueDate).day ?? 0
             if daysFromNow > 0 && daysFromNow <= 6 {
                 let formatter = DateFormatter()
                 formatter.dateFormat = "EEEE"
-                return formatter.string(from: dueDate)
+                return formatter.string(from: dueDate) + time
             } else {
-                return dueDate.formatted(.dateTime.month(.abbreviated).day())
+                return dueDate.formatted(.dateTime.month(.abbreviated).day()) + time
             }
         }
     }
@@ -211,7 +214,7 @@ struct TaskRowView: View {
             .tint(.orange)
         }
         .sheet(isPresented: $showDatePicker) {
-            DatePickerSheet(selectedDate: dueDateBinding)
+            DatePickerSheet(selectedDate: dueDateBinding, hasTime: dueDateHasTimeBinding)
         }
         .sheet(isPresented: $showPriorityPicker) {
             PriorityPicker(selection: priorityBinding)
@@ -247,6 +250,13 @@ struct TaskRowView: View {
         Binding(
             get: { task.priority },
             set: { task.priority = $0; task.isDirty = true; submitTaskMutation() }
+        )
+    }
+
+    private var dueDateHasTimeBinding: Binding<Bool> {
+        Binding(
+            get: { task.dueDateHasTime },
+            set: { task.dueDateHasTime = $0; task.isDirty = true; submitTaskMutation() }
         )
     }
 

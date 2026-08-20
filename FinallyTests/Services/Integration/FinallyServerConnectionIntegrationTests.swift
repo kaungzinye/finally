@@ -236,6 +236,9 @@ final class FinallyServerConnectionIntegrationTests: XCTestCase {
         context.insert(workspace)
         let task = TaskItem(externalTaskID: UUID().uuidString, title: "Plan tomorrow")
         task.providerWorkspaceId = workspace.workspaceId
+        task.targetDate = Date(timeIntervalSince1970: 1_780_000_000)
+        task.dueDate = Date(timeIntervalSince1970: 1_780_086_400)
+        task.priority = .urgent
         task.isDirty = true
         context.insert(task)
         let adapter = FinallyServerTaskProviderAdapter(api: api)
@@ -244,6 +247,9 @@ final class FinallyServerConnectionIntegrationTests: XCTestCase {
         XCTAssertEqual(task.externalTaskID, "1")
         XCTAssertFalse(task.isDirty)
         XCTAssertEqual(api.tasks["1"]?.title, "Plan tomorrow")
+        XCTAssertEqual(api.tasks["1"]?.plannedDay, task.targetDate)
+        XCTAssertEqual(api.tasks["1"]?.deadline, task.dueDate)
+        XCTAssertEqual(api.tasks["1"]?.priority, .urgent)
 
         task.title = "Plan focused tomorrow"
         task.isDirty = true

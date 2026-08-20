@@ -16,6 +16,8 @@ final class TaskItem {
     var recurrenceRaw: String = Recurrence.none.rawValue
     var customRecurrenceJSON: String?
     var remindersJSON: String?
+    var estimateMinutes: Int?
+    var externalReferences: [String] = []
     var lastEditedTime: Date?
     var lastSyncedAt: Date?
     var isDirty: Bool = false

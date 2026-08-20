@@ -204,6 +204,85 @@ final class TaskProviderContractTests: XCTestCase {
         )
     }
 
+    func testProviderConformanceMatrixDeclaresEveryCanonicalField() {
+        let notion = SyncService(api: MockNotionAPIClient())
+        let server = FinallyServerTaskProviderAdapter(api: MockFinallyServerAPIClient())
+        let canonicalFields = Set(CanonicalTaskField.allCases)
+
+        XCTAssertEqual(Set(notion.fieldSupport.keys), canonicalFields)
+        XCTAssertEqual(Set(server.fieldSupport.keys), canonicalFields)
+        XCTAssertEqual(notion.fieldSupport[.deadline], .lossless)
+        XCTAssertEqual(
+            notion.fieldSupport[.plannedDay],
+            .lossy(reason: "A separate Target date property is required to preserve every planned-day shape.")
+        )
+        XCTAssertEqual(server.fieldSupport[.state], .lossless)
+        guard case .lossy = server.fieldSupport[.deadline] else {
+            return XCTFail("Finally Server timestamp normalization must remain explicit")
+        }
+    }
+
+    func testUnsupportedPopulatedFieldsProduceAProviderNotice() async throws {
+        let coordinator = TaskProviderCoordinator(
+            adapter: FinallyServerTaskProviderAdapter(api: MockFinallyServerAPIClient())
+        )
+        let context = try makeInMemoryContext()
+        let workspace = UserSession(
+            workspaceId: "server-workspace",
+            workspaceName: "Personal",
+            providerIdentity: .finallyServer
+        )
+        workspace.serverProjectID = 42
+        let task = TaskItem(externalTaskID: UUID().uuidString, title: "Plan launch")
+        task.providerWorkspaceId = workspace.workspaceId
+        task.tags = ["Launch"]
+        task.estimateMinutes = 30
+        task.isDirty = true
+        context.insert(workspace)
+        context.insert(task)
+
+        try await coordinator.submitPendingChanges(for: [task], store: context)
+
+        XCTAssertEqual(
+            coordinator.lastWarning,
+            "This provider keeps these fields on this device: estimate, labels."
+        )
+    }
+
+    func testCanonicalPlanningFieldsPersistIndependently() throws {
+        let (container, context) = try makeInMemoryStore()
+        let workspace = UserSession(
+            workspaceId: "workspace",
+            workspaceName: "Workspace",
+            providerIdentity: .notion
+        )
+        let task = TaskItem(externalTaskID: "task-1", title: "Plan launch")
+        task.providerWorkspaceId = workspace.workspaceId
+        task.targetDate = Date(timeIntervalSince1970: 1_780_000_000)
+        task.targetDateHasTime = false
+        task.dueDate = Date(timeIntervalSince1970: 1_780_086_400)
+        task.dueDateHasTime = true
+        task.priority = .urgent
+        task.tags = ["Launch"]
+        task.estimateMinutes = 90
+        task.recurrence = .weekly
+        task.taskReminders = [
+            .explicitDate(ExplicitDateReminder(dateTime: Date(timeIntervalSince1970: 1_780_050_000)))
+        ]
+        task.externalReferences = ["https://example.com/brief"]
+        context.insert(workspace)
+        context.insert(task)
+        try context.save()
+
+        let stored = try XCTUnwrap(ModelContext(container).fetch(FetchDescriptor<TaskItem>()).first)
+        XCTAssertNotEqual(stored.targetDate, stored.dueDate)
+        XCTAssertFalse(stored.targetDateHasTime)
+        XCTAssertTrue(stored.dueDateHasTime)
+        XCTAssertEqual(stored.estimateMinutes, 90)
+        XCTAssertEqual(stored.externalReferences, ["https://example.com/brief"])
+        XCTAssertEqual(stored.taskReminders.count, 1)
+    }
+
     func testNotionAdapterMapsStoredWorkspaceAndTaskIntoProviderNeutralIdentities() {
         let adapter = SyncService(api: MockNotionAPIClient())
         let session = UserSession(workspaceId: "notion-workspace", workspaceName: "Shared", providerIdentity: .notion)

@@ -14,6 +14,21 @@ final class FinallyServerTaskProviderAdapter: TaskProviderAdapter {
         .completeTasks,
         .deleteTasks,
     ]
+    static let canonicalFieldSupport: [CanonicalTaskField: TaskProviderFieldSupport] = [
+        .title: .lossless,
+        .plannedDay: .lossy(reason: "Finally Server stores planned days as timestamps."),
+        .deadline: .lossy(reason: "Finally Server stores deadlines as timestamps."),
+        .state: .lossless,
+        .project: .lossless,
+        .labels: .unsupported(reason: "Finally Server does not expose labels."),
+        .priority: .lossless,
+        .estimate: .unsupported(reason: "Finally Server does not expose estimates."),
+        .subtasks: .unsupported(reason: "Finally Server does not expose parent relationships."),
+        .recurrence: .unsupported(reason: "Finally Server does not expose recurrence."),
+        .reminders: .unsupported(reason: "Finally Server does not expose reminders."),
+        .externalReferences: .unsupported(reason: "Finally Server does not expose external references."),
+    ]
+    let fieldSupport = canonicalFieldSupport
 
     private let api: FinallyServerAPIClient
 
@@ -67,8 +82,15 @@ final class FinallyServerTaskProviderAdapter: TaskProviderAdapter {
             }
 
             let remote: FinallyServerTask
+            let mutation = FinallyServerTaskMutation(
+                title: task.title,
+                isCompleted: false,
+                plannedDay: task.targetDate,
+                deadline: task.dueDate,
+                priority: task.priority
+            )
             if task.lastSyncedAt == nil {
-                let created = try await api.createTask(projectID: projectID, title: task.title)
+                let created = try await api.createTask(projectID: projectID, mutation: mutation)
                 task.externalTaskID = created.id
                 task.lastSyncedAt = Date()
                 try store.save()
@@ -78,20 +100,18 @@ final class FinallyServerTaskProviderAdapter: TaskProviderAdapter {
                     remote = created
                 }
             } else if task.status == .done {
-                _ = try await api.updateTask(
-                    id: task.externalTaskID,
-                    title: task.title,
-                    isCompleted: false
-                )
+                _ = try await api.updateTask(id: task.externalTaskID, mutation: mutation)
                 remote = try await api.completeTask(id: task.externalTaskID)
             } else {
-                remote = try await api.updateTask(
-                    id: task.externalTaskID,
-                    title: task.title,
-                    isCompleted: false
-                )
+                remote = try await api.updateTask(id: task.externalTaskID, mutation: mutation)
             }
-            try apply(remote, to: task, workspaceID: workspaceID, store: store)
+            try apply(
+                remote,
+                to: task,
+                workspaceID: workspaceID,
+                preserveDateSemantics: true,
+                store: store
+            )
             task.isDirty = false
             task.lastSyncedAt = Date()
             try store.save()
@@ -120,7 +140,13 @@ final class FinallyServerTaskProviderAdapter: TaskProviderAdapter {
                 task.providerWorkspaceId = workspaceID
                 store.insert(task)
             }
-            try apply(remote, to: task, workspaceID: workspaceID, store: store)
+            try apply(
+                remote,
+                to: task,
+                workspaceID: workspaceID,
+                preserveDateSemantics: false,
+                store: store
+            )
             task.lastSyncedAt = Date()
         }
         for task in localTasks where
@@ -137,10 +163,18 @@ final class FinallyServerTaskProviderAdapter: TaskProviderAdapter {
         _ remote: FinallyServerTask,
         to task: TaskItem,
         workspaceID: String,
+        preserveDateSemantics: Bool,
         store: ModelContext
     ) throws {
         task.title = remote.title
         task.status = remote.isCompleted ? .done : .notStarted
+        task.targetDate = remote.plannedDay
+        task.dueDate = remote.deadline
+        if !preserveDateSemantics {
+            task.targetDateHasTime = remote.plannedDay != nil
+            task.dueDateHasTime = remote.deadline != nil
+        }
+        task.priority = remote.priority
         let remoteProjectID = String(remote.projectID)
         let descriptor = FetchDescriptor<ProjectItem>(predicate: #Predicate<ProjectItem> { project in
             project.externalProjectID == remoteProjectID && project.providerWorkspaceId == workspaceID

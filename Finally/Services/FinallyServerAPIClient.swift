@@ -5,6 +5,49 @@ struct FinallyServerTask: Equatable, Sendable {
     let projectID: Int64
     let title: String
     let isCompleted: Bool
+    let plannedDay: Date?
+    let deadline: Date?
+    let priority: TaskPriority?
+
+    init(
+        id: String,
+        projectID: Int64,
+        title: String,
+        isCompleted: Bool,
+        plannedDay: Date? = nil,
+        deadline: Date? = nil,
+        priority: TaskPriority? = nil
+    ) {
+        self.id = id
+        self.projectID = projectID
+        self.title = title
+        self.isCompleted = isCompleted
+        self.plannedDay = plannedDay
+        self.deadline = deadline
+        self.priority = priority
+    }
+}
+
+struct FinallyServerTaskMutation: Equatable, Sendable {
+    let title: String
+    let isCompleted: Bool
+    let plannedDay: Date?
+    let deadline: Date?
+    let priority: TaskPriority?
+
+    init(
+        title: String,
+        isCompleted: Bool = false,
+        plannedDay: Date? = nil,
+        deadline: Date? = nil,
+        priority: TaskPriority? = nil
+    ) {
+        self.title = title
+        self.isCompleted = isCompleted
+        self.plannedDay = plannedDay
+        self.deadline = deadline
+        self.priority = priority
+    }
 }
 
 struct FinallyServerProject: Identifiable, Hashable, Sendable, Decodable {
@@ -48,11 +91,24 @@ protocol FinallyServerAPIClient: AnyObject {
     func login(username: String, password: String) async throws -> String
     func listProjects() async throws -> [FinallyServerProject]
     func listTasks(projectID: Int64) async throws -> [FinallyServerTask]
-    func createTask(projectID: Int64, title: String) async throws -> FinallyServerTask
+    func createTask(projectID: Int64, mutation: FinallyServerTaskMutation) async throws -> FinallyServerTask
     func readTask(id: String) async throws -> FinallyServerTask
-    func updateTask(id: String, title: String, isCompleted: Bool) async throws -> FinallyServerTask
+    func updateTask(id: String, mutation: FinallyServerTaskMutation) async throws -> FinallyServerTask
     func completeTask(id: String) async throws -> FinallyServerTask
     func deleteTask(id: String) async throws
+}
+
+extension FinallyServerAPIClient {
+    func createTask(projectID: Int64, title: String) async throws -> FinallyServerTask {
+        try await createTask(projectID: projectID, mutation: FinallyServerTaskMutation(title: title))
+    }
+
+    func updateTask(id: String, title: String, isCompleted: Bool) async throws -> FinallyServerTask {
+        try await updateTask(
+            id: id,
+            mutation: FinallyServerTaskMutation(title: title, isCompleted: isCompleted)
+        )
+    }
 }
 
 final class URLSessionFinallyServerAPIClient: FinallyServerAPIClient {
@@ -73,14 +129,45 @@ final class URLSessionFinallyServerAPIClient: FinallyServerAPIClient {
         let projectID: Int64
         let title: String
         let done: Bool
+        let startDate: String?
+        let dueDate: String?
+        let priority: Int64?
 
         enum CodingKeys: String, CodingKey {
             case id, title, done
             case projectID = "project_id"
+            case startDate = "start_date"
+            case dueDate = "due_date"
+            case priority
         }
 
         var task: FinallyServerTask {
-            FinallyServerTask(id: String(id), projectID: projectID, title: title, isCompleted: done)
+            FinallyServerTask(
+                id: String(id),
+                projectID: projectID,
+                title: title,
+                isCompleted: done,
+                plannedDay: Self.parseDate(startDate),
+                deadline: Self.parseDate(dueDate),
+                priority: Self.taskPriority(priority ?? 0)
+            )
+        }
+
+        private static func parseDate(_ value: String?) -> Date? {
+            guard let value,
+                  !value.hasPrefix("0001-01-01"),
+                  let date = ISO8601DateFormatter().date(from: value) else { return nil }
+            return date
+        }
+
+        private static func taskPriority(_ value: Int64) -> TaskPriority? {
+            switch value {
+            case 4: .urgent
+            case 3: .high
+            case 2: .medium
+            case 1: .low
+            default: nil
+            }
         }
     }
 
@@ -132,11 +219,11 @@ final class URLSessionFinallyServerAPIClient: FinallyServerAPIClient {
         return tasks
     }
 
-    func createTask(projectID: Int64, title: String) async throws -> FinallyServerTask {
+    func createTask(projectID: Int64, mutation: FinallyServerTaskMutation) async throws -> FinallyServerTask {
         let response: RemoteTask = try await send(
             path: "projects/\(projectID)/tasks",
             method: "POST",
-            body: ["title": title]
+            body: taskBody(mutation)
         )
         return response.task
     }
@@ -146,11 +233,11 @@ final class URLSessionFinallyServerAPIClient: FinallyServerAPIClient {
         return response.task
     }
 
-    func updateTask(id: String, title: String, isCompleted: Bool) async throws -> FinallyServerTask {
+    func updateTask(id: String, mutation: FinallyServerTaskMutation) async throws -> FinallyServerTask {
         let response: RemoteTask = try await send(
             path: "tasks/\(id)",
             method: "PUT",
-            body: ["title": title, "done": isCompleted]
+            body: taskBody(mutation)
         )
         return response.task
     }
@@ -162,6 +249,27 @@ final class URLSessionFinallyServerAPIClient: FinallyServerAPIClient {
 
     func deleteTask(id: String) async throws {
         let _: EmptyResponse = try await send(path: "tasks/\(id)", method: "DELETE")
+    }
+
+    private func taskBody(_ mutation: FinallyServerTaskMutation) -> [String: any Encodable] {
+        let formatter = ISO8601DateFormatter()
+        return [
+            "title": mutation.title,
+            "done": mutation.isCompleted,
+            "start_date": mutation.plannedDay.map { formatter.string(from: $0) } as String?,
+            "due_date": mutation.deadline.map { formatter.string(from: $0) } as String?,
+            "priority": providerPriority(mutation.priority),
+        ]
+    }
+
+    private func providerPriority(_ priority: TaskPriority?) -> Int64 {
+        switch priority {
+        case .urgent: 4
+        case .high: 3
+        case .medium: 2
+        case .low: 1
+        case nil: 0
+        }
     }
 
     private struct EmptyResponse: Decodable {}

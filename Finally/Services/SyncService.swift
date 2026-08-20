@@ -40,6 +40,11 @@ final class SyncService {
         f.formatOptions = [.withFullDate]
         return f
     }()
+    private let timedDateFormatter: ISO8601DateFormatter = {
+        let f = ISO8601DateFormatter()
+        f.formatOptions = [.withInternetDateTime]
+        return f
+    }()
 
     var isSyncing = false
     var lastError: String?
@@ -468,12 +473,21 @@ final class SyncService {
             "status": ["name": mappings.notionStatusName(for: task.status)]
         ]
 
-        // Due Date
+        // Deadline and planned day
         if let dueDate = task.dueDate {
-            let dateStr = shortDateFormatter.string(from: dueDate)
-            props[mappings.taskDueDateProperty] = [
-                "date": ["start": dateStr]
-            ]
+            let dueDateString = notionDateString(dueDate, hasTime: task.dueDateHasTime)
+            if mappings.taskTargetDateProperty == nil, let targetDate = task.targetDate {
+                props[mappings.taskDueDateProperty] = [
+                    "date": [
+                        "start": notionDateString(targetDate, hasTime: task.targetDateHasTime),
+                        "end": dueDateString,
+                    ]
+                ]
+            } else {
+                props[mappings.taskDueDateProperty] = [
+                    "date": ["start": dueDateString]
+                ]
+            }
         } else {
             props[mappings.taskDueDateProperty] = [
                 "date": NSNull()
@@ -483,9 +497,10 @@ final class SyncService {
         // Target Date
         if let targetKey = mappings.taskTargetDateProperty {
             if let targetDate = task.targetDate {
-                let dateStr = shortDateFormatter.string(from: targetDate)
                 props[targetKey] = [
-                    "date": ["start": dateStr]
+                    "date": [
+                        "start": notionDateString(targetDate, hasTime: task.targetDateHasTime)
+                    ]
                 ]
             } else {
                 props[targetKey] = [
@@ -584,6 +599,7 @@ final class SyncService {
     private func parseDate(_ string: String) -> Date? {
         // Full ISO8601 with time+timezone — already in correct absolute time
         if let date = dateFormatter.date(from: string) { return date }
+        if let date = timedDateFormatter.date(from: string) { return date }
         // Date-only: "2026-03-20" — ISO8601DateFormatter interprets this as UTC midnight,
         // which is wrong for users in non-UTC timezones. Parse as local calendar date instead.
         if string.count == 10, !string.contains("T") {
@@ -601,6 +617,10 @@ final class SyncService {
             }
         }
         return nil
+    }
+
+    private func notionDateString(_ date: Date, hasTime: Bool) -> String {
+        hasTime ? timedDateFormatter.string(from: date) : shortDateFormatter.string(from: date)
     }
 
     private func reloadWidgetTimelines() {
