@@ -172,7 +172,7 @@ final class SyncService {
     private func pushDirtyChangesUsingProvider(session: UserSession, modelContext: ModelContext) async throws {
         let descriptor = FetchDescriptor<TaskItem>(predicate: #Predicate { $0.isDirty == true })
         let dirtyTasks = try modelContext.fetch(descriptor).filter {
-            $0.providerWorkspaceId == nil || $0.providerWorkspaceId == session.workspaceId
+            $0.providerWorkspaceId == session.workspaceId
         }
 
         var mappings = session.propertyMappings
@@ -441,11 +441,11 @@ final class SyncService {
         for item in locals {
             // Bug 4 fix: don't delete tasks with unsaved local edits
             if let task = item as? TaskItem {
-                guard task.providerWorkspaceId == nil || task.providerWorkspaceId == workspaceID else { continue }
+                guard task.providerWorkspaceId == workspaceID else { continue }
                 if task.isDirty { continue }
             }
             if let project = item as? ProjectItem {
-                guard project.providerWorkspaceId == nil || project.providerWorkspaceId == workspaceID else { continue }
+                guard project.providerWorkspaceId == workspaceID else { continue }
             }
             if !remoteIds.contains(item.externalProviderID) {
                 modelContext.delete(item)

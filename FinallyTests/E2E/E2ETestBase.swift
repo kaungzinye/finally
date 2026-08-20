@@ -17,7 +17,7 @@ class NotionE2ETestCase: XCTestCase {
 
         api = NotionAPIService(token: E2EConfig.notionToken!)
         modelContext = try makeInMemoryContext()
-        session = UserSession(workspaceId: "e2e-workspace", workspaceName: "E2E Workspace")
+        session = UserSession(workspaceId: "e2e-workspace", workspaceName: "E2E Workspace", providerIdentity: .notion)
         session.tasksDatabaseId = E2EConfig.tasksDatabaseId!
         if let projectsDb = E2EConfig.projectsDatabaseId {
             session.projectsDatabaseId = projectsDb

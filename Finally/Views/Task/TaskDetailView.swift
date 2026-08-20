@@ -328,6 +328,7 @@ struct TaskDetailView: View {
         guard !title.isEmpty else { return }
 
         let subtask = TaskItem(externalTaskID: UUID().uuidString, title: title)
+        subtask.providerWorkspaceId = task.providerWorkspaceId
         subtask.parentId = task.externalTaskID
         subtask.parent = task
         subtask.isDirty = true

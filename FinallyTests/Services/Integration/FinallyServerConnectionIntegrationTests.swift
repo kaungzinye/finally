@@ -13,7 +13,7 @@ final class FinallyServerConnectionIntegrationTests: XCTestCase {
         let api = MockFinallyServerAPIClient()
         let credentials = InMemoryCredentialStore()
         let context = try makeInMemoryContext()
-        let notion = UserSession(workspaceId: "notion-workspace", workspaceName: "Shared")
+        let notion = UserSession(workspaceId: "notion-workspace", workspaceName: "Shared", providerIdentity: .notion)
         context.insert(notion)
 
         let accounts = FinallyServerAccountService(api: api, credentials: credentials)
@@ -47,7 +47,7 @@ final class FinallyServerConnectionIntegrationTests: XCTestCase {
         let api = MockFinallyServerAPIClient()
         let credentials = InMemoryCredentialStore()
         let context = try makeInMemoryContext()
-        let notion = UserSession(workspaceId: "notion-workspace", workspaceName: "Shared")
+        let notion = UserSession(workspaceId: "notion-workspace", workspaceName: "Shared", providerIdentity: .notion)
         context.insert(notion)
         try credentials.saveToken("notion-token", workspaceID: notion.workspaceId)
         let accounts = FinallyServerAccountService(api: api, credentials: credentials)
@@ -125,8 +125,7 @@ final class FinallyServerConnectionIntegrationTests: XCTestCase {
 
     func testSwitchingWorkspaceKeepsProviderTasksSeparate() throws {
         let context = try makeInMemoryContext()
-        let notion = UserSession(workspaceId: "notion-workspace", workspaceName: "Shared")
-        notion.providerIdentity = .notion
+        let notion = UserSession(workspaceId: "notion-workspace", workspaceName: "Shared", providerIdentity: .notion)
         notion.isSelected = false
         let server = makeServerWorkspace()
         server.isSelected = true
@@ -158,8 +157,7 @@ final class FinallyServerConnectionIntegrationTests: XCTestCase {
     }
 
     func testPresentationSummariesUseSelectedWorkspaceAcrossProviders() throws {
-        let notion = UserSession(workspaceId: "notion-workspace", workspaceName: "Shared")
-        notion.providerIdentity = .notion
+        let notion = UserSession(workspaceId: "notion-workspace", workspaceName: "Shared", providerIdentity: .notion)
         let server = makeServerWorkspace()
         server.isSelected = true
         notion.isSelected = false
@@ -178,14 +176,57 @@ final class FinallyServerConnectionIntegrationTests: XCTestCase {
     }
 
     func testPresentationSummariesRetainTasksForUnavailableProvider() {
-        let unavailable = UserSession(workspaceId: "offline-workspace", workspaceName: "Offline")
-        unavailable.providerRaw = "temporarily-unavailable"
+        let unavailable = UserSession(
+            workspaceId: "offline-workspace",
+            workspaceName: "Offline",
+            providerIdentity: TaskProviderIdentity(rawValue: "temporarily-unavailable")
+        )
         let task = TaskItem(externalTaskID: "task-1", title: "Available offline")
         task.providerWorkspaceId = unavailable.workspaceId
 
         let summaries = TaskPresentationQuery.summaries(from: [task], workspace: unavailable)
 
         XCTAssertEqual(summaries.map(\.title), ["Available offline"])
+    }
+
+    func testProviderConfigurationsShareOneCanonicalSessionPayloadWithoutLeakingFields() {
+        let notion = UserSession(
+            workspaceId: "notion-workspace",
+            workspaceName: "Shared",
+            providerIdentity: .notion
+        )
+        notion.tasksDatabaseId = "tasks-db"
+        notion.projectsDatabaseId = "projects-db"
+
+        XCTAssertNotNil(notion.providerConfigurationData)
+        XCTAssertEqual(notion.notionConfiguration.tasksDatabaseID, "tasks-db")
+        XCTAssertNil(notion.serverBaseURL)
+
+        let server = UserSession(
+            workspaceId: "server-workspace",
+            workspaceName: "Personal",
+            providerIdentity: .finallyServer
+        )
+        server.serverBaseURL = "https://tasks.example.com"
+        server.serverProjectID = 42
+
+        XCTAssertNotNil(server.providerConfigurationData)
+        XCTAssertEqual(server.finallyServerConfiguration.projectID, 42)
+        XCTAssertTrue(server.tasksDatabaseId.isEmpty)
+    }
+
+    func testWorkspaceScopeRequiresCanonicalProviderWorkspaceIdentity() {
+        let notion = UserSession(
+            workspaceId: "notion-workspace",
+            workspaceName: "Shared",
+            providerIdentity: .notion
+        )
+        let unassigned = TaskItem(externalTaskID: "task-1", title: "Unassigned")
+        let assigned = TaskItem(externalTaskID: "task-2", title: "Assigned")
+        assigned.providerWorkspaceId = notion.workspaceId
+
+        XCTAssertFalse(unassigned.belongs(to: notion))
+        XCTAssertTrue(assigned.belongs(to: notion))
     }
 
     func testFinallyServerAdapterRoundTripsEditCompleteReopenAndDelete() async throws {
@@ -622,8 +663,11 @@ final class FinallyServerConnectionIntegrationTests: XCTestCase {
     }
 
     private func makeServerWorkspace() -> UserSession {
-        let workspace = UserSession(workspaceId: "server-workspace", workspaceName: "Personal Server")
-        workspace.providerIdentity = .finallyServer
+        let workspace = UserSession(
+            workspaceId: "server-workspace",
+            workspaceName: "Personal Server",
+            providerIdentity: .finallyServer
+        )
         workspace.serverBaseURL = "https://tasks.example.com"
         workspace.serverProjectID = 42
         return workspace

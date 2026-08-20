@@ -72,8 +72,11 @@ final class FinallyServerAccountService {
               account.projects.contains(project) else {
             throw FinallyServerClientError.invalidConfiguration
         }
-        let workspace = UserSession(workspaceId: UUID().uuidString, workspaceName: name)
-        workspace.providerIdentity = .finallyServer
+        let workspace = UserSession(
+            workspaceId: UUID().uuidString,
+            workspaceName: name,
+            providerIdentity: .finallyServer
+        )
         workspace.serverBaseURL = baseURL.absoluteString
         workspace.serverProjectID = project.id
 

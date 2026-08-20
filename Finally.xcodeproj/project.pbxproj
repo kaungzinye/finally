@@ -26,6 +26,7 @@
 		34F63FDAE9AF83CAA6DCA4AF /* BackendDataFlowIntegrationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8C46663913189E0200BD2F8C /* BackendDataFlowIntegrationTests.swift */; };
 		355ED7047F5FF404C3DA161E /* BrowseProjectsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6BB4558F2F9209A1B689A505 /* BrowseProjectsView.swift */; };
 		39ABF7688CFAFFBB508BBEC7 /* ReminderListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A9D29A2B7B51E63416C26971 /* ReminderListView.swift */; };
+		3C2153D7726A70A8C8FA36D9 /* FinallyServerWorkspaceConfiguration.swift in Sources */ = {isa = PBXBuildFile; fileRef = 44DC53FF019C668FF0D59C8D /* FinallyServerWorkspaceConfiguration.swift */; };
 		4504EC7F248400D129B20F3E /* Constants.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7EAF47BA098BEE13C1604C57 /* Constants.swift */; };
 		4772476F586F0B8090B14981 /* TodayView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE35E78EBFD4FC0E67ED2B37 /* TodayView.swift */; };
 		4C9FDBE28EDFC4F8476D0B60 /* NotionAPIService.swift in Sources */ = {isa = PBXBuildFile; fileRef = EEA8E930574A524BDEF99456 /* NotionAPIService.swift */; };
@@ -76,6 +77,7 @@
 		D5423739046AE1DC495CD241 /* ParentTaskPicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = CCE5F29F716D6CB80D87B657 /* ParentTaskPicker.swift */; };
 		D684A2A1AEB4D0DD228DF4E2 /* MockNotificationScheduler.swift in Sources */ = {isa = PBXBuildFile; fileRef = B3D49B256E36F33AAD2C9991 /* MockNotificationScheduler.swift */; };
 		D6D0544538223C2E6CF6F0E6 /* ProjectPicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = 832612E5901E80295CD69C97 /* ProjectPicker.swift */; };
+		D71410F4BEF4D1538E8D6A5D /* NotionWorkspaceConfiguration.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6AB16B5D414051565B4B4B2B /* NotionWorkspaceConfiguration.swift */; };
 		D97C60EE3542CFC75F712AA4 /* UpcomingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A9A54018F6182362CEAB38B7 /* UpcomingView.swift */; };
 		DCA78CA7E0DC752FFBA0F504 /* E2EConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8875DF7703CDE08E6E96792D /* E2EConfig.swift */; };
 		E55AF1AB3260B53AE1BB9E20 /* KanbanFilterView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1D6E15836E98186A00C4ED0D /* KanbanFilterView.swift */; };
@@ -140,6 +142,7 @@
 		42B3711F01223345C22AC39D /* SyncServiceNotionMappingIntegrationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SyncServiceNotionMappingIntegrationTests.swift; sourceTree = "<group>"; };
 		432E1F70246CCDDAE110402D /* FinallyServerConnectionIntegrationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FinallyServerConnectionIntegrationTests.swift; sourceTree = "<group>"; };
 		4411D70BC941BFFC9D0B540D /* FinallyServerAPIClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FinallyServerAPIClient.swift; sourceTree = "<group>"; };
+		44DC53FF019C668FF0D59C8D /* FinallyServerWorkspaceConfiguration.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FinallyServerWorkspaceConfiguration.swift; sourceTree = "<group>"; };
 		44FC30A47CA1D9B4F15234D2 /* TaskDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskDetailView.swift; sourceTree = "<group>"; };
 		4D283DE85CFFB6238F20D533 /* MockURLProtocol.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MockURLProtocol.swift; sourceTree = "<group>"; };
 		4D6A9D885F54EDA96C38C007 /* Phase6BNotificationServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Phase6BNotificationServiceTests.swift; sourceTree = "<group>"; };
@@ -154,6 +157,7 @@
 		6361629AB42FF68CA77254EC /* Finally.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = Finally.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		6491D6ECA6018FBC712CEEE1 /* NotionConnectView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotionConnectView.swift; sourceTree = "<group>"; };
 		695A63457914D18721BF9D98 /* SchemaValidatorUnitTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SchemaValidatorUnitTests.swift; sourceTree = "<group>"; };
+		6AB16B5D414051565B4B4B2B /* NotionWorkspaceConfiguration.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotionWorkspaceConfiguration.swift; sourceTree = "<group>"; };
 		6BB4558F2F9209A1B689A505 /* BrowseProjectsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrowseProjectsView.swift; sourceTree = "<group>"; };
 		6BE4BD53E8A06D86F228E95E /* NotionDataShapeUnitTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotionDataShapeUnitTests.swift; sourceTree = "<group>"; };
 		6D0E48E011BE7F2F17609008 /* TagPicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TagPicker.swift; sourceTree = "<group>"; };
@@ -306,11 +310,13 @@
 				F9EF412B0991CDB2D31BB700 /* FinallyServerAccountService.swift */,
 				4411D70BC941BFFC9D0B540D /* FinallyServerAPIClient.swift */,
 				B04AEEE09B1DFE7213BE2100 /* FinallyServerTaskProviderAdapter.swift */,
+				44DC53FF019C668FF0D59C8D /* FinallyServerWorkspaceConfiguration.swift */,
 				19D6396C60EC66DD7C32ED4D /* KeychainHelper.swift */,
 				C9438CA4430DF5A84E08C34F /* NetworkService.swift */,
 				945D47BECC130042350E778B /* NotificationService.swift */,
 				EEA8E930574A524BDEF99456 /* NotionAPIService.swift */,
 				9407C09D8E6E212AB6455934 /* NotionAuthService.swift */,
+				6AB16B5D414051565B4B4B2B /* NotionWorkspaceConfiguration.swift */,
 				628D2FCDB35AAD3E45C3B77E /* SchemaValidator.swift */,
 				886B142AE74239CB20B81B88 /* SubtaskScheduler.swift */,
 				6195045508D41FC6C8438C7F /* SyncService.swift */,
@@ -608,6 +614,7 @@
 				6AC06A56A17FF5DD2EF16120 /* FinallyServerAPIClient.swift in Sources */,
 				F6B3FF871A5A1CF311AE3AB5 /* FinallyServerAccountService.swift in Sources */,
 				27BF1D534BBE6EB6981C137C /* FinallyServerTaskProviderAdapter.swift in Sources */,
+				3C2153D7726A70A8C8FA36D9 /* FinallyServerWorkspaceConfiguration.swift in Sources */,
 				2BA18E36246E875B2071B500 /* InboxView.swift in Sources */,
 				7DE3A9452E030B8502AAE1DD /* InlineReminderPicker.swift in Sources */,
 				743614B7C47D1C37E35131B8 /* InlineTaskCreator.swift in Sources */,
@@ -623,6 +630,7 @@
 				4C9FDBE28EDFC4F8476D0B60 /* NotionAPIService.swift in Sources */,
 				72B3C47A213C17281F6CC2C9 /* NotionAuthService.swift in Sources */,
 				27541C233B7309950256A7CC /* NotionConnectView.swift in Sources */,
+				D71410F4BEF4D1538E8D6A5D /* NotionWorkspaceConfiguration.swift in Sources */,
 				D5423739046AE1DC495CD241 /* ParentTaskPicker.swift in Sources */,
 				10B3C0F097CEDFDC88AF04A1 /* PriorityPicker.swift in Sources */,
 				531A6FD89E09145823875703 /* ProjectItem.swift in Sources */,

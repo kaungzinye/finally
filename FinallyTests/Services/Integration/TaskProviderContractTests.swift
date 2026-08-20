@@ -7,7 +7,7 @@ final class TaskProviderContractTests: XCTestCase {
         let (container, context) = try makeInMemoryStore()
         let adapter = AlwaysFailingTaskProviderAdapter()
         let coordinator = TaskProviderCoordinator(adapter: adapter)
-        let workspace = UserSession(workspaceId: "workspace", workspaceName: "Workspace")
+        let workspace = UserSession(workspaceId: "workspace", workspaceName: "Workspace", providerIdentity: .notion)
         context.insert(workspace)
         let task = TaskItem(externalTaskID: "local-draft", title: "Draft survives")
         task.providerWorkspaceId = workspace.workspaceId
@@ -31,7 +31,7 @@ final class TaskProviderContractTests: XCTestCase {
         let (container, context) = try makeInMemoryStore()
         let adapter = AlwaysFailingTaskProviderAdapter()
         let coordinator = TaskProviderCoordinator(adapter: adapter)
-        let workspace = UserSession(workspaceId: "workspace", workspaceName: "Workspace")
+        let workspace = UserSession(workspaceId: "workspace", workspaceName: "Workspace", providerIdentity: .notion)
         let task = TaskItem(externalTaskID: "remote-task", title: "Original")
         task.providerWorkspaceId = workspace.workspaceId
         context.insert(workspace)
@@ -60,10 +60,11 @@ final class TaskProviderContractTests: XCTestCase {
         let mock = MockNotionAPIClient()
         let coordinator = TaskProviderCoordinator(adapter: SyncService(api: mock))
         let context = try makeInMemoryContext()
-        let workspace = UserSession(workspaceId: "notion-workspace", workspaceName: "Shared")
+        let workspace = UserSession(workspaceId: "notion-workspace", workspaceName: "Shared", providerIdentity: .notion)
         workspace.tasksDatabaseId = "tasks-db"
         context.insert(workspace)
         let task = TaskItem(externalTaskID: UUID().uuidString, title: "Review proposal")
+        task.providerWorkspaceId = workspace.workspaceId
         task.isDirty = true
         context.insert(task)
         try context.save()
@@ -78,9 +79,9 @@ final class TaskProviderContractTests: XCTestCase {
         let adapter = RecordingTaskProviderAdapter()
         let coordinator = TaskProviderCoordinator(adapter: adapter)
         let context = try makeInMemoryContext()
-        let selectedWorkspace = UserSession(workspaceId: "selected", workspaceName: "Selected")
+        let selectedWorkspace = UserSession(workspaceId: "selected", workspaceName: "Selected", providerIdentity: .notion)
         selectedWorkspace.isSelected = true
-        let taskWorkspace = UserSession(workspaceId: "task-workspace", workspaceName: "Task workspace")
+        let taskWorkspace = UserSession(workspaceId: "task-workspace", workspaceName: "Task workspace", providerIdentity: .notion)
         taskWorkspace.isSelected = false
         let task = TaskItem(externalTaskID: "task-1", title: "Review proposal")
         task.providerWorkspaceId = taskWorkspace.workspaceId
@@ -116,8 +117,11 @@ final class TaskProviderContractTests: XCTestCase {
         api.error = FinallyServerClientError.serverUnavailable
         let coordinator = TaskProviderCoordinator(adapter: FinallyServerTaskProviderAdapter(api: api))
         let (container, context) = try makeInMemoryStore()
-        let workspace = UserSession(workspaceId: "server-workspace", workspaceName: "Personal")
-        workspace.providerIdentity = .finallyServer
+        let workspace = UserSession(
+            workspaceId: "server-workspace",
+            workspaceName: "Personal",
+            providerIdentity: .finallyServer
+        )
         workspace.serverProjectID = 42
         let task = TaskItem(externalTaskID: "local-draft", title: "Review proposal")
         task.providerWorkspaceId = workspace.workspaceId
@@ -147,7 +151,7 @@ final class TaskProviderContractTests: XCTestCase {
         let adapter = BlockingTaskProviderAdapter()
         let coordinator = TaskProviderCoordinator(adapter: adapter)
         let context = try makeInMemoryContext()
-        let workspace = UserSession(workspaceId: "workspace", workspaceName: "Workspace")
+        let workspace = UserSession(workspaceId: "workspace", workspaceName: "Workspace", providerIdentity: .notion)
         let task = TaskItem(externalTaskID: "task-1", title: "Review proposal")
         task.providerWorkspaceId = workspace.workspaceId
         task.isDirty = true
@@ -202,7 +206,7 @@ final class TaskProviderContractTests: XCTestCase {
 
     func testNotionAdapterMapsStoredWorkspaceAndTaskIntoProviderNeutralIdentities() {
         let adapter = SyncService(api: MockNotionAPIClient())
-        let session = UserSession(workspaceId: "notion-workspace", workspaceName: "Shared")
+        let session = UserSession(workspaceId: "notion-workspace", workspaceName: "Shared", providerIdentity: .notion)
         let task = TaskItem(externalTaskID: "notion-page", title: "Review proposal")
 
         let workspaceIdentity = adapter.workspaceIdentity(for: session)
@@ -225,10 +229,11 @@ final class TaskProviderContractTests: XCTestCase {
         let mock = MockNotionAPIClient()
         let adapter = SyncService(api: mock)
         let context = try makeInMemoryContext()
-        let session = UserSession(workspaceId: "notion-workspace", workspaceName: "Shared")
+        let session = UserSession(workspaceId: "notion-workspace", workspaceName: "Shared", providerIdentity: .notion)
         session.tasksDatabaseId = "tasks-db"
         context.insert(session)
         let task = TaskItem(externalTaskID: UUID().uuidString, title: "Review proposal")
+        task.providerWorkspaceId = session.workspaceId
 
         try await assertCanonicalTaskLifecycle(
             using: TaskProviderLifecycleHarness(
@@ -284,8 +289,11 @@ final class TaskProviderContractTests: XCTestCase {
         let api = MockFinallyServerAPIClient()
         let adapter = FinallyServerTaskProviderAdapter(api: api)
         let context = try makeInMemoryContext()
-        let session = UserSession(workspaceId: "server-workspace", workspaceName: "Personal")
-        session.providerIdentity = .finallyServer
+        let session = UserSession(
+            workspaceId: "server-workspace",
+            workspaceName: "Personal",
+            providerIdentity: .finallyServer
+        )
         session.serverBaseURL = "https://tasks.example.com"
         session.serverProjectID = 42
         context.insert(session)

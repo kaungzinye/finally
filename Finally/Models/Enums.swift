@@ -6,26 +6,6 @@ enum TaskStatus: String, Codable, CaseIterable {
     case notStarted = "Not started"
     case inProgress = "In progress"
     case done = "Complete"
-
-    /// Map from Notion status group name to TaskStatus
-    static func fromNotionGroup(_ group: String) -> TaskStatus? {
-        switch group.lowercased() {
-        case "to-do", "to do": return .notStarted
-        case "in progress": return .inProgress
-        case "complete", "completed", "done": return .done
-        default: return nil
-        }
-    }
-
-    /// Map from Notion status option name to TaskStatus
-    static func fromNotionOption(_ name: String) -> TaskStatus? {
-        switch name.lowercased() {
-        case "not started", "not_started", "to do", "todo": return .notStarted
-        case "in progress", "in_progress", "doing": return .inProgress
-        case "done", "complete", "completed": return .done
-        default: return nil
-        }
-    }
 }
 
 // MARK: - TaskPriority

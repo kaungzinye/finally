@@ -158,9 +158,9 @@ final class NotionAuthService: NSObject {
 
         let session = UserSession(
             workspaceId: tokenResponse.workspaceId,
-            workspaceName: tokenResponse.workspaceName
+            workspaceName: tokenResponse.workspaceName,
+            providerIdentity: .notion
         )
-        session.providerIdentity = .notion
         session.isSelected = true
         context.insert(session)
         try context.save()
