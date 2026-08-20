@@ -74,6 +74,87 @@ final class TaskProviderContractTests: XCTestCase {
         XCTAssertFalse(task.isDirty)
     }
 
+    func testMutationSubmissionUsesTaskWorkspace() async throws {
+        let adapter = RecordingTaskProviderAdapter()
+        let coordinator = TaskProviderCoordinator(adapter: adapter)
+        let context = try makeInMemoryContext()
+        let selectedWorkspace = UserSession(workspaceId: "selected", workspaceName: "Selected")
+        selectedWorkspace.isSelected = true
+        let taskWorkspace = UserSession(workspaceId: "task-workspace", workspaceName: "Task workspace")
+        taskWorkspace.isSelected = false
+        let task = TaskItem(externalTaskID: "task-1", title: "Review proposal")
+        task.providerWorkspaceId = taskWorkspace.workspaceId
+        task.isDirty = true
+        context.insert(selectedWorkspace)
+        context.insert(taskWorkspace)
+        context.insert(task)
+
+        try await coordinator.submitPendingChanges(for: [task], store: context)
+
+        XCTAssertEqual(adapter.workspaceIDs, ["task-workspace"])
+    }
+
+    func testFailedMutationSubmissionRemainsDurableAndRetriesWithoutDuplicateTask() async throws {
+        let api = MockFinallyServerAPIClient()
+        api.error = FinallyServerClientError.serverUnavailable
+        let coordinator = TaskProviderCoordinator(adapter: FinallyServerTaskProviderAdapter(api: api))
+        let (container, context) = try makeInMemoryStore()
+        let workspace = UserSession(workspaceId: "server-workspace", workspaceName: "Personal")
+        workspace.providerIdentity = .finallyServer
+        workspace.serverProjectID = 42
+        let task = TaskItem(externalTaskID: "local-draft", title: "Review proposal")
+        task.providerWorkspaceId = workspace.workspaceId
+        task.isDirty = true
+        context.insert(workspace)
+        context.insert(task)
+
+        do {
+            try await coordinator.submitPendingChanges(for: [task], store: context)
+            XCTFail("Expected provider failure")
+        } catch FinallyServerClientError.serverUnavailable {
+            let durableTasks = try ModelContext(container).fetch(FetchDescriptor<TaskItem>())
+            XCTAssertEqual(durableTasks.count, 1)
+            XCTAssertTrue(try XCTUnwrap(durableTasks.first).isDirty)
+            XCTAssertTrue(api.tasks.isEmpty)
+        }
+
+        api.error = nil
+        try await coordinator.submitPendingChanges(for: [task], store: context)
+
+        XCTAssertEqual(api.tasks.count, 1)
+        XCTAssertEqual(task.externalTaskID, "1")
+        XCTAssertFalse(task.isDirty)
+    }
+
+    func testConcurrentDuplicateMutationSubmissionsShareOneProviderCall() async throws {
+        let adapter = BlockingTaskProviderAdapter()
+        let coordinator = TaskProviderCoordinator(adapter: adapter)
+        let context = try makeInMemoryContext()
+        let workspace = UserSession(workspaceId: "workspace", workspaceName: "Workspace")
+        let task = TaskItem(externalTaskID: "task-1", title: "Review proposal")
+        task.providerWorkspaceId = workspace.workspaceId
+        task.isDirty = true
+        context.insert(workspace)
+        context.insert(task)
+
+        let first = Task {
+            try await coordinator.submitPendingChanges(for: [task], store: context)
+        }
+        await adapter.waitUntilStarted()
+        let duplicate = Task {
+            try await coordinator.submitPendingChanges(for: [task], store: context)
+        }
+        await Task.yield()
+
+        let callsBeforeRelease = await adapter.callCount
+        XCTAssertEqual(callsBeforeRelease, 1)
+        await adapter.release()
+        try await first.value
+        try await duplicate.value
+        let callsAfterRelease = await adapter.callCount
+        XCTAssertEqual(callsAfterRelease, 1)
+    }
+
     func testNotionAdapterReportsProviderNeutralIdentityAndCapabilities() {
         let adapter: any TaskProviderAdapter = SyncService(api: MockNotionAPIClient())
         let workspace = ProviderWorkspaceIdentity(
@@ -315,6 +396,90 @@ private final class AlwaysFailingTaskProviderAdapter: TaskProviderAdapter {
     ) async throws {
         synchronizeCallCount += 1
         throw Failure.offline
+    }
+}
+
+private final class RecordingTaskProviderAdapter: TaskProviderAdapter {
+    let providerIdentity = TaskProviderIdentity.finallyServer
+    let capabilities: Set<TaskProviderCapability> = [.createTasks, .updateTasks]
+    private(set) var workspaceIDs: [String] = []
+
+    func workspaceIdentity(for workspace: UserSession) -> ProviderWorkspaceIdentity {
+        ProviderWorkspaceIdentity(provider: providerIdentity, externalID: workspace.workspaceId)
+    }
+
+    func taskIdentity(for task: TaskItem, in workspace: ProviderWorkspaceIdentity) -> ProviderTaskIdentity {
+        ProviderTaskIdentity(workspace: workspace, externalID: task.externalTaskID)
+    }
+
+    func synchronize(
+        _ intent: TaskProviderSyncIntent,
+        workspace: UserSession?,
+        store: ModelContext
+    ) async throws {
+        guard let workspace else { throw TaskProviderAdapterError.workspaceRequired }
+        workspaceIDs.append(workspace.workspaceId)
+    }
+}
+
+private final class BlockingTaskProviderAdapter: TaskProviderAdapter {
+    let providerIdentity = TaskProviderIdentity.finallyServer
+    let capabilities: Set<TaskProviderCapability> = [.createTasks, .updateTasks]
+    private let state = BlockingTaskProviderState()
+
+    var callCount: Int {
+        get async { await state.callCount }
+    }
+
+    func workspaceIdentity(for workspace: UserSession) -> ProviderWorkspaceIdentity {
+        ProviderWorkspaceIdentity(provider: providerIdentity, externalID: workspace.workspaceId)
+    }
+
+    func taskIdentity(for task: TaskItem, in workspace: ProviderWorkspaceIdentity) -> ProviderTaskIdentity {
+        ProviderTaskIdentity(workspace: workspace, externalID: task.externalTaskID)
+    }
+
+    func synchronize(
+        _ intent: TaskProviderSyncIntent,
+        workspace: UserSession?,
+        store: ModelContext
+    ) async throws {
+        await state.block()
+    }
+
+    func waitUntilStarted() async {
+        await state.waitUntilStarted()
+    }
+
+    func release() async {
+        await state.release()
+    }
+}
+
+private actor BlockingTaskProviderState {
+    private(set) var callCount = 0
+    private var startedContinuations: [CheckedContinuation<Void, Never>] = []
+    private var releaseContinuations: [CheckedContinuation<Void, Never>] = []
+
+    func block() async {
+        callCount += 1
+        startedContinuations.forEach { $0.resume() }
+        startedContinuations.removeAll()
+        await withCheckedContinuation { continuation in
+            releaseContinuations.append(continuation)
+        }
+    }
+
+    func waitUntilStarted() async {
+        if callCount > 0 { return }
+        await withCheckedContinuation { continuation in
+            startedContinuations.append(continuation)
+        }
+    }
+
+    func release() {
+        releaseContinuations.forEach { $0.resume() }
+        releaseContinuations.removeAll()
     }
 }
 

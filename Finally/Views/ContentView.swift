@@ -4,6 +4,7 @@ struct ContentView: View {
     @Environment(NavigationRouter.self) private var router
     @Environment(NetworkService.self) private var networkService
     @Environment(TaskProviderCoordinator.self) private var taskProvider
+    @Environment(\.modelContext) private var modelContext
 
     @State private var showCreator = false
 
@@ -23,9 +24,13 @@ struct ContentView: View {
                 }
 
                 if let message = taskProvider.lastError {
-                    SyncErrorBanner(message: message) {
-                        taskProvider.clearError()
-                    }
+                    SyncErrorBanner(
+                        message: message,
+                        onRetry: {
+                            Task { await taskProvider.retryPendingChanges(store: modelContext) }
+                        },
+                        onDismiss: { taskProvider.clearError() }
+                    )
                     .padding(.horizontal)
                     .padding(.vertical, 8)
                 }

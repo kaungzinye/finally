@@ -366,19 +366,7 @@ struct TaskDetailView: View {
         }
 
         do {
-            try taskProvider.persistPendingChanges(store: modelContext)
-        } catch {
-            syncErrorMessage = error.localizedDescription
-            return
-        }
-
-        // Synchronize before dismissing so failures remain visible.
-        let context = modelContext
-        guard let session = try? context.selectedProviderWorkspace() else { return }
-        do {
-            try await taskProvider.synchronize(.push, workspace: session, store: context)
-        } catch let error as TaskSyncError {
-            syncErrorMessage = error.localizedDescription
+            try await taskProvider.submitPendingChanges(for: [task], store: modelContext)
         } catch {
             syncErrorMessage = error.localizedDescription
         }

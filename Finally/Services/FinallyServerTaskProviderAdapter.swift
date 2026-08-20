@@ -68,8 +68,15 @@ final class FinallyServerTaskProviderAdapter: TaskProviderAdapter {
 
             let remote: FinallyServerTask
             if task.lastSyncedAt == nil {
-                remote = try await api.createTask(projectID: projectID, title: task.title)
-                task.externalTaskID = remote.id
+                let created = try await api.createTask(projectID: projectID, title: task.title)
+                task.externalTaskID = created.id
+                task.lastSyncedAt = Date()
+                try store.save()
+                if task.status == .done {
+                    remote = try await api.completeTask(id: created.id)
+                } else {
+                    remote = created
+                }
             } else if task.status == .done {
                 _ = try await api.updateTask(
                     id: task.externalTaskID,

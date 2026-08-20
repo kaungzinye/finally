@@ -319,21 +319,10 @@ struct InlineTaskCreator: View {
             NotificationService.shared.rescheduleAllReminders(modelContext: modelContext)
         }
 
-        do {
-            try taskProvider.persistPendingChanges(store: modelContext)
-        } catch {
-            syncErrorMessage = error.localizedDescription
-            return
-        }
-
-        // Push to the selected task provider in the background.
         let context = modelContext
         Task {
-            guard let session = try? context.selectedProviderWorkspace() else { return }
             do {
-                try await taskProvider.synchronize(.push, workspace: session, store: context)
-            } catch let error as TaskSyncError {
-                syncErrorMessage = error.localizedDescription
+                try await taskProvider.submitPendingChanges(for: [task], store: context)
             } catch {
                 syncErrorMessage = error.localizedDescription
             }

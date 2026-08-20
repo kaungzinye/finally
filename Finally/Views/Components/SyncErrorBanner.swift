@@ -2,6 +2,7 @@ import SwiftUI
 
 struct SyncErrorBanner: View {
     let message: String
+    var onRetry: (() -> Void)?
     let onDismiss: () -> Void
 
     var body: some View {
@@ -15,6 +16,11 @@ struct SyncErrorBanner: View {
                 .multilineTextAlignment(.leading)
 
             Spacer(minLength: 8)
+
+            if let onRetry {
+                Button("Retry", action: onRetry)
+                    .buttonStyle(.bordered)
+            }
 
             Button(action: onDismiss) {
                 Image(systemName: "xmark.circle.fill")

@@ -37,7 +37,7 @@ enum TaskProviderCapability: String, Codable, Hashable, Sendable {
     case recurrence
 }
 
-enum TaskProviderSyncIntent: Sendable {
+enum TaskProviderSyncIntent: Hashable, Sendable {
     case launch
     case incremental
     case full
@@ -119,11 +119,17 @@ extension SyncService: TaskProviderAdapter {
 
 @Observable
 final class TaskProviderCoordinator {
+    private struct SynchronizationKey: Hashable {
+        let intent: TaskProviderSyncIntent
+        let workspaceID: String
+    }
+
     let providerIdentity: TaskProviderIdentity
     let capabilities: Set<TaskProviderCapability>
     private let synchronizeProvider: ((TaskProviderSyncIntent, UserSession?, ModelContext) async throws -> Void)?
     private let notionAdapter: SyncService
     private let credentials: FinallyServerCredentialStore
+    @ObservationIgnored private var activeSynchronizations: [SynchronizationKey: Task<Void, Error>] = [:]
 
     var isSyncing = false
     var lastError: String?
@@ -150,46 +156,136 @@ final class TaskProviderCoordinator {
         synchronizeProvider = nil
     }
 
+    @MainActor
     func synchronize(
         _ intent: TaskProviderSyncIntent,
         workspace: UserSession? = nil,
         store: ModelContext
     ) async throws {
+        let selectedWorkspace: UserSession?
+        if let workspace {
+            selectedWorkspace = workspace
+        } else if intent == .launch {
+            selectedWorkspace = nil
+        } else {
+            selectedWorkspace = try store.selectedProviderWorkspace()
+        }
+        if intent != .launch, selectedWorkspace == nil {
+            throw TaskProviderAdapterError.workspaceRequired
+        }
+
+        let key = SynchronizationKey(
+            intent: intent,
+            workspaceID: selectedWorkspace?.workspaceId ?? "launch"
+        )
+        if let activeSynchronization = activeSynchronizations[key] {
+            try await activeSynchronization.value
+            return
+        }
+
+        let synchronization = Task { [self] in
+            try await performSynchronization(intent, workspace: selectedWorkspace, store: store)
+        }
+        activeSynchronizations[key] = synchronization
         isSyncing = true
         lastError = nil
-        defer { isSyncing = false }
+        defer {
+            activeSynchronizations.removeValue(forKey: key)
+            isSyncing = !activeSynchronizations.isEmpty
+        }
         do {
-            if let synchronizeProvider {
-                try await synchronizeProvider(intent, workspace, store)
-                return
-            }
-            let selectedWorkspace: UserSession?
-            if let workspace {
-                selectedWorkspace = workspace
-            } else {
-                selectedWorkspace = try store.selectedProviderWorkspace()
-            }
-            guard let workspace = selectedWorkspace else { throw TaskProviderAdapterError.workspaceRequired }
-            switch workspace.providerIdentity {
-            case .notion:
-                try await notionAdapter.synchronize(intent, workspace: workspace, store: store)
-            case .finallyServer:
-                guard let urlString = workspace.serverBaseURL,
-                      let baseURL = URL(string: urlString),
-                      let token = credentials.token(workspaceID: workspace.workspaceId) else {
-                    throw FinallyServerClientError.unauthorized
-                }
-                let api = URLSessionFinallyServerAPIClient(baseURL: baseURL, token: token)
-                try await FinallyServerTaskProviderAdapter(api: api)
-                    .synchronize(intent, workspace: workspace, store: store)
-            default:
-                throw FinallyServerClientError.invalidResponse
-            }
+            try await synchronization.value
         } catch is CancellationError {
             return
         } catch {
             lastError = error.localizedDescription
             throw error
+        }
+    }
+
+    @MainActor
+    func submitPendingChanges(for tasks: [TaskItem], store: ModelContext) async throws {
+        do {
+            try persistPendingChanges(store: store)
+
+            let sessions = try store.fetch(FetchDescriptor<UserSession>())
+            let selectedWorkspaceID = sessions.selectedProviderWorkspace?.workspaceId
+            let workspaceIDs = Set(try tasks.map { task in
+                if let workspaceID = task.providerWorkspaceId { return workspaceID }
+                guard let selectedWorkspaceID else {
+                    throw TaskProviderAdapterError.workspaceRequired
+                }
+                return selectedWorkspaceID
+            })
+            let workspaces: [UserSession]
+            if workspaceIDs.isEmpty {
+                guard let selected = sessions.selectedProviderWorkspace else {
+                    throw TaskProviderAdapterError.workspaceRequired
+                }
+                workspaces = [selected]
+            } else {
+                workspaces = sessions.filter { workspaceIDs.contains($0.workspaceId) }
+                guard workspaces.count == workspaceIDs.count else {
+                    throw TaskProviderAdapterError.workspaceRequired
+                }
+            }
+
+            for workspace in workspaces {
+                try await synchronize(.push, workspace: workspace, store: store)
+            }
+        } catch {
+            lastError = error.localizedDescription
+            throw error
+        }
+    }
+
+    @MainActor
+    func submitPendingChangesReportingFailure(for tasks: [TaskItem], store: ModelContext) async {
+        try? await submitPendingChanges(for: tasks, store: store)
+    }
+
+    @MainActor
+    func retryPendingChanges(store: ModelContext) async {
+        do {
+            let tasks = try store.fetch(FetchDescriptor<TaskItem>()).filter { $0.isDirty }
+            guard !tasks.isEmpty else {
+                lastError = nil
+                return
+            }
+            try await submitPendingChanges(for: tasks, store: store)
+        } catch {
+            lastError = error.localizedDescription
+        }
+    }
+
+    @MainActor
+    private func performSynchronization(
+        _ intent: TaskProviderSyncIntent,
+        workspace: UserSession?,
+        store: ModelContext
+    ) async throws {
+        if let synchronizeProvider {
+            try await synchronizeProvider(intent, workspace, store)
+            return
+        }
+        guard let workspace else {
+            try await notionAdapter.synchronize(intent, workspace: nil, store: store)
+            return
+        }
+        switch workspace.providerIdentity {
+        case .notion:
+            try await notionAdapter.synchronize(intent, workspace: workspace, store: store)
+        case .finallyServer:
+            guard let urlString = workspace.serverBaseURL,
+                  let baseURL = URL(string: urlString),
+                  let token = credentials.token(workspaceID: workspace.workspaceId) else {
+                throw FinallyServerClientError.unauthorized
+            }
+            let api = URLSessionFinallyServerAPIClient(baseURL: baseURL, token: token)
+            try await FinallyServerTaskProviderAdapter(api: api)
+                .synchronize(intent, workspace: workspace, store: store)
+        default:
+            throw FinallyServerClientError.invalidResponse
         }
     }
 

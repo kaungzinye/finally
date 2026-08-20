@@ -165,6 +165,9 @@ struct KanbanView: View {
                 task.status = status
                 task.isDirty = true
             }
+            Task {
+                await taskProvider.submitPendingChangesReportingFailure(for: [task], store: modelContext)
+            }
             draggingTaskId = nil
             let generator = UINotificationFeedbackGenerator()
             generator.notificationOccurred(.success)

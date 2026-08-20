@@ -4,6 +4,7 @@ import SwiftData
 struct TaskRowView: View {
     @Bindable var task: TaskItem
     @Environment(\.modelContext) private var modelContext
+    @Environment(TaskProviderCoordinator.self) private var taskProvider
 
     @State private var showDatePicker = false
     @State private var showPriorityPicker = false
@@ -51,6 +52,7 @@ struct TaskRowView: View {
                             NotificationService.shared.cancelRemindersForTask(task)
                         }
                     }
+                    submitTaskMutation()
                 } label: {
                     Image(systemName: task.status == .done ? "checkmark.circle.fill" : "circle")
                         .font(.title3)
@@ -194,6 +196,7 @@ struct TaskRowView: View {
                         NotificationService.shared.cancelRemindersForTask(task)
                     }
                 }
+                submitTaskMutation()
             } label: {
                 Label("Complete", systemImage: "checkmark")
             }
@@ -236,42 +239,48 @@ struct TaskRowView: View {
     private var dueDateBinding: Binding<Date?> {
         Binding(
             get: { task.dueDate },
-            set: { task.dueDate = $0; task.isDirty = true }
+            set: { task.dueDate = $0; task.isDirty = true; submitTaskMutation() }
         )
     }
 
     private var priorityBinding: Binding<TaskPriority?> {
         Binding(
             get: { task.priority },
-            set: { task.priority = $0; task.isDirty = true }
+            set: { task.priority = $0; task.isDirty = true; submitTaskMutation() }
         )
     }
 
     private var tagsBinding: Binding<[String]> {
         Binding(
             get: { task.tags },
-            set: { task.tags = $0; task.isDirty = true }
+            set: { task.tags = $0; task.isDirty = true; submitTaskMutation() }
         )
     }
 
     private var projectBinding: Binding<ProjectItem?> {
         Binding(
             get: { task.project },
-            set: { task.project = $0; task.isDirty = true }
+            set: { task.project = $0; task.isDirty = true; submitTaskMutation() }
         )
     }
 
     private var recurrenceBinding: Binding<Recurrence> {
         Binding(
             get: { task.recurrence },
-            set: { task.recurrence = $0; task.isDirty = true }
+            set: { task.recurrence = $0; task.isDirty = true; submitTaskMutation() }
         )
     }
 
     private var customRecurrenceBinding: Binding<RecurrenceRule?> {
         Binding(
             get: { task.customRecurrenceRule },
-            set: { task.customRecurrenceRule = $0; task.isDirty = true }
+            set: { task.customRecurrenceRule = $0; task.isDirty = true; submitTaskMutation() }
         )
+    }
+
+    private func submitTaskMutation() {
+        Task {
+            await taskProvider.submitPendingChangesReportingFailure(for: [task], store: modelContext)
+        }
     }
 }

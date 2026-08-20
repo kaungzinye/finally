@@ -196,6 +196,59 @@ final class FinallyServerConnectionIntegrationTests: XCTestCase {
         XCTAssertEqual(try context.fetchCount(FetchDescriptor<TaskItem>()), 0)
     }
 
+    func testFinallyServerPushCompletesTaskFinishedBeforeFirstSync() async throws {
+        let api = MockFinallyServerAPIClient()
+        let context = try makeInMemoryContext()
+        let workspace = makeServerWorkspace()
+        let task = TaskItem(externalTaskID: UUID().uuidString, title: "Already finished")
+        task.providerWorkspaceId = workspace.workspaceId
+        task.status = .done
+        task.isDirty = true
+        context.insert(workspace)
+        context.insert(task)
+
+        try await FinallyServerTaskProviderAdapter(api: api)
+            .synchronize(.push, workspace: workspace, store: context)
+
+        XCTAssertEqual(task.externalTaskID, "1")
+        XCTAssertEqual(api.taskOperations, ["complete"])
+        XCTAssertTrue(api.tasks["1"]?.isCompleted == true)
+        XCTAssertEqual(task.status, .done)
+        XCTAssertFalse(task.isDirty)
+    }
+
+    func testFinallyServerRetriesCompletionWithoutCreatingSecondRemoteTask() async throws {
+        let api = MockFinallyServerAPIClient()
+        api.completeError = FinallyServerClientError.serverUnavailable
+        let context = try makeInMemoryContext()
+        let workspace = makeServerWorkspace()
+        let task = TaskItem(externalTaskID: UUID().uuidString, title: "Retry completion")
+        task.providerWorkspaceId = workspace.workspaceId
+        task.status = .done
+        task.isDirty = true
+        context.insert(workspace)
+        context.insert(task)
+
+        do {
+            try await FinallyServerTaskProviderAdapter(api: api)
+                .synchronize(.push, workspace: workspace, store: context)
+            XCTFail("Expected completion failure")
+        } catch FinallyServerClientError.serverUnavailable {
+            XCTAssertEqual(task.externalTaskID, "1")
+            XCTAssertNotNil(task.lastSyncedAt)
+            XCTAssertTrue(task.isDirty)
+            XCTAssertEqual(api.tasks.count, 1)
+        }
+
+        api.completeError = nil
+        try await FinallyServerTaskProviderAdapter(api: api)
+            .synchronize(.push, workspace: workspace, store: context)
+
+        XCTAssertEqual(api.tasks.count, 1)
+        XCTAssertTrue(api.tasks["1"]?.isCompleted == true)
+        XCTAssertFalse(task.isDirty)
+    }
+
     func testFinallyServerFailureKeepsLocalEditRecoverable() async throws {
         let api = MockFinallyServerAPIClient()
         let context = try makeInMemoryContext()
