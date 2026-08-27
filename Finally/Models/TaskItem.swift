@@ -83,23 +83,30 @@ final class TaskItem {
     }
 
     var isSubtask: Bool { parentId != nil }
-    var hasSubtasks: Bool { !subtasks.isEmpty }
+
+    /// Subtasks the user still owns. A subtask awaiting a provider delete push is marked
+    /// `isDeleted` and drops out of every derived view until the provider confirms it.
+    var activeSubtasks: [TaskItem] { subtasks.filter { !$0.isDeleted } }
+
+    var hasSubtasks: Bool { !activeSubtasks.isEmpty }
 
     var nextActionableSubtask: TaskItem? {
-        subtasks
+        activeSubtasks
             .filter { $0.status != .done }
             .sorted { $0.sortIndex < $1.sortIndex }
             .first
     }
 
     var subtaskProgress: (done: Int, total: Int) {
-        let total = subtasks.count
-        let done = subtasks.filter { $0.status == .done }.count
+        let active = activeSubtasks
+        let total = active.count
+        let done = active.filter { $0.status == .done }.count
         return (done, total)
     }
 
     var allSubtasksComplete: Bool {
-        !subtasks.isEmpty && subtasks.allSatisfy { $0.status == .done }
+        let active = activeSubtasks
+        return !active.isEmpty && active.allSatisfy { $0.status == .done }
     }
 
     var effectiveSuggestedDate: Date? {
@@ -151,7 +158,7 @@ final class TaskItem {
 
     var computedSuggestedDate: Date? {
         guard isSubtask, let parent else { return nil }
-        let sorted = parent.subtasks
+        let sorted = parent.activeSubtasks
             .filter { $0.status != .done }
             .sorted { $0.sortIndex < $1.sortIndex }
         guard let index = sorted.firstIndex(where: { $0.externalTaskID == externalTaskID }) else { return nil }

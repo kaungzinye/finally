@@ -4,7 +4,7 @@ struct SubtaskScheduler {
 
     /// Distribute suggested dates backward from parent's targetDate (preferred) or dueDate.
     static func distributeSubtaskDates(parent: TaskItem) {
-        let sorted = parent.subtasks
+        let sorted = parent.activeSubtasks
             .filter { $0.status != .done }
             .sorted { $0.sortIndex < $1.sortIndex }
 
@@ -12,7 +12,7 @@ struct SubtaskScheduler {
 
         let planningDate = parent.targetDate ?? parent.dueDate
         guard let deadline = planningDate else {
-            for subtask in parent.subtasks where subtask.suggestedDateOverride == nil {
+            for subtask in parent.activeSubtasks where subtask.suggestedDateOverride == nil {
                 subtask.suggestedDate = nil
             }
             return
@@ -47,7 +47,7 @@ struct SubtaskScheduler {
 
         let deadline = parent.targetDate ?? parent.dueDate ?? Date.distantFuture
 
-        let remaining = parent.subtasks
+        let remaining = parent.activeSubtasks
             .filter { $0.status != .done && $0.externalTaskID != completedSubtask.externalTaskID }
             .sorted { $0.sortIndex < $1.sortIndex }
 

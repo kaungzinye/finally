@@ -208,7 +208,7 @@ struct TaskDetailView: View {
                         }
 
                         // Subtask list
-                        let sortedSubtasks = task.subtasks.sorted { $0.sortIndex < $1.sortIndex }
+                        let sortedSubtasks = sortedActiveSubtasks
                         ForEach(sortedSubtasks, id: \.externalTaskID) { subtask in
                             HStack(spacing: 10) {
                                 Button {
@@ -249,15 +249,10 @@ struct TaskDetailView: View {
                             }
                         }
                         .onDelete { indexSet in
-                            let sorted = task.subtasks.sorted { $0.sortIndex < $1.sortIndex }
-                            for index in indexSet {
-                                modelContext.delete(sorted[index])
-                            }
-                            SubtaskScheduler.distributeSubtaskDates(parent: task)
-                            NotificationService.shared.rescheduleAllReminders(modelContext: modelContext)
+                            deleteSubtasks(at: indexSet)
                         }
                         .onMove { from, to in
-                            var sorted = task.subtasks.sorted { $0.sortIndex < $1.sortIndex }
+                            var sorted = sortedActiveSubtasks
                             sorted.move(fromOffsets: from, toOffset: to)
                             for (i, subtask) in sorted.enumerated() {
                                 subtask.sortIndex = i
@@ -351,6 +346,31 @@ struct TaskDetailView: View {
         }
     }
 
+    private var sortedActiveSubtasks: [TaskItem] {
+        task.activeSubtasks.sorted { $0.sortIndex < $1.sortIndex }
+    }
+
+    /// Subtasks are provider-owned tasks, so a swipe delete takes the same route as every other
+    /// delete: mark the record and let the provider adapter retire it remotely.
+    private func deleteSubtasks(at offsets: IndexSet) {
+        let sorted = sortedActiveSubtasks
+        let removed = offsets.map { sorted[$0] }
+        for subtask in removed {
+            subtask.isDeleted = true
+            subtask.isDirty = true
+            NotificationService.shared.cancelRemindersForTask(subtask)
+        }
+        SubtaskScheduler.distributeSubtaskDates(parent: task)
+        NotificationService.shared.rescheduleAllReminders(modelContext: modelContext)
+        Task {
+            do {
+                try await taskProvider.submitPendingChanges(for: removed, store: modelContext)
+            } catch {
+                syncErrorMessage = error.localizedDescription
+            }
+        }
+    }
+
     private func addSubtask() {
         let title = newSubtaskTitle.trimmingCharacters(in: .whitespaces)
         guard !title.isEmpty else { return }
@@ -360,7 +380,7 @@ struct TaskDetailView: View {
         subtask.parentId = task.externalTaskID
         subtask.parent = task
         subtask.isDirty = true
-        subtask.sortIndex = task.subtasks.count
+        subtask.sortIndex = task.activeSubtasks.count
         modelContext.insert(subtask)
 
         newSubtaskTitle = ""
