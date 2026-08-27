@@ -7,7 +7,7 @@ body:
   - type: markdown
     attributes:
       value: |
-        Describe the problem you're trying to solve. Feature requests that reference the [spec](specs/001-notion-task-app/spec.md) are especially helpful.
+        Describe the problem you want to solve and the provider or screen it affects.
 
   - type: dropdown
     id: component
