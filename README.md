@@ -14,7 +14,7 @@ Finally is a free, open-source iOS task manager that connects to [Notion](https:
 - Home screen widget
 - iOS 17+ with SwiftUI and SwiftData
 
-See [`specs/001-notion-task-app/spec.md`](specs/001-notion-task-app/spec.md) for the full product spec.
+See [`docs/spec.md`](docs/spec.md) for the full product spec.
 
 ## Repository layout
 
@@ -24,7 +24,7 @@ See [`specs/001-notion-task-app/spec.md`](specs/001-notion-task-app/spec.md) for
 | [`FinallyWidget/`](FinallyWidget/) | Home screen widget extension |
 | [`FinallyTests/`](FinallyTests/) | Unit, integration, and E2E tests |
 | [`vercel-notion-auth/`](vercel-notion-auth/) | Serverless OAuth relay (HTTPS callback + token exchange) |
-| [`specs/001-notion-task-app/`](specs/001-notion-task-app/) | Feature specs and task checklist |
+| [`docs/`](docs/) | Product and provider specifications, contracts, setup guide |
 | [`PRIVACY.md`](PRIVACY.md) | Privacy policy |
 | [`TERMS.md`](TERMS.md) | Terms of use |
 | [`SECURITY.md`](SECURITY.md) | Private vulnerability reporting |
@@ -50,7 +50,7 @@ xcodebuild build-for-testing -project Finally.xcodeproj -scheme Finally \
   -destination 'generic/platform=iOS' CODE_SIGNING_ALLOWED=NO -quiet
 ```
 
-Full setup (Notion integration, database schema, OAuth): [`specs/001-notion-task-app/quickstart.md`](specs/001-notion-task-app/quickstart.md).
+Full setup (Notion integration, database schema, OAuth): [`docs/quickstart.md`](docs/quickstart.md).
 
 If you change `project.yml`, regenerate the Xcode project:
 

@@ -31,7 +31,7 @@ cd finally
 git checkout -b feat/YOUR_USERNAME/short-description origin/main
 ```
 
-The full Notion and OAuth setup is in [`specs/001-notion-task-app/quickstart.md`](specs/001-notion-task-app/quickstart.md).
+The full Notion and OAuth setup is in [`docs/quickstart.md`](docs/quickstart.md).
 
 ## Build and test
 

@@ -13,9 +13,6 @@ DerivedData/
 vercel-notion-auth/node_modules/
 vercel-notion-auth/.vercel/
 
-# Specify
-.specify/
-
 # Misc
 *.swp
 *~
