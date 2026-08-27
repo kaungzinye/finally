@@ -301,6 +301,30 @@ final class TaskProviderContractTests: XCTestCase {
         XCTAssertEqual(task.status, .done)
     }
 
+    /// A Finally Server workspace is exactly one server project, so a task moved to another
+    /// project has left this workspace and Finally drops the local record.
+    func testFinallyServerRemovesACleanTaskMovedToAnotherServerProject() async throws {
+        let api = MockFinallyServerAPIClient()
+        api.tasks["55"] = FinallyServerTask(
+            id: "55",
+            projectID: 99,
+            title: "Moved away",
+            isCompleted: false
+        )
+        let context = try makeInMemoryContext()
+        let workspace = makeServerWorkspace()
+        let task = TaskItem(externalTaskID: "55", title: "Moved away")
+        task.providerWorkspaceId = workspace.workspaceId
+        task.lastSyncedAt = Date()
+        context.insert(workspace)
+        context.insert(task)
+
+        try await FinallyServerTaskProviderAdapter(api: api)
+            .synchronize(.full, workspace: workspace, store: context)
+
+        XCTAssertEqual(try context.fetchCount(FetchDescriptor<TaskItem>()), 0)
+    }
+
     private func makeServerWorkspace() -> UserSession {
         let workspace = UserSession(
             workspaceId: "server-workspace",

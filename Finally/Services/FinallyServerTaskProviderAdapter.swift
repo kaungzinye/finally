@@ -155,6 +155,10 @@ final class FinallyServerTaskProviderAdapter: TaskProviderAdapter {
             )
             task.lastSyncedAt = Date()
         }
+        // A Finally Server provider workspace is exactly one server project. A synced task the
+        // project no longer lists has left this workspace, whether it was deleted on the server
+        // or moved to another project, and Finally never copies tasks across workspaces. Either
+        // way the local record goes. Local-only drafts and dirty edits are held back above.
         for task in localTasks where
             task.lastSyncedAt != nil &&
             !task.isDirty &&
