@@ -1,7 +1,7 @@
 import SwiftUI
 import SwiftData
 
-struct KanbanView: View {
+struct BoardView: View {
     @Query(filter: #Predicate<TaskItem> { $0.isDeleted == false }) private var allTasks: [TaskItem]
     @Query private var sessions: [UserSession]
     @Environment(TaskProviderCoordinator.self) private var taskProvider
@@ -62,9 +62,9 @@ struct KanbanView: View {
 
                         ScrollView(.horizontal, showsIndicators: false) {
                             HStack(alignment: .top, spacing: 12) {
-                                kanbanColumn("To Do", color: .blue, status: .notStarted, tasks: notStartedTasks, width: columnWidth, isLandscape: isLandscape)
-                                kanbanColumn("In Progress", color: .orange, status: .inProgress, tasks: inProgressTasks, width: columnWidth, isLandscape: isLandscape)
-                                kanbanColumn("Done", color: .green, status: .done, tasks: doneTasks, width: columnWidth, isLandscape: isLandscape)
+                                boardColumn("To Do", color: .blue, status: .notStarted, tasks: notStartedTasks, width: columnWidth, isLandscape: isLandscape)
+                                boardColumn("In Progress", color: .orange, status: .inProgress, tasks: inProgressTasks, width: columnWidth, isLandscape: isLandscape)
+                                boardColumn("Done", color: .green, status: .done, tasks: doneTasks, width: columnWidth, isLandscape: isLandscape)
                             }
                             .padding(.horizontal, 16)
                             .padding(.bottom, 20)
@@ -92,7 +92,7 @@ struct KanbanView: View {
                 SearchFilterView()
             }
             .sheet(isPresented: $showFilterSheet) {
-                KanbanFilterView(
+                BoardFilterView(
                     filterProjects: $filterProjects,
                     filterPriorities: $filterPriorities
                 )
@@ -107,7 +107,7 @@ struct KanbanView: View {
     // MARK: - Column
 
     @ViewBuilder
-    private func kanbanColumn(_ title: String, color: Color, status: TaskStatus, tasks: [TaskItem], width: CGFloat, isLandscape: Bool) -> some View {
+    private func boardColumn(_ title: String, color: Color, status: TaskStatus, tasks: [TaskItem], width: CGFloat, isLandscape: Bool) -> some View {
         VStack(alignment: .leading, spacing: 0) {
             // Column header
             HStack {
@@ -132,7 +132,7 @@ struct KanbanView: View {
             ScrollView(.vertical, showsIndicators: false) {
                 LazyVStack(spacing: 8) {
                     ForEach(tasks, id: \.externalTaskID) { task in
-                                kanbanCard(task, isLandscape: isLandscape)
+                                boardCard(task, isLandscape: isLandscape)
                             .draggable(task.externalTaskID) {
                                 // Drag preview
                                 Text(task.title)
@@ -177,7 +177,7 @@ struct KanbanView: View {
     // MARK: - Card
 
     @ViewBuilder
-    private func kanbanCard(_ task: TaskItem, isLandscape: Bool) -> some View {
+    private func boardCard(_ task: TaskItem, isLandscape: Bool) -> some View {
         VStack(alignment: .leading, spacing: 6) {
             Text(task.title)
                 .font(.subheadline)
@@ -208,7 +208,7 @@ struct KanbanView: View {
 
                 Spacer(minLength: 0)
 
-                // Vertical (portrait) Kanban: only show project in the trailing side
+                // Vertical (portrait) Board: only show project in the trailing side
                 if !isLandscape {
                     if let emoji = task.project?.iconEmoji {
                         Text(emoji)
@@ -221,7 +221,7 @@ struct KanbanView: View {
                             .truncationMode(.tail)
                     }
                 } else {
-                    // Horizontal (landscape) Kanban: show full set of properties like Today/Upcoming
+                    // Horizontal (landscape) Board: show full set of properties like Today/Upcoming
                     HStack(spacing: 6) {
                         if let emoji = task.project?.iconEmoji {
                             Text(emoji)
