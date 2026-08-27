@@ -49,7 +49,7 @@ Finally presents one provider-independent task experience backed by a local Swif
 - Reminder rules are canonical product data replicated to the phone. The phone schedules native local notifications in advance and replenishes the nearest notifications within iOS scheduling limits.
 - Anchored reminders identify their anchor explicitly. Exact reminders remain independent of task dates.
 - Recurrence and reminders remain separate concerns.
-- Subtasks are tasks with parent relationships. Local presentation metadata may include subtask order and a suggested-day override.
+- Subtasks are tasks with parent relationships. Local presentation metadata may include subtask order and a suggested date override.
 - Provider adapters map canonical tasks to remote systems. Provider identifiers, authentication sessions, schema mappings, and synchronization cursors remain outside provider-independent views and models.
 - `TaskItem.externalTaskID` identifies a task inside its provider workspace. `providerWorkspaceId` scopes tasks and projects to the selected session.
 - Finally Server credentials travel only over HTTPS. Authentication discovers writable projects, and connection requires an explicit project selection from that response.

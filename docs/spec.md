@@ -10,8 +10,7 @@ The product interface depends on a task-provider contract. The Notion provider a
 
 ## Supporting artifacts
 
-- [Data model](data-model.md) records the canonical SwiftData representation and provider-owned workspace metadata.
-- [Quickstart](quickstart.md) covers Notion integration, database schema, and OAuth setup.
+- [Quickstart](quickstart.md) covers Notion integration, database schema, and OAuth setup. The Swift models in `Finally/Models/` are the canonical record of the stored data shape.
 - [Notion API contract](contracts/notion-api.md) defines remote request and response shapes.
 - [URL schemes](contracts/url-schemes.md) defines app deep links.
 - [Widget contract](contracts/widget-contract.md) defines widget behavior.

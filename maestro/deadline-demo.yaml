@@ -1,0 +1,9 @@
+appId: com.kaungzinye.finally
+---
+- launchApp:
+    clearState: true
+    arguments:
+      deadline-demo: true
+- extendedWaitUntil:
+    visible: "Ship the project proposal"
+    timeout: 10000
