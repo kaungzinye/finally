@@ -1,12 +1,12 @@
 # Finally
 
-Finally is a free, open-source iOS task manager that connects to your [Notion](https://www.notion.com) workspace. It syncs tasks from your Notion databases, supports Todoist-style inline creation, per-task reminders, recurring tasks, widgets, and dark mode.
+Finally is a free, open-source iOS task manager that connects to [Notion](https://www.notion.com) or a Finally Server selected by the user. It supports inline task creation, reminders, recurring tasks, widgets, and provider-scoped synchronization.
 
-**Branch:** [`main`](https://github.com/kaungzinye/finally/tree/main) is the public integration branch — fork it, branch off it, and open PRs against it.
+[`main`](https://github.com/kaungzinye/finally/tree/main) is the public integration branch. Fork it, branch from it, and open pull requests against it.
 
 ## Features
 
-- Notion OAuth — connect any workspace where you're a member
+- Notion OAuth: connect any workspace where you're a member
 - Two-way sync with your Tasks and Projects databases
 - Inbox, Today, Upcoming, Kanban, and project browse views
 - Inline task creation with chip-based fields (due date, target date, priority, tags, project, recurrence)
@@ -27,6 +27,9 @@ See [`specs/001-notion-task-app/spec.md`](specs/001-notion-task-app/spec.md) for
 | [`specs/001-notion-task-app/`](specs/001-notion-task-app/) | Feature specs and task checklist |
 | [`PRIVACY.md`](PRIVACY.md) | Privacy policy |
 | [`TERMS.md`](TERMS.md) | Terms of use |
+| [`SECURITY.md`](SECURITY.md) | Private vulnerability reporting |
+| [`SUPPORT.md`](SUPPORT.md) | Help and issue routing |
+| [`GOVERNANCE.md`](GOVERNANCE.md) | Project decision process |
 
 ## Quick start
 
@@ -67,15 +70,15 @@ Deploy and env var setup: [`vercel-notion-auth/DEPLOY.md`](vercel-notion-auth/DE
 
 ## Contributing
 
-All contributions target **`main`**. See [CONTRIBUTING.md](CONTRIBUTING.md).
+All contributions target **`main`** from a branch named `<type>/<author>/<description>`. See [CONTRIBUTING.md](CONTRIBUTING.md).
 
-- **Bug reports** — [bug report template](.github/ISSUE_TEMPLATE/bug_report.yml)
-- **Feature ideas** — [feature request template](.github/ISSUE_TEMPLATE/feature_request.yml)
-- **Security issues** — [SECURITY.md](SECURITY.md) (do not open public issues)
+- [Bug reports](.github/ISSUE_TEMPLATE/bug_report.yml)
+- [Feature ideas](.github/ISSUE_TEMPLATE/feature_request.yml)
+- [Private security reports](SECURITY.md)
 
 ## License
 
-MIT — see [LICENSE](LICENSE).
+MIT. See [LICENSE](LICENSE). Contributions are accepted under the same MIT terms.
 
 ## Links
 
