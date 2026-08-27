@@ -16,10 +16,18 @@ final class FinallyServerTaskProviderAdapter: TaskProviderAdapter {
     ]
     static let canonicalFieldSupport: [CanonicalTaskField: TaskProviderFieldSupport] = [
         .title: .lossless,
-        .plannedDay: .lossy(reason: "Finally Server stores planned days as timestamps."),
-        .deadline: .lossy(reason: "Finally Server stores deadlines as timestamps."),
-        .state: .lossless,
-        .project: .lossless,
+        .plannedDay: .lossy(
+            reason: "Finally Server carries planned days as timestamps, so a remotely edited planned day arrives timed."
+        ),
+        .deadline: .lossy(
+            reason: "Finally Server carries deadlines as timestamps, so a remotely edited deadline arrives timed."
+        ),
+        .state: .lossy(
+            reason: "Finally Server records completion only, so In progress stays on this device."
+        ),
+        .project: .lossy(
+            reason: "A Finally Server workspace is one server project, so the project follows the workspace."
+        ),
         .labels: .unsupported(reason: "Finally Server does not expose labels."),
         .priority: .lossless,
         .estimate: .unsupported(reason: "Finally Server does not expose estimates."),
@@ -109,7 +117,6 @@ final class FinallyServerTaskProviderAdapter: TaskProviderAdapter {
                 remote,
                 to: task,
                 workspaceID: workspaceID,
-                preserveDateSemantics: true,
                 store: store
             )
             task.isDirty = false
@@ -144,7 +151,6 @@ final class FinallyServerTaskProviderAdapter: TaskProviderAdapter {
                 remote,
                 to: task,
                 workspaceID: workspaceID,
-                preserveDateSemantics: false,
                 store: store
             )
             task.lastSyncedAt = Date()
@@ -163,15 +169,19 @@ final class FinallyServerTaskProviderAdapter: TaskProviderAdapter {
         _ remote: FinallyServerTask,
         to task: TaskItem,
         workspaceID: String,
-        preserveDateSemantics: Bool,
         store: ModelContext
     ) throws {
         task.title = remote.title
-        task.status = remote.isCompleted ? .done : .notStarted
-        task.targetDate = remote.plannedDay
-        task.dueDate = remote.deadline
-        if !preserveDateSemantics {
+        task.status = canonicalStatus(remoteIsCompleted: remote.isCompleted, local: task.status)
+        // Finally Server carries every date as a timestamp, so a payload cannot say whether the
+        // user meant a whole day or a moment. Keep the local reading while the instant is
+        // unchanged, and read a genuinely new instant as timed.
+        if !isSameInstant(task.targetDate, remote.plannedDay) {
+            task.targetDate = remote.plannedDay
             task.targetDateHasTime = remote.plannedDay != nil
+        }
+        if !isSameInstant(task.dueDate, remote.deadline) {
+            task.dueDate = remote.deadline
             task.dueDateHasTime = remote.deadline != nil
         }
         task.priority = remote.priority
@@ -180,5 +190,25 @@ final class FinallyServerTaskProviderAdapter: TaskProviderAdapter {
             project.externalProjectID == remoteProjectID && project.providerWorkspaceId == workspaceID
         })
         task.project = try store.fetch(descriptor).first
+    }
+
+    /// Finally Server records completion only. A task the user marked In progress stays In
+    /// progress while the server reports it unfinished.
+    private func canonicalStatus(remoteIsCompleted: Bool, local: TaskStatus) -> TaskStatus {
+        guard !remoteIsCompleted else { return .done }
+        return local == .done ? .notStarted : local
+    }
+
+    /// The wire format carries whole seconds, so a value that survived a round trip can come
+    /// back with its fractional part trimmed.
+    private func isSameInstant(_ local: Date?, _ remote: Date?) -> Bool {
+        switch (local, remote) {
+        case (nil, nil):
+            return true
+        case let (local?, remote?):
+            return abs(local.timeIntervalSince(remote)) < 1
+        default:
+            return false
+        }
     }
 }

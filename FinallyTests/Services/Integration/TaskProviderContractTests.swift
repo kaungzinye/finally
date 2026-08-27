@@ -216,10 +216,99 @@ final class TaskProviderContractTests: XCTestCase {
             notion.fieldSupport[.plannedDay],
             .lossy(reason: "A separate Target date property is required to preserve every planned-day shape.")
         )
-        XCTAssertEqual(server.fieldSupport[.state], .lossless)
         guard case .lossy = server.fieldSupport[.deadline] else {
             return XCTFail("Finally Server timestamp normalization must remain explicit")
         }
+        guard case .lossy = server.fieldSupport[.state] else {
+            return XCTFail("Finally Server records completion only, so state cannot claim a full round trip")
+        }
+        guard case .lossy = server.fieldSupport[.project] else {
+            return XCTFail("A Finally Server workspace pins one project, so project cannot claim a full round trip")
+        }
+    }
+
+    func testFinallyServerKeepsDateOnlyPlanningAcrossARoundTrip() async throws {
+        let api = MockFinallyServerAPIClient()
+        let context = try makeInMemoryContext()
+        let workspace = makeServerWorkspace()
+        let task = TaskItem(externalTaskID: UUID().uuidString, title: "Plan the week")
+        task.providerWorkspaceId = workspace.workspaceId
+        task.targetDate = Calendar.current.startOfDay(for: Date(timeIntervalSince1970: 1_780_000_000))
+        task.targetDateHasTime = false
+        task.dueDate = Date(timeIntervalSince1970: 1_780_086_400)
+        task.dueDateHasTime = true
+        task.isDirty = true
+        context.insert(workspace)
+        context.insert(task)
+        let adapter = FinallyServerTaskProviderAdapter(api: api)
+
+        try await adapter.synchronize(.push, workspace: workspace, store: context)
+        XCTAssertFalse(task.targetDateHasTime)
+        XCTAssertTrue(task.dueDateHasTime)
+
+        try await adapter.synchronize(.launch, workspace: workspace, store: context)
+
+        XCTAssertFalse(task.targetDateHasTime)
+        XCTAssertTrue(task.dueDateHasTime)
+    }
+
+    func testFinallyServerReadsARemotelyChangedPlanningDateAsTimed() async throws {
+        let api = MockFinallyServerAPIClient()
+        api.tasks["1"] = FinallyServerTask(
+            id: "1",
+            projectID: 42,
+            title: "Plan the week",
+            isCompleted: false,
+            plannedDay: Date(timeIntervalSince1970: 1_780_012_345)
+        )
+        let context = try makeInMemoryContext()
+        let workspace = makeServerWorkspace()
+        let task = TaskItem(externalTaskID: "1", title: "Plan the week")
+        task.providerWorkspaceId = workspace.workspaceId
+        task.targetDate = Calendar.current.startOfDay(for: Date(timeIntervalSince1970: 1_780_000_000))
+        task.targetDateHasTime = false
+        task.lastSyncedAt = Date()
+        context.insert(workspace)
+        context.insert(task)
+
+        try await FinallyServerTaskProviderAdapter(api: api)
+            .synchronize(.full, workspace: workspace, store: context)
+
+        XCTAssertEqual(task.targetDate, Date(timeIntervalSince1970: 1_780_012_345))
+        XCTAssertTrue(task.targetDateHasTime)
+    }
+
+    func testFinallyServerKeepsInProgressStateAcrossARoundTrip() async throws {
+        let api = MockFinallyServerAPIClient()
+        let context = try makeInMemoryContext()
+        let workspace = makeServerWorkspace()
+        let task = TaskItem(externalTaskID: UUID().uuidString, title: "Draft the brief")
+        task.providerWorkspaceId = workspace.workspaceId
+        task.status = .inProgress
+        task.isDirty = true
+        context.insert(workspace)
+        context.insert(task)
+        let adapter = FinallyServerTaskProviderAdapter(api: api)
+
+        try await adapter.synchronize(.push, workspace: workspace, store: context)
+        XCTAssertEqual(task.status, .inProgress)
+
+        try await adapter.synchronize(.full, workspace: workspace, store: context)
+        XCTAssertEqual(task.status, .inProgress)
+
+        api.tasks["1"] = FinallyServerTask(id: "1", projectID: 42, title: "Draft the brief", isCompleted: true)
+        try await adapter.synchronize(.full, workspace: workspace, store: context)
+        XCTAssertEqual(task.status, .done)
+    }
+
+    private func makeServerWorkspace() -> UserSession {
+        let workspace = UserSession(
+            workspaceId: "server-workspace",
+            workspaceName: "Personal Server",
+            providerIdentity: .finallyServer
+        )
+        workspace.serverProjectID = 42
+        return workspace
     }
 
     func testUnsupportedPopulatedFieldsProduceAProviderNotice() async throws {
