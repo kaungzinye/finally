@@ -3,7 +3,7 @@ import SwiftUI
 @Observable
 final class NavigationRouter {
     enum Tab: Int, CaseIterable {
-        case kanban = 0
+        case board = 0
         case upcoming
         case today
         case browse

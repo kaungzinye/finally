@@ -31,11 +31,11 @@ struct ContentView: View {
                 }
 
                 TabView(selection: $router.selectedTab) {
-                    KanbanView()
+                    BoardView()
                         .tabItem {
-                            Label("Kanban", systemImage: "square.grid.2x2")
+                            Label("Board", systemImage: "square.grid.2x2")
                         }
-                        .tag(NavigationRouter.Tab.kanban)
+                        .tag(NavigationRouter.Tab.board)
 
                     UpcomingView()
                         .tabItem {

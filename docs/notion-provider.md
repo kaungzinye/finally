@@ -2,7 +2,7 @@
 
 ## Problem Statement
 
-People who collaborate in Notion need Finally to present and edit their tasks without copying those tasks into another authoritative task store. Notion workspaces vary in schema and permissions, so the adapter must validate and map each workspace explicitly.
+People whose tasks live in their own Notion need Finally to present and edit those tasks with zero infrastructure, without copying them into another authoritative task store. Notion mode is the app's front door. Notion workspaces vary in schema and permissions, so the adapter must validate and map each workspace explicitly.
 
 ## Solution
 
@@ -45,7 +45,6 @@ The Notion provider authenticates through OAuth, lets the user select task and p
 - Incremental pulls do not infer remote deletion. Full reconciliation determines deletion after protecting dirty local records.
 - A permission failure distinguishes missing access, read-only access, revoked authorization, and rate limiting.
 - Webhook or event-driven synchronization remains an optimization over a correct pull-based reconciliation path.
-- A read-only planning projection may publish minimal task metadata to Finally Server so Hermes can rank Notion tasks without receiving Notion credentials or mutation authority.
 
 ## Testing Decisions
 
@@ -57,10 +56,11 @@ The Notion provider authenticates through OAuth, lets the user select task and p
 
 ## Out of Scope
 
-- Automatic copying between Notion and Finally Server
-- Hermes holding Notion OAuth credentials or directly editing Notion
+- Automatic copying between Notion mode workspaces and Finally Server
+- Hermes holding Notion mode credentials or ranking Notion mode tasks
 - Creating a user's Notion databases automatically
-- Treating Notion as the store for Finally work sessions or Daily Plans
+- Treating a Notion mode workspace as the store for work sessions or the Daily Focus
+- The Notion surface, which belongs to Finally Server and syncs server tasks into a dedicated Notion database
 - Provider-specific behavior in shared SwiftUI views
 - Real-time collaborative editing inside Finally
 

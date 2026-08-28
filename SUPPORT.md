@@ -4,7 +4,7 @@ Finally is maintained as an open-source project. Support is provided on a best-e
 
 ## Get help
 
-1. Read the [README](README.md) and [setup guide](specs/001-notion-task-app/quickstart.md).
+1. Read the [README](README.md) and [setup guide](docs/quickstart.md).
 2. Search [existing issues](https://github.com/kaungzinye/finally/issues).
 3. Open a [bug report](https://github.com/kaungzinye/finally/issues/new?template=bug_report.yml) for reproducible defects.
 4. Open a [feature request](https://github.com/kaungzinye/finally/issues/new?template=feature_request.yml) for product ideas or general questions.
