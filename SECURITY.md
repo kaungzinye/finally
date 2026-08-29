@@ -1,40 +1,41 @@
-# Security Policy
+# Security policy
 
-## Supported versions
+## Supported code
 
-| Component | Notes |
-|-----------|-------|
-| OAuth relay (`vercel-notion-auth/`) | Receives auth codes; must not log or persist tokens |
-| iOS app (`main`) | Stores Notion tokens in Keychain only |
+Security fixes target the current `main` branch and the latest published release. Older builds may require an upgrade before a fix can be applied.
 
-## Reporting a vulnerability
+## Report a vulnerability privately
 
-**Please do not open a public GitHub issue for security vulnerabilities.**
+Use [GitHub private vulnerability reporting](https://github.com/kaungzinye/finally/security/advisories/new). Do not open a public issue for a suspected vulnerability.
 
-Instead, email **kaungzinye11@gmail.com** with:
+If GitHub private reporting is unavailable, email `kaungzinye11@gmail.com` with the subject `Finally security report`.
 
-- Description of the vulnerability
-- Steps to reproduce
-- Impact assessment (what an attacker could access or do)
-- Your suggested fix, if any
+Include:
 
-We aim to acknowledge reports within **72 hours** and will keep you updated on remediation progress.
+- the affected commit, release, or deployed component;
+- steps to reproduce with sensitive values removed;
+- the impact and data at risk;
+- any known workaround or suggested fix;
+- a safe way to contact you.
+
+You should receive an acknowledgement within 72 hours. Triage and remediation timing depends on severity and reproducibility. The project will coordinate disclosure with the reporter when practical.
 
 ## Scope
 
-In scope:
+Reports are in scope when they affect:
 
-- OAuth token exchange or callback handling in `vercel-notion-auth/`
-- Notion token storage or leakage in the iOS app
-- Authentication or authorization bypasses
-- Injection or data exfiltration via sync/API handling
+- OAuth callback or token exchange handling;
+- Keychain credential storage;
+- task or project authorization and provider isolation;
+- the widget or app-group data boundary;
+- notification data exposure;
+- Finally Server authentication used by the iOS client;
+- code in this repository that exposes private task or calendar data.
 
-Out of scope:
+Report vulnerabilities in Notion, Apple, Vercel, Google, or another independent service to that provider unless Finally's code causes the exposure.
 
-- Denial-of-service against Notion's API
-- Social engineering
-- Issues in third-party services (Notion, Vercel) — report those to the vendor directly
+## Research guidelines
 
-## Safe harbor
+Use accounts, devices, workspaces, and servers you own or have permission to test. Avoid privacy violations, service disruption, social engineering, and access to other people's data. Stop testing and report the issue if you encounter private data.
 
-We appreciate responsible disclosure and will not pursue legal action against researchers who report issues in good faith and allow reasonable time for a fix before public disclosure.
+The maintainer will not pursue action against good-faith research that follows these guidelines and gives the project a reasonable opportunity to address the report. This statement does not authorize testing against third-party services.

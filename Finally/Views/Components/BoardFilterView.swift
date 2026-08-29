@@ -1,7 +1,7 @@
 import SwiftUI
 import SwiftData
 
-struct KanbanFilterView: View {
+struct BoardFilterView: View {
     @Query(sort: \ProjectItem.title) private var projects: [ProjectItem]
     @Query private var sessions: [UserSession]
     @Binding var filterProjects: Set<String>

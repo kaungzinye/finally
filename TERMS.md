@@ -1,32 +1,29 @@
-# Terms of Use — Finally
+# Terms of use for Finally
 
-**Last updated**: March 13, 2026
+Last updated: August 27, 2026
 
-## Acceptance
+## The software
 
-By using Finally, you agree to these terms.
+Finally is open-source software for managing tasks through Notion or a Finally Server selected by the user. The source code is licensed under the [MIT License](LICENSE). That license governs copying, modification, and distribution of the source code.
 
-## What Finally Does
+## Your accounts and data
 
-Finally is a free, open-source iOS app that helps you manage tasks stored in your Notion workspace. It reads and writes to Notion databases you grant access to. Source code is available under the [MIT License](LICENSE).
+You are responsible for the accounts, workspaces, servers, and calendars you connect. Connect only systems you own or have permission to use. Keep backups of important data and review changes made through synchronization.
 
-## Your Responsibilities
+Finally relies on services operated by Apple, Notion, Vercel, Google, and independent Finally Server operators. Their availability, data handling, and terms are outside this project's control.
 
-- You are responsible for your Notion account and workspace.
-- You grant Finally permission to access your Notion workspace through Notion's official OAuth flow. You can revoke this at any time from Notion's settings or from within the app.
+## No warranty
 
-## No Warranty
+The software is provided as is, without warranty. Sync conflicts, provider changes, configuration errors, or software defects may delay, alter, duplicate, or delete data.
 
-Finally is provided "as is" without warranty of any kind. We are not responsible for data loss, sync errors, or any issues arising from use of the app. Always keep backups of important data in Notion.
+## Limitation of liability
 
-## Limitation of Liability
-
-To the maximum extent permitted by law, the developers of Finally shall not be liable for any damages arising from the use of this app.
+To the maximum extent permitted by applicable law, the authors and copyright holders are not liable for claims or damages arising from use of the software. The full warranty disclaimer and liability terms are in the MIT License.
 
 ## Changes
 
-We may update these terms. Continued use of the app constitutes acceptance of updated terms.
+These terms may change with a published repository update. The version included with a release applies to that release.
 
 ## Contact
 
-Questions? Open an issue at [github.com/kaungzinye/finally](https://github.com/kaungzinye/finally) or email kaungzinye11@gmail.com.
+Use [SUPPORT.md](SUPPORT.md) for help and [SECURITY.md](SECURITY.md) for vulnerability reports.

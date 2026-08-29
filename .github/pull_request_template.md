@@ -1,40 +1,22 @@
-## Summary
+## What changes
 
-<!-- What does this PR change and why? Link issues: Fixes #123 -->
+<!-- Explain the behavior and why it belongs in Finally. Link an issue with Fixes #123 when applicable. -->
 
-## Component
+## Verification
 
-- [ ] iOS app (`Finally/`, `FinallyWidget/`, `FinallyTests/`)
-- [ ] OAuth relay (`vercel-notion-auth/`)
-- [ ] Specs / documentation
-- [ ] Other
+- [ ] The `Finally` app target compiles.
+- [ ] The `Finally` test target compiles.
+- [ ] Relevant tests pass, or the reason they did not run is recorded below.
+- [ ] Interface changes include screenshots or a recording.
+- [ ] Documentation, specs, privacy text, and setup instructions match the behavior.
 
-## Changes
+Verification notes:
 
--
+## Contributor checklist
 
-## Testing
-
-- [ ] `xcodebuild build` passes (iOS changes)
-- [ ] `xcodebuild build-for-testing` passes (iOS changes)
-- [ ] Unit/integration tests added or updated
-- [ ] Manual testing performed (describe below)
-- [ ] OAuth relay: `npm run typecheck` passes
-- [ ] N/A — docs only
-
-**Manual test notes:**
-
-## Screenshots / recordings
-
-<!-- UI changes only -->
-
-## Spec updates
-
-- [ ] Updated `specs/001-notion-task-app/spec.md` and/or `tasks.md`
-- [ ] Not applicable
-
-## Checklist
-
-- [ ] PR targets **`main`**
-- [ ] No secrets, tokens, or personal credentials committed
-- [ ] Commit messages are clear and focused
+- [ ] This pull request targets `main` from a branch named `<type>/<author>/<description>`.
+- [ ] No token, OAuth code, credential, private task content, or personal calendar data is included.
+- [ ] Copied or adapted work is identified and carries every required notice.
+- [ ] I have the right to submit this work under the MIT License.
+- [ ] Meaningful AI assistance is disclosed in the description.
+- [ ] Security-sensitive details use the private process in `SECURITY.md`.

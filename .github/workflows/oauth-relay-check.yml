@@ -9,6 +9,14 @@ on:
     branches: [main]
     paths:
       - "vercel-notion-auth/**"
+      - ".github/workflows/oauth-relay-check.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: oauth-relay-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 jobs:
   typecheck:
@@ -18,9 +26,9 @@ jobs:
         working-directory: vercel-notion-auth
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
         with:
           node-version: "20"
           cache: npm
