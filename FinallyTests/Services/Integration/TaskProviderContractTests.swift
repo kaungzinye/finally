@@ -147,6 +147,7 @@ final class TaskProviderContractTests: XCTestCase {
         XCTAssertFalse(task.isDirty)
     }
 
+    @MainActor
     func testConcurrentDuplicateMutationSubmissionsShareOneProviderCall() async throws {
         let adapter = BlockingTaskProviderAdapter()
         let coordinator = TaskProviderCoordinator(adapter: adapter)
@@ -158,11 +159,11 @@ final class TaskProviderContractTests: XCTestCase {
         context.insert(workspace)
         context.insert(task)
 
-        let first = Task {
+        let first = Task { @MainActor in
             try await coordinator.submitPendingChanges(for: [task], store: context)
         }
         await adapter.waitUntilStarted()
-        let duplicate = Task {
+        let duplicate = Task { @MainActor in
             try await coordinator.submitPendingChanges(for: [task], store: context)
         }
         await Task.yield()
@@ -174,6 +175,47 @@ final class TaskProviderContractTests: XCTestCase {
         try await duplicate.value
         let callsAfterRelease = await adapter.callCount
         XCTAssertEqual(callsAfterRelease, 1)
+    }
+
+    func testChangeDirtiedDuringAnInFlightPushStillReachesTheProvider() async throws {
+        let adapter = DirtyDrainingTaskProviderAdapter()
+        let coordinator = TaskProviderCoordinator(adapter: adapter)
+        let context = try makeInMemoryContext()
+        let workspace = UserSession(workspaceId: "workspace", workspaceName: "Workspace", providerIdentity: .notion)
+        let early = TaskItem(externalTaskID: "task-1", title: "Read before the push")
+        early.providerWorkspaceId = workspace.workspaceId
+        early.isDirty = true
+        context.insert(workspace)
+        context.insert(early)
+        try context.save()
+
+        let inFlight = Task { @MainActor in
+            try await coordinator.submitPendingChanges(for: [early], store: context)
+        }
+        await adapter.waitUntilFirstArrival()
+
+        let late = TaskItem(externalTaskID: "task-2", title: "Dirtied mid flight")
+        late.providerWorkspaceId = workspace.workspaceId
+        late.isDirty = true
+        context.insert(late)
+        try context.save()
+
+        let joining = Task { @MainActor in
+            try await coordinator.submitPendingChanges(for: [late], store: context)
+        }
+        try await Task.sleep(for: .milliseconds(50))
+        await adapter.open()
+        try await inFlight.value
+        try await joining.value
+
+        let arrivals = await adapter.arrivals
+        XCTAssertEqual(arrivals, 2)
+        XCTAssertEqual(
+            adapter.observedDirtyTitles,
+            [["Read before the push"], ["Dirtied mid flight"]]
+        )
+        XCTAssertFalse(early.isDirty)
+        XCTAssertFalse(late.isDirty)
     }
 
     func testNotionAdapterReportsProviderNeutralIdentityAndCapabilities() {
@@ -673,8 +715,75 @@ private final class BlockingTaskProviderAdapter: TaskProviderAdapter {
     }
 }
 
+/// Stands in for a provider push that reads its dirty list once, at the moment it starts.
+private final class DirtyDrainingTaskProviderAdapter: TaskProviderAdapter {
+    let providerIdentity = TaskProviderIdentity.finallyServer
+    let capabilities: Set<TaskProviderCapability> = [.createTasks, .updateTasks]
+    private(set) var observedDirtyTitles: [[String]] = []
+    private let gate = DirtyDrainingGate()
+
+    var arrivals: Int {
+        get async { await gate.arrivals }
+    }
+
+    func workspaceIdentity(for workspace: UserSession) -> ProviderWorkspaceIdentity {
+        ProviderWorkspaceIdentity(provider: providerIdentity, externalID: workspace.workspaceId)
+    }
+
+    func taskIdentity(for task: TaskItem, in workspace: ProviderWorkspaceIdentity) -> ProviderTaskIdentity {
+        ProviderTaskIdentity(workspace: workspace, externalID: task.externalTaskID)
+    }
+
+    func synchronize(
+        _ intent: TaskProviderSyncIntent,
+        workspace: UserSession?,
+        store: ModelContext
+    ) async throws {
+        let dirtyTasks = try store.fetch(FetchDescriptor<TaskItem>()).filter(\.isDirty)
+        observedDirtyTitles.append(dirtyTasks.map(\.title).sorted())
+        await gate.arrive()
+        dirtyTasks.forEach { $0.isDirty = false }
+        try store.save()
+    }
+
+    func waitUntilFirstArrival() async {
+        await gate.waitUntilFirstArrival()
+    }
+
+    func open() async {
+        await gate.open()
+    }
+}
+
+private actor DirtyDrainingGate {
+    private(set) var arrivals = 0
+    private var isOpen = false
+    private var arrivalWaiters: [CheckedContinuation<Void, Never>] = []
+    private var releaseWaiters: [CheckedContinuation<Void, Never>] = []
+
+    func arrive() async {
+        arrivals += 1
+        arrivalWaiters.forEach { $0.resume() }
+        arrivalWaiters.removeAll()
+        guard !isOpen else { return }
+        await withCheckedContinuation { releaseWaiters.append($0) }
+    }
+
+    func waitUntilFirstArrival() async {
+        if arrivals > 0 { return }
+        await withCheckedContinuation { arrivalWaiters.append($0) }
+    }
+
+    func open() {
+        isOpen = true
+        releaseWaiters.forEach { $0.resume() }
+        releaseWaiters.removeAll()
+    }
+}
+
 private actor BlockingTaskProviderState {
     private(set) var callCount = 0
+    private var isReleased = false
     private var startedContinuations: [CheckedContinuation<Void, Never>] = []
     private var releaseContinuations: [CheckedContinuation<Void, Never>] = []
 
@@ -682,6 +791,8 @@ private actor BlockingTaskProviderState {
         callCount += 1
         startedContinuations.forEach { $0.resume() }
         startedContinuations.removeAll()
+        // Latching the release lets a surplus provider call finish so its count fails the test.
+        guard !isReleased else { return }
         await withCheckedContinuation { continuation in
             releaseContinuations.append(continuation)
         }
@@ -695,6 +806,7 @@ private actor BlockingTaskProviderState {
     }
 
     func release() {
+        isReleased = true
         releaseContinuations.forEach { $0.resume() }
         releaseContinuations.removeAll()
     }

@@ -173,12 +173,18 @@ final class TaskProviderCoordinator {
         let workspaceID: String
     }
 
+    /// A run in flight, paired with the dirty records it could see when it started.
+    private struct ActiveSynchronization {
+        let task: Task<Void, Error>
+        let visibleDirtyTaskIDs: Set<PersistentIdentifier>
+    }
+
     let providerIdentity: TaskProviderIdentity
     let capabilities: Set<TaskProviderCapability>
     private let synchronizeProvider: ((TaskProviderSyncIntent, UserSession?, ModelContext) async throws -> Void)?
     private let notionAdapter: SyncService
     private let credentials: FinallyServerCredentialStore
-    @ObservationIgnored private var activeSynchronizations: [SynchronizationKey: Task<Void, Error>] = [:]
+    @ObservationIgnored private var activeSynchronizations: [SynchronizationKey: ActiveSynchronization] = [:]
 
     var isSyncing = false
     var lastError: String?
@@ -226,21 +232,43 @@ final class TaskProviderCoordinator {
             intent: intent,
             workspaceID: selectedWorkspace?.workspaceId ?? "launch"
         )
-        if let activeSynchronization = activeSynchronizations[key] {
-            try await activeSynchronization.value
-            return
+        // An in-flight push read its dirty list when it started. A record dirtied after that read
+        // is invisible to it, so joining the push and returning would report success over a change
+        // that never left the device. Join the push, then run again for whatever it could not see.
+        while let activeSynchronization = activeSynchronizations[key] {
+            try await activeSynchronization.task.value
+            guard intent == .push else { return }
+            let unseen = try pendingChangeIdentifiers(workspace: selectedWorkspace, store: store)
+                .subtracting(activeSynchronization.visibleDirtyTaskIDs)
+            guard !unseen.isEmpty else { return }
         }
 
+        try await runSynchronization(intent, workspace: selectedWorkspace, store: store, key: key)
+    }
+
+    @MainActor
+    private func runSynchronization(
+        _ intent: TaskProviderSyncIntent,
+        workspace: UserSession?,
+        store: ModelContext,
+        key: SynchronizationKey
+    ) async throws {
+        let visibleDirtyTaskIDs = try pendingChangeIdentifiers(workspace: workspace, store: store)
         let synchronization = Task { [self] in
-            try await performSynchronization(intent, workspace: selectedWorkspace, store: store)
+            // Release the slot as the provider run finishes so a waiting push can start a
+            // follow-up run for changes that arrived in flight.
+            defer {
+                activeSynchronizations.removeValue(forKey: key)
+                isSyncing = !activeSynchronizations.isEmpty
+            }
+            try await performSynchronization(intent, workspace: workspace, store: store)
         }
-        activeSynchronizations[key] = synchronization
+        activeSynchronizations[key] = ActiveSynchronization(
+            task: synchronization,
+            visibleDirtyTaskIDs: visibleDirtyTaskIDs
+        )
         isSyncing = true
         lastError = nil
-        defer {
-            activeSynchronizations.removeValue(forKey: key)
-            isSyncing = !activeSynchronizations.isEmpty
-        }
         do {
             try await synchronization.value
             try? WidgetTaskSnapshotStore.publish(store: store)
@@ -250,6 +278,23 @@ final class TaskProviderCoordinator {
             lastError = error.localizedDescription
             throw error
         }
+    }
+
+    private func pendingChangeIdentifiers(
+        workspace: UserSession?,
+        store: ModelContext
+    ) throws -> Set<PersistentIdentifier> {
+        let dirtyTasks = try store.fetch(
+            FetchDescriptor<TaskItem>(predicate: #Predicate { $0.isDirty == true })
+        )
+        guard let workspaceID = workspace?.workspaceId else {
+            return Set(dirtyTasks.map(\.persistentModelID))
+        }
+        return Set(
+            dirtyTasks
+                .filter { $0.providerWorkspaceId == workspaceID }
+                .map(\.persistentModelID)
+        )
     }
 
     @MainActor
