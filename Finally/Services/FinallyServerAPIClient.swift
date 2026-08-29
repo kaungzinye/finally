@@ -130,14 +130,14 @@ final class URLSessionFinallyServerAPIClient: FinallyServerAPIClient {
         let title: String
         let done: Bool
         let startDate: String?
-        let dueDate: String?
+        let deadline: String?
         let priority: Int64?
 
         enum CodingKeys: String, CodingKey {
             case id, title, done
             case projectID = "project_id"
             case startDate = "start_date"
-            case dueDate = "due_date"
+            case deadline = "due_date"
             case priority
         }
 
@@ -148,7 +148,7 @@ final class URLSessionFinallyServerAPIClient: FinallyServerAPIClient {
                 title: title,
                 isCompleted: done,
                 plannedDay: Self.parseDate(startDate),
-                deadline: Self.parseDate(dueDate),
+                deadline: Self.parseDate(deadline),
                 priority: Self.taskPriority(priority ?? 0)
             )
         }

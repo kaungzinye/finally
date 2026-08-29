@@ -93,8 +93,8 @@ final class FinallyServerTaskProviderAdapter: TaskProviderAdapter {
             let mutation = FinallyServerTaskMutation(
                 title: task.title,
                 isCompleted: false,
-                plannedDay: task.targetDate,
-                deadline: task.dueDate,
+                plannedDay: task.plannedDay,
+                deadline: task.deadline,
                 priority: task.priority
             )
             if task.lastSyncedAt == nil {
@@ -180,13 +180,13 @@ final class FinallyServerTaskProviderAdapter: TaskProviderAdapter {
         // Finally Server carries every date as a timestamp, so a payload cannot say whether the
         // user meant a whole day or a moment. Keep the local reading while the instant is
         // unchanged, and read a genuinely new instant as timed.
-        if !isSameInstant(task.targetDate, remote.plannedDay) {
-            task.targetDate = remote.plannedDay
-            task.targetDateHasTime = remote.plannedDay != nil
+        if !isSameInstant(task.plannedDay, remote.plannedDay) {
+            task.plannedDay = remote.plannedDay
+            task.plannedDayHasTime = remote.plannedDay != nil
         }
-        if !isSameInstant(task.dueDate, remote.deadline) {
-            task.dueDate = remote.deadline
-            task.dueDateHasTime = remote.deadline != nil
+        if !isSameInstant(task.deadline, remote.deadline) {
+            task.deadline = remote.deadline
+            task.deadlineHasTime = remote.deadline != nil
         }
         task.priority = remote.priority
         let remoteProjectID = String(remote.projectID)

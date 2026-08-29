@@ -4,9 +4,9 @@ import SwiftData
 struct UpcomingView: View {
     @Query(
         filter: #Predicate<TaskItem> { task in
-            task.statusRaw != "Complete" && task.isDeleted == false && task.dueDate != nil
+            task.statusRaw != "Complete" && task.isDeleted == false && task.deadline != nil
         },
-        sort: \TaskItem.dueDate
+        sort: \TaskItem.deadline
     )
     private var allFutureTasks: [TaskItem]
     @Query private var sessions: [UserSession]
@@ -28,7 +28,7 @@ struct UpcomingView: View {
     private var upcomingTasks: [TaskItem] {
         allFutureTasks.filter {
             $0.belongs(to: sessions.selectedProviderWorkspace) &&
-                ($0.dueDate ?? .distantFuture) > Date() &&
+                ($0.deadline ?? .distantFuture) > Date() &&
                 !$0.isSubtask
         }
     }
@@ -38,13 +38,13 @@ struct UpcomingView: View {
         formatter.dateStyle = .medium
 
         let grouped = Dictionary(grouping: upcomingTasks) { task -> String in
-            guard let date = task.dueDate else { return "No Date" }
+            guard let date = task.deadline else { return "No Date" }
             return formatter.string(from: date)
         }
 
         return grouped.sorted { lhs, rhs in
-            let lhsDate = lhs.value.first?.dueDate ?? .distantFuture
-            let rhsDate = rhs.value.first?.dueDate ?? .distantFuture
+            let lhsDate = lhs.value.first?.deadline ?? .distantFuture
+            let rhsDate = rhs.value.first?.deadline ?? .distantFuture
             return lhsDate < rhsDate
         }.map { (key, tasks) in
             (key, sortStack.sorted(tasks))
@@ -144,7 +144,7 @@ struct UpcomingView: View {
                     ContentUnavailableView(
                         "No upcoming tasks",
                         systemImage: "calendar",
-                        description: Text("Tasks with due dates will appear here")
+                        description: Text("Tasks with deadlines will appear here")
                     )
                 }
             }

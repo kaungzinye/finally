@@ -189,12 +189,12 @@ struct BoardView: View {
                 .strikethrough(task.status == .done)
 
             HStack(spacing: 6) {
-                // Due date — match order used in Today/Upcoming
-                if let dueDate = task.dueDate {
+                // Match the deadline order used in Today and Upcoming.
+                if let deadline = task.deadline {
                     HStack(spacing: 2) {
                         Image(systemName: "calendar")
                             .font(.caption2)
-                        Text(formatDate(dueDate))
+                        Text(formatDate(deadline))
                             .font(.caption2)
                             .lineLimit(1)
                             .truncationMode(.tail)

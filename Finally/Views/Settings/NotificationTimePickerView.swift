@@ -41,7 +41,7 @@ struct NotificationTimePickerView: View {
             } header: {
                 Text("Default Reminder Time")
             } footer: {
-                Text("Reminders on tasks without a specific time will fire at this time on the due date. Changing this reschedules existing reminders.")
+                Text("Reminders on tasks without a specific time will fire at this time on the deadline. Changing this reschedules existing reminders.")
                     .font(.footnote)
             }
         }

@@ -13,7 +13,7 @@ struct WidgetTask: Codable, Identifiable {
     let providerWorkspaceID: String
     let externalTaskID: String
     let title: String
-    let dueDate: Date?
+    let deadline: Date?
     let priorityRaw: String?
     let isComplete: Bool
 
@@ -45,7 +45,7 @@ struct TaskTimelineProvider: TimelineProvider {
                 providerWorkspaceID: "preview",
                 externalTaskID: "1",
                 title: "Sample task",
-                dueDate: .now,
+                deadline: .now,
                 priorityRaw: "Medium",
                 isComplete: false
             ),
@@ -53,7 +53,7 @@ struct TaskTimelineProvider: TimelineProvider {
                 providerWorkspaceID: "preview",
                 externalTaskID: "2",
                 title: "Another task",
-                dueDate: .now,
+                deadline: .now,
                 priorityRaw: nil,
                 isComplete: false
             ),
@@ -137,7 +137,7 @@ struct MediumWidgetView: View {
 
             if entry.tasks.isEmpty {
                 Spacer()
-                Text("No tasks due")
+                Text("No upcoming deadlines")
                     .font(.callout)
                     .foregroundStyle(.secondary)
                     .frame(maxWidth: .infinity)
@@ -151,8 +151,8 @@ struct MediumWidgetView: View {
                             .font(.caption)
                             .lineLimit(1)
                         Spacer()
-                        if let dueDate = task.dueDate {
-                            Text(dueDate.formatted(.dateTime.month(.abbreviated).day()))
+                        if let deadline = task.deadline {
+                            Text(deadline.formatted(.dateTime.month(.abbreviated).day()))
                                 .font(.caption2)
                                 .foregroundStyle(.secondary)
                         }
@@ -215,8 +215,8 @@ struct LargeWidgetView: View {
 
                         Spacer()
 
-                        if let dueDate = task.dueDate {
-                            Text(dueDate.formatted(.dateTime.month(.abbreviated).day()))
+                        if let deadline = task.deadline {
+                            Text(deadline.formatted(.dateTime.month(.abbreviated).day()))
                                 .font(.caption2)
                                 .foregroundStyle(.secondary)
                         }

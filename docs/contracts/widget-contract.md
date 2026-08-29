@@ -7,8 +7,8 @@
 | Family | Layout | Content |
 |--------|--------|---------|
 | `.systemSmall` | Compact list | 3-4 nearest tasks with checkboxes. "+" button bottom-right. Single tap area for whole widget opens app. |
-| `.systemMedium` | Wide list | 4-6 tasks with checkbox, task name, due date. "+" button bottom-right via `Link`. |
-| `.systemLarge` | Extended list | 8-10 tasks with checkbox, task name, due date, priority color indicator. "+" button bottom-right via `Link`. |
+| `.systemMedium` | Wide list | 4-6 tasks with checkbox, task name, deadline. "+" button bottom-right via `Link`. |
+| `.systemLarge` | Extended list | 8-10 tasks with checkbox, task name, deadline, priority color indicator. "+" button bottom-right via `Link`. |
 
 ## Interactive Elements
 
@@ -16,7 +16,7 @@
 
 - **Mechanism**: `Toggle(isOn:intent:)` with `ToggleTaskCompleteIntent` (AppIntent)
 - **Behavior**: Optimistic UI flip → `perform()` updates shared SwiftData store → timeline auto-reloads
-- **For recurring tasks**: Advances due date instead of marking done
+- **For recurring obligations**: Advances the deadline and begins the next cycle
 
 ### "+" Add Button
 
@@ -30,4 +30,4 @@
 - **Storage**: SwiftData `ModelContainer` at shared container path
 - **Widget reads only**: Writes via AppIntents (run in main app process)
 - **Refresh trigger**: `WidgetCenter.shared.reloadTimelines(ofKind: "TaskListWidget")` on every data change
-- **Timeline policy**: `.atEnd` with entries at each upcoming task due time
+- **Timeline policy**: `.atEnd` with entries at each upcoming task deadline

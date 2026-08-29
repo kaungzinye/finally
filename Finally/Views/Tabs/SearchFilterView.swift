@@ -2,7 +2,7 @@ import SwiftUI
 import SwiftData
 
 struct SearchFilterView: View {
-    @Query(sort: \TaskItem.dueDate) private var allTasks: [TaskItem]
+    @Query(sort: \TaskItem.deadline) private var allTasks: [TaskItem]
     @Query private var sessions: [UserSession]
     @State private var searchText = ""
 

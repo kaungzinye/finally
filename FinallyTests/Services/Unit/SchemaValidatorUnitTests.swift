@@ -21,7 +21,7 @@ final class SchemaValidatorUnitTests: XCTestCase {
 
         XCTAssertTrue(result.isValid)
         XCTAssertEqual(mappings.taskStatusProperty, "Status")
-        XCTAssertEqual(mappings.taskDueDateProperty, "Due Date")
+        XCTAssertEqual(mappings.taskDeadlineProperty, "Due Date")
         XCTAssertEqual(mappings.taskPriorityProperty, "Priority")
         XCTAssertEqual(mappings.taskTagsProperty, "Tags")
         XCTAssertEqual(mappings.taskProjectProperty, "Project")
@@ -112,7 +112,7 @@ final class SchemaValidatorUnitTests: XCTestCase {
         XCTAssertTrue(result.issues.contains { $0.propertyName == "Status" && $0.expectedType == "status" })
     }
 
-    func testValidateTasksDatabase_WhenDueDateTypeIsWrong_ReturnsExplicitMismatchError() async throws {
+    func testValidateTasksDatabase_WhenDeadlineTypeIsWrong_ReturnsExplicitMismatchError() async throws {
         let mock = MockNotionAPIClient()
         mock.retrieveDatabaseQueue = [
             NotionTestFactory.makeDatabase(properties: [
@@ -145,8 +145,8 @@ final class SchemaValidatorUnitTests: XCTestCase {
         let (result, mappings) = try await validator.validateTasksDatabase(id: "tasks-db")
 
         XCTAssertTrue(result.isValid)
-        XCTAssertEqual(Set(result.ambiguousDueDateCandidates), Set(["Start", "End"]))
-        XCTAssertEqual(result.ambiguousDueDateCandidates, ["End", "Start"])
-        XCTAssertEqual(mappings.taskDueDateProperty, "End")
+        XCTAssertEqual(Set(result.ambiguousDeadlineCandidates), Set(["Start", "End"]))
+        XCTAssertEqual(result.ambiguousDeadlineCandidates, ["End", "Start"])
+        XCTAssertEqual(mappings.taskDeadlineProperty, "End")
     }
 }

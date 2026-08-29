@@ -9,7 +9,7 @@ struct ValidationResult {
 
     var isValid: Bool { issues.isEmpty }
     var issues: [Issue] = []
-    var ambiguousDueDateCandidates: [String] = []
+    var ambiguousDeadlineCandidates: [String] = []
 }
 
 final class SchemaValidator {
@@ -58,10 +58,10 @@ final class SchemaValidator {
             ))
         }
 
-        // Required: Date property for due date
+        // Required Notion date property for the deadline
         if let explicitDueProp = property(named: "Due Date", in: database.properties) {
             if explicitDueProp.value.type == "date" {
-                mappings.taskDueDateProperty = explicitDueProp.key
+                mappings.taskDeadlineProperty = explicitDueProp.key
             } else {
                 result.issues.append(.init(
                     propertyName: explicitDueProp.key,
@@ -74,15 +74,15 @@ final class SchemaValidator {
                 .filter { $0.value.type == "date" }
                 .sorted { $0.key.localizedCaseInsensitiveCompare($1.key) == .orderedAscending }
             if dateProps.count == 1 {
-                mappings.taskDueDateProperty = dateProps.first!.key
+                mappings.taskDeadlineProperty = dateProps.first!.key
             } else if dateProps.count > 1 {
             // Multiple date properties — will need user selection
             // Default to common names
                 if let match = dateProps.first(where: { $0.key.lowercased().contains("due") }) {
-                    mappings.taskDueDateProperty = match.key
+                    mappings.taskDeadlineProperty = match.key
                 } else {
-                    mappings.taskDueDateProperty = dateProps.first!.key
-                    result.ambiguousDueDateCandidates = dateProps.map(\.key)
+                    mappings.taskDeadlineProperty = dateProps.first!.key
+                    result.ambiguousDeadlineCandidates = dateProps.map(\.key)
                 }
             } else {
                 result.issues.append(.init(
@@ -93,13 +93,13 @@ final class SchemaValidator {
             }
         }
 
-        // Optional: Target date (secondary planning date)
+        // Optional Notion date property for the planned day
         if let targetProp = database.properties.first(where: {
             ($0.key.lowercased().contains("target") || $0.key.lowercased() == "start") && $0.value.type == "date"
         }) {
-            mappings.taskTargetDateProperty = targetProp.key
+            mappings.taskPlannedDayProperty = targetProp.key
         } else {
-            mappings.taskTargetDateProperty = nil
+            mappings.taskPlannedDayProperty = nil
         }
 
         // Optional: Parent task relation (subtasks)

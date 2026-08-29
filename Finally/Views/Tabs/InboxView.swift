@@ -6,7 +6,7 @@ struct InboxView: View {
         filter: #Predicate<TaskItem> { task in
             task.statusRaw != "Complete" && task.isDeleted == false
         },
-        sort: \TaskItem.dueDate
+        sort: \TaskItem.deadline
     )
     private var allNonDoneTasks: [TaskItem]
     @Query private var sessions: [UserSession]

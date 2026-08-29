@@ -26,7 +26,7 @@ struct BrowseProjectsView: View {
     }
 
     private var backlogTasks: [TaskItem] {
-        sortStack.sorted(selectedTasks.filter { $0.dueDate == nil })
+        sortStack.sorted(selectedTasks.filter { $0.deadline == nil })
     }
 
     private var selectedWorkspace: UserSession? { sessions.selectedProviderWorkspace }
@@ -61,7 +61,7 @@ struct BrowseProjectsView: View {
                     collapsibleHeader("Inbox", icon: "tray")
                 }
 
-                // Backlog section — tasks without a due date
+                // Backlog section — tasks without a deadline
                 Section {
                     if expandedSections.contains("Backlog") {
                         if backlogTasks.isEmpty {

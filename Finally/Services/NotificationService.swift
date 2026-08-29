@@ -54,21 +54,21 @@ final class NotificationService {
     }
 
     func notificationBody(for task: TaskItem, using currentDate: Date) -> String {
-        guard let dueDate = task.dueDate else { return "" }
+        guard let deadline = task.deadline else { return "" }
         let cal = Calendar.current
-        if task.dueDateHasTime {
-            let timeStr = dueDate.formatted(date: .omitted, time: .shortened)
-            return "Due at \(timeStr)"
+        if task.deadlineHasTime {
+            let timeStr = deadline.formatted(date: .omitted, time: .shortened)
+            return "Deadline at \(timeStr)"
         }
-        if cal.isDate(dueDate, inSameDayAs: currentDate) {
-            return "Due today"
+        if cal.isDate(deadline, inSameDayAs: currentDate) {
+            return "Deadline today"
         }
         if let tomorrow = cal.date(byAdding: .day, value: 1, to: currentDate),
-           cal.isDate(dueDate, inSameDayAs: tomorrow) {
-            return "Due tomorrow"
+           cal.isDate(deadline, inSameDayAs: tomorrow) {
+            return "Deadline tomorrow"
         }
-        let dateStr = dueDate.formatted(date: .abbreviated, time: .omitted)
-        return "Due \(dateStr)"
+        let dateStr = deadline.formatted(date: .abbreviated, time: .omitted)
+        return "Deadline \(dateStr)"
     }
 
     func scheduleReminder(for task: TaskItem, reminder: TaskReminder, defaultReminderMinutes: Int? = nil) {
