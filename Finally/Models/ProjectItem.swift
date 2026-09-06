@@ -3,7 +3,7 @@ import SwiftData
 
 @Model
 final class ProjectItem {
-    @Attribute(.unique) var notionPageId: String
+    var externalProjectID: String
     var title: String
     var iconEmoji: String?
     var lastEditedTime: Date?
@@ -13,8 +13,8 @@ final class ProjectItem {
     @Relationship(deleteRule: .nullify, inverse: \TaskItem.project)
     var tasks: [TaskItem] = []
 
-    init(notionPageId: String, title: String, iconEmoji: String? = nil) {
-        self.notionPageId = notionPageId
+    init(externalProjectID: String, title: String, iconEmoji: String? = nil) {
+        self.externalProjectID = externalProjectID
         self.title = title
         self.iconEmoji = iconEmoji
     }

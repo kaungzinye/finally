@@ -182,7 +182,7 @@ final class PropertyRoundtripE2ETests: NotionE2ETestCase {
 
         let projectId = projectPage.id
         let projectDescriptor = FetchDescriptor<ProjectItem>(
-            predicate: #Predicate<ProjectItem> { $0.notionPageId == projectId }
+            predicate: #Predicate<ProjectItem> { $0.externalProjectID == projectId }
         )
         let localProject = try XCTUnwrap(try modelContext.fetch(projectDescriptor).first)
 
@@ -194,6 +194,6 @@ final class PropertyRoundtripE2ETests: NotionE2ETestCase {
         // Full sync again and verify the relation roundtrips
         try await syncService.fullSync(session: session, modelContext: modelContext)
         let synced = try XCTUnwrap(try fetchTask(externalTaskID: task.externalTaskID))
-        XCTAssertEqual(synced.project?.notionPageId, projectPage.id)
+        XCTAssertEqual(synced.project?.externalProjectID, projectPage.id)
     }
 }

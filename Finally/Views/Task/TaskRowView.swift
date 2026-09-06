@@ -4,6 +4,7 @@ import SwiftData
 struct TaskRowView: View {
     @Bindable var task: TaskItem
     @Environment(\.modelContext) private var modelContext
+    @Environment(TaskProviderCoordinator.self) private var taskProvider
 
     @State private var showDatePicker = false
     @State private var showPriorityPicker = false
@@ -16,20 +17,23 @@ struct TaskRowView: View {
         guard let dueDate = task.dueDate else { return "—" }
 
         let calendar = Calendar.current
+        let time = task.dueDateHasTime
+            ? " \(dueDate.formatted(date: .omitted, time: .shortened))"
+            : ""
         if calendar.isDateInToday(dueDate) {
-            return "Today"
+            return "Today\(time)"
         } else if calendar.isDateInTomorrow(dueDate) {
-            return "Tomorrow"
+            return "Tomorrow\(time)"
         } else if calendar.isDateInYesterday(dueDate) {
-            return "Yesterday"
+            return "Yesterday\(time)"
         } else {
             let daysFromNow = calendar.dateComponents([.day], from: calendar.startOfDay(for: Date()), to: dueDate).day ?? 0
             if daysFromNow > 0 && daysFromNow <= 6 {
                 let formatter = DateFormatter()
                 formatter.dateFormat = "EEEE"
-                return formatter.string(from: dueDate)
+                return formatter.string(from: dueDate) + time
             } else {
-                return dueDate.formatted(.dateTime.month(.abbreviated).day())
+                return dueDate.formatted(.dateTime.month(.abbreviated).day()) + time
             }
         }
     }
@@ -51,6 +55,7 @@ struct TaskRowView: View {
                             NotificationService.shared.cancelRemindersForTask(task)
                         }
                     }
+                    submitTaskMutation()
                 } label: {
                     Image(systemName: task.status == .done ? "checkmark.circle.fill" : "circle")
                         .font(.title3)
@@ -122,13 +127,13 @@ struct TaskRowView: View {
                 .font(.caption)
                 .buttonStyle(.plain)
 
-                // Tags — only show if not empty, with Notion colors
+                // Tags
                 if !task.tags.isEmpty {
                     Button { showTagPicker = true } label: {
                         HStack(spacing: 4) {
                             ForEach(Array(task.tags.prefix(2).enumerated()), id: \.offset) { index, tag in
                                 let colorName = index < task.tagColors.count ? task.tagColors[index] : "default"
-                                let tagColor = NotionColor.swiftUIColor(for: colorName)
+                                let tagColor = TaskTagColor.swiftUIColor(for: colorName)
                                 Text(tag)
                                     .padding(.horizontal, 4)
                                     .padding(.vertical, 1)
@@ -194,6 +199,7 @@ struct TaskRowView: View {
                         NotificationService.shared.cancelRemindersForTask(task)
                     }
                 }
+                submitTaskMutation()
             } label: {
                 Label("Complete", systemImage: "checkmark")
             }
@@ -208,7 +214,7 @@ struct TaskRowView: View {
             .tint(.orange)
         }
         .sheet(isPresented: $showDatePicker) {
-            DatePickerSheet(selectedDate: dueDateBinding)
+            DatePickerSheet(selectedDate: dueDateBinding, hasTime: dueDateHasTimeBinding)
         }
         .sheet(isPresented: $showPriorityPicker) {
             PriorityPicker(selection: priorityBinding)
@@ -236,42 +242,55 @@ struct TaskRowView: View {
     private var dueDateBinding: Binding<Date?> {
         Binding(
             get: { task.dueDate },
-            set: { task.dueDate = $0; task.isDirty = true }
+            set: { task.dueDate = $0; task.isDirty = true; submitTaskMutation() }
         )
     }
 
     private var priorityBinding: Binding<TaskPriority?> {
         Binding(
             get: { task.priority },
-            set: { task.priority = $0; task.isDirty = true }
+            set: { task.priority = $0; task.isDirty = true; submitTaskMutation() }
+        )
+    }
+
+    private var dueDateHasTimeBinding: Binding<Bool> {
+        Binding(
+            get: { task.dueDateHasTime },
+            set: { task.dueDateHasTime = $0; task.isDirty = true; submitTaskMutation() }
         )
     }
 
     private var tagsBinding: Binding<[String]> {
         Binding(
             get: { task.tags },
-            set: { task.tags = $0; task.isDirty = true }
+            set: { task.tags = $0; task.isDirty = true; submitTaskMutation() }
         )
     }
 
     private var projectBinding: Binding<ProjectItem?> {
         Binding(
             get: { task.project },
-            set: { task.project = $0; task.isDirty = true }
+            set: { task.project = $0; task.isDirty = true; submitTaskMutation() }
         )
     }
 
     private var recurrenceBinding: Binding<Recurrence> {
         Binding(
             get: { task.recurrence },
-            set: { task.recurrence = $0; task.isDirty = true }
+            set: { task.recurrence = $0; task.isDirty = true; submitTaskMutation() }
         )
     }
 
     private var customRecurrenceBinding: Binding<RecurrenceRule?> {
         Binding(
             get: { task.customRecurrenceRule },
-            set: { task.customRecurrenceRule = $0; task.isDirty = true }
+            set: { task.customRecurrenceRule = $0; task.isDirty = true; submitTaskMutation() }
         )
+    }
+
+    private func submitTaskMutation() {
+        Task {
+            await taskProvider.submitPendingChangesReportingFailure(for: [task], store: modelContext)
+        }
     }
 }

@@ -206,7 +206,7 @@ struct UpcomingView: View {
             task.isDeleted = true
             task.isDirty = true
         }
-        try? modelContext.save()
+        submitMutations(tasksToDelete)
         withAnimation {
             isSelectionMode = false
             selectedTasks.removeAll()
@@ -223,10 +223,16 @@ struct UpcomingView: View {
                 NotificationService.shared.cancelRemindersForTask(task)
             }
         }
-        try? modelContext.save()
+        submitMutations(tasksToComplete)
         withAnimation {
             isSelectionMode = false
             selectedTasks.removeAll()
+        }
+    }
+
+    private func submitMutations(_ tasks: [TaskItem]) {
+        Task {
+            await taskProvider.submitPendingChangesReportingFailure(for: tasks, store: modelContext)
         }
     }
 }

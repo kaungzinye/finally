@@ -23,9 +23,24 @@ final class MockFinallyServerAPIClient: FinallyServerAPIClient {
         return projects
     }
 
-    func createTask(projectID: Int64, title: String) async throws -> FinallyServerTask {
+    func listTasks(projectID: Int64) async throws -> [FinallyServerTask] {
         if let error { throw error }
-        let task = FinallyServerTask(id: String(nextTaskID), projectID: projectID, title: title, isCompleted: false)
+        return tasks.values
+            .filter { $0.projectID == projectID }
+            .sorted { $0.id.localizedStandardCompare($1.id) == .orderedAscending }
+    }
+
+    func createTask(projectID: Int64, mutation: FinallyServerTaskMutation) async throws -> FinallyServerTask {
+        if let error { throw error }
+        let task = FinallyServerTask(
+            id: String(nextTaskID),
+            projectID: projectID,
+            title: mutation.title,
+            isCompleted: mutation.isCompleted,
+            plannedDay: mutation.plannedDay,
+            deadline: mutation.deadline,
+            priority: mutation.priority
+        )
         nextTaskID += 1
         tasks[task.id] = task
         return task
@@ -37,7 +52,7 @@ final class MockFinallyServerAPIClient: FinallyServerAPIClient {
         return task
     }
 
-    func updateTask(id: String, title: String, isCompleted: Bool) async throws -> FinallyServerTask {
+    func updateTask(id: String, mutation: FinallyServerTaskMutation) async throws -> FinallyServerTask {
         taskOperations.append("update")
         if let updateError { throw updateError }
         if let error { throw error }
@@ -45,8 +60,11 @@ final class MockFinallyServerAPIClient: FinallyServerAPIClient {
         let task = FinallyServerTask(
             id: current.id,
             projectID: current.projectID,
-            title: title,
-            isCompleted: isCompleted
+            title: mutation.title,
+            isCompleted: mutation.isCompleted,
+            plannedDay: mutation.plannedDay,
+            deadline: mutation.deadline,
+            priority: mutation.priority
         )
         tasks[id] = task
         return task
@@ -61,7 +79,10 @@ final class MockFinallyServerAPIClient: FinallyServerAPIClient {
             id: current.id,
             projectID: current.projectID,
             title: current.title,
-            isCompleted: true
+            isCompleted: true,
+            plannedDay: current.plannedDay,
+            deadline: current.deadline,
+            priority: current.priority
         )
         tasks[id] = task
         return task

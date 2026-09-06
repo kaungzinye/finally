@@ -60,7 +60,7 @@ struct ProjectPicker: View {
                             }
                             Text(project.title)
                             Spacer()
-                            if selection?.notionPageId == project.notionPageId {
+                            if selection?.externalProjectID == project.externalProjectID {
                                 Image(systemName: "checkmark")
                                     .foregroundStyle(.primary)
                             }

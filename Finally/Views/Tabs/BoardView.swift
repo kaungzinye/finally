@@ -22,7 +22,7 @@ struct BoardView: View {
 
     private var filteredTasks: [TaskItem] {
         topLevelTasks.filter { task in
-            (filterProjects.isEmpty || filterProjects.contains(task.project?.notionPageId ?? "")) &&
+            (filterProjects.isEmpty || filterProjects.contains(task.project?.externalProjectID ?? "")) &&
             (filterPriorities.isEmpty || filterPriorities.contains(task.priorityRaw ?? ""))
         }
     }
@@ -160,10 +160,13 @@ struct BoardView: View {
         .clipShape(RoundedRectangle(cornerRadius: 12))
         .dropDestination(for: String.self) { droppedIds, _ in
             guard let taskId = droppedIds.first,
-                  let task = allTasks.first(where: { $0.externalTaskID == taskId }) else { return false }
+                  let task = topLevelTasks.first(where: { $0.externalTaskID == taskId }) else { return false }
             withAnimation {
                 task.status = status
                 task.isDirty = true
+            }
+            Task {
+                await taskProvider.submitPendingChangesReportingFailure(for: [task], store: modelContext)
             }
             draggingTaskId = nil
             let generator = UINotificationFeedbackGenerator()
@@ -239,7 +242,7 @@ struct BoardView: View {
                                 let colorName = index < task.tagColors.count ? task.tagColors[index] : "default"
                                 Text(tag)
                                     .font(.caption2)
-                                    .foregroundStyle(NotionColor.swiftUIColor(for: colorName))
+                                    .foregroundStyle(TaskTagColor.swiftUIColor(for: colorName))
                                     .lineLimit(1)
                                     .truncationMode(.tail)
                             }

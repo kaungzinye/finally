@@ -84,12 +84,12 @@ struct BrowseProjectsView: View {
                 Section {
                     if expandedSections.contains("Projects") {
                         if selectedProjects.isEmpty {
-                            Text("No projects from Notion")
+                            Text("No projects")
                                 .foregroundStyle(.secondary)
                                 .font(.caption)
                         } else {
-                            ForEach(selectedProjects, id: \.notionPageId) { project in
-                                NavigationLink(value: project.notionPageId) {
+                            ForEach(selectedProjects, id: \.externalProjectID) { project in
+                                NavigationLink(value: project.externalProjectID) {
                                     HStack {
                                         if let emoji = project.iconEmoji {
                                             Text(emoji)
@@ -187,12 +187,12 @@ struct ProjectDetailView: View {
     @State private var showCreator = false
 
     private var project: ProjectItem? {
-        allProjects.scoped(to: sessions.selectedProviderWorkspace).first { $0.notionPageId == projectId }
+        allProjects.scoped(to: sessions.selectedProviderWorkspace).first { $0.externalProjectID == projectId }
     }
 
     private var projectTasks: [TaskItem] {
         allTasks.scoped(to: sessions.selectedProviderWorkspace).filter {
-            $0.project?.notionPageId == projectId && !$0.isDeleted
+            $0.project?.externalProjectID == projectId && !$0.isDeleted
         }
     }
 

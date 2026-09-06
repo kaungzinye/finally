@@ -41,11 +41,12 @@ final class BackendDataFlowIntegrationTests: XCTestCase {
         let syncService = SyncService(api: mock)
         let context = try makeInMemoryContext()
 
-        let session = UserSession(workspaceId: "ws-1", workspaceName: "Workspace")
+        let session = UserSession(workspaceId: "ws-1", workspaceName: "Workspace", providerIdentity: .notion)
         session.tasksDatabaseId = "tasks-db"
         context.insert(session)
 
         let task = TaskItem(externalTaskID: UUID().uuidString, title: "Recurring bill")
+        task.providerWorkspaceId = session.workspaceId
         task.status = .notStarted
         task.dueDate = Date(timeIntervalSince1970: 1_700_000_000)
         task.recurrence = .weekly
@@ -75,16 +76,48 @@ final class BackendDataFlowIntegrationTests: XCTestCase {
         XCTAssertNotNil(properties[session.propertyMappings.taskDueDateProperty])
     }
 
+    func testNotionPushPreservesDateOnlyAndTimedPlanningSemantics() async throws {
+        let mock = MockNotionAPIClient()
+        let syncService = SyncService(api: mock)
+        let context = try makeInMemoryContext()
+        let session = UserSession(
+            workspaceId: "ws-1",
+            workspaceName: "Workspace",
+            providerIdentity: .notion
+        )
+        session.tasksDatabaseId = "tasks-db"
+        context.insert(session)
+        let task = TaskItem(externalTaskID: UUID().uuidString, title: "Timed deadline")
+        task.providerWorkspaceId = session.workspaceId
+        task.targetDate = Date(timeIntervalSince1970: 1_780_000_000)
+        task.targetDateHasTime = false
+        task.dueDate = Date(timeIntervalSince1970: 1_780_086_400)
+        task.dueDateHasTime = true
+        task.isDirty = true
+        context.insert(task)
+
+        try await syncService.pushDirtyChanges(session: session, modelContext: context)
+
+        let properties = try XCTUnwrap(mock.createdPages.first?.properties)
+        let due = try XCTUnwrap(properties["Due Date"] as? [String: Any])
+        let dueValue = try XCTUnwrap(due["date"] as? [String: String])
+        let target = try XCTUnwrap(properties["Target"] as? [String: Any])
+        let targetValue = try XCTUnwrap(target["date"] as? [String: String])
+        XCTAssertTrue(try XCTUnwrap(dueValue["start"]).contains("T"))
+        XCTAssertEqual(try XCTUnwrap(targetValue["start"]).count, 10)
+    }
+
     func testPushDirtyChanges_WhenNoTasksDatabaseId_LeavesUnsyncedTaskDirty() async throws {
         let mock = MockNotionAPIClient()
         let syncService = SyncService(api: mock)
         let context = try makeInMemoryContext()
 
-        let session = UserSession(workspaceId: "ws-1", workspaceName: "Workspace")
+        let session = UserSession(workspaceId: "ws-1", workspaceName: "Workspace", providerIdentity: .notion)
         session.tasksDatabaseId = ""
         context.insert(session)
 
         let task = TaskItem(externalTaskID: UUID().uuidString, title: "Offline draft")
+        task.providerWorkspaceId = session.workspaceId
         task.isDirty = true
         task.lastSyncedAt = nil
         context.insert(task)
@@ -104,11 +137,12 @@ final class BackendDataFlowIntegrationTests: XCTestCase {
         let syncService = SyncService(api: mock)
         let context = try makeInMemoryContext()
 
-        let session = UserSession(workspaceId: "ws-1", workspaceName: "Workspace")
+        let session = UserSession(workspaceId: "ws-1", workspaceName: "Workspace", providerIdentity: .notion)
         session.tasksDatabaseId = "tasks-db"
         context.insert(session)
 
         let task = TaskItem(externalTaskID: UUID().uuidString, title: "Protected task")
+        task.providerWorkspaceId = session.workspaceId
         task.isDirty = true
         context.insert(task)
         try context.save()
@@ -135,11 +169,12 @@ final class BackendDataFlowIntegrationTests: XCTestCase {
         let syncService = SyncService(api: mock)
         let context = try makeInMemoryContext()
 
-        let session = UserSession(workspaceId: "ws-1", workspaceName: "Workspace")
+        let session = UserSession(workspaceId: "ws-1", workspaceName: "Workspace", providerIdentity: .notion)
         session.tasksDatabaseId = "tasks-db"
         context.insert(session)
 
         let task = TaskItem(externalTaskID: UUID().uuidString, title: "Protected task")
+        task.providerWorkspaceId = session.workspaceId
         task.isDirty = true
         context.insert(task)
         try context.save()
@@ -161,12 +196,13 @@ final class BackendDataFlowIntegrationTests: XCTestCase {
         let syncService = SyncService(api: mock)
         let context = try makeInMemoryContext()
 
-        let session = UserSession(workspaceId: "ws-1", workspaceName: "Workspace")
+        let session = UserSession(workspaceId: "ws-1", workspaceName: "Workspace", providerIdentity: .notion)
         session.tasksDatabaseId = "tasks-db"
         session.lastFullSyncAt = Date(timeIntervalSince1970: 1_700_000_000)
         context.insert(session)
 
         let local = TaskItem(externalTaskID: "task-1", title: "Old title")
+        local.providerWorkspaceId = session.workspaceId
         local.status = .notStarted
         local.lastSyncedAt = Date(timeIntervalSince1970: 1_700_000_000)
         context.insert(local)
@@ -203,11 +239,12 @@ final class BackendDataFlowIntegrationTests: XCTestCase {
         let syncService = SyncService(api: mock)
         let context = try makeInMemoryContext()
 
-        let session = UserSession(workspaceId: "ws-1", workspaceName: "Workspace")
+        let session = UserSession(workspaceId: "ws-1", workspaceName: "Workspace", providerIdentity: .notion)
         session.tasksDatabaseId = "tasks-db"
         context.insert(session)
 
         let staleTask = TaskItem(externalTaskID: "task-stale", title: "Should disappear")
+        staleTask.providerWorkspaceId = session.workspaceId
         context.insert(staleTask)
         try context.save()
 
@@ -224,12 +261,13 @@ final class BackendDataFlowIntegrationTests: XCTestCase {
         let syncService = SyncService(api: mock)
         let context = try makeInMemoryContext()
 
-        let session = UserSession(workspaceId: "ws-1", workspaceName: "Workspace")
+        let session = UserSession(workspaceId: "ws-1", workspaceName: "Workspace", providerIdentity: .notion)
         session.tasksDatabaseId = "tasks-db"
         session.lastFullSyncAt = Date(timeIntervalSince1970: 1_700_000_000)
         context.insert(session)
 
         let local = TaskItem(externalTaskID: "task-1", title: "Local stays on incremental")
+        local.providerWorkspaceId = session.workspaceId
         context.insert(local)
         try context.save()
 
@@ -249,12 +287,13 @@ final class BackendDataFlowIntegrationTests: XCTestCase {
         let syncService = SyncService(api: mock)
         let context = try makeInMemoryContext()
 
-        let session = UserSession(workspaceId: "ws-1", workspaceName: "Workspace")
+        let session = UserSession(workspaceId: "ws-1", workspaceName: "Workspace", providerIdentity: .notion)
         session.tasksDatabaseId = "tasks-db"
         session.lastFullSyncAt = Date(timeIntervalSince1970: 1_700_000_000)
         context.insert(session)
 
         let local = TaskItem(externalTaskID: "task-1", title: "Local draft title")
+        local.providerWorkspaceId = session.workspaceId
         local.status = .inProgress
         local.isDirty = true
         local.lastSyncedAt = Date(timeIntervalSince1970: 1_700_000_000)
@@ -316,12 +355,13 @@ final class BackendDataFlowIntegrationTests: XCTestCase {
             ])
         ]
 
-        let session = UserSession(workspaceId: "ws-1", workspaceName: "Workspace")
+        let session = UserSession(workspaceId: "ws-1", workspaceName: "Workspace", providerIdentity: .notion)
         session.tasksDatabaseId = "tasks-db"
         session.propertyMappings = PropertyMappings()
         context.insert(session)
 
         let task = TaskItem(externalTaskID: "task-1", title: "Ship release")
+        task.providerWorkspaceId = session.workspaceId
         task.status = .done
         task.isDirty = true
         task.lastSyncedAt = Date(timeIntervalSince1970: 1_700_000_000)

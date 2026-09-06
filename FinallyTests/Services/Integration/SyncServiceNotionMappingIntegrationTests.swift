@@ -19,7 +19,7 @@ final class SyncServiceNotionMappingIntegrationTests: XCTestCase {
             projectTitleProperty: "Name"
         )
 
-        let session = UserSession(workspaceId: "ws-1", workspaceName: "Workspace")
+        let session = UserSession(workspaceId: "ws-1", workspaceName: "Workspace", providerIdentity: .notion)
         session.tasksDatabaseId = "tasks-db"
         session.projectsDatabaseId = "projects-db"
         session.propertyMappings = mappings
@@ -64,7 +64,7 @@ final class SyncServiceNotionMappingIntegrationTests: XCTestCase {
         XCTAssertEqual(task.priority, .high)
         XCTAssertEqual(task.tags, ["Bills", "Home"])
         XCTAssertEqual(task.recurrence, .monthly)
-        XCTAssertEqual(task.project?.notionPageId, "proj-1")
+        XCTAssertEqual(task.project?.externalProjectID, "proj-1")
         XCTAssertNotNil(task.dueDate)
     }
 
@@ -73,7 +73,7 @@ final class SyncServiceNotionMappingIntegrationTests: XCTestCase {
         let syncService = SyncService(api: mock)
         let context = try makeInMemoryContext()
 
-        let session = UserSession(workspaceId: "ws-1", workspaceName: "Workspace")
+        let session = UserSession(workspaceId: "ws-1", workspaceName: "Workspace", providerIdentity: .notion)
         session.tasksDatabaseId = "tasks-db"
         session.propertyMappings = PropertyMappings()
         context.insert(session)
@@ -104,7 +104,7 @@ final class SyncServiceNotionMappingIntegrationTests: XCTestCase {
         let syncService = SyncService(api: mock)
         let context = try makeInMemoryContext()
 
-        let session = UserSession(workspaceId: "ws-1", workspaceName: "Workspace")
+        let session = UserSession(workspaceId: "ws-1", workspaceName: "Workspace", providerIdentity: .notion)
         session.tasksDatabaseId = "tasks-db"
         session.propertyMappings = PropertyMappings()
         context.insert(session)
@@ -151,7 +151,7 @@ final class SyncServiceNotionMappingIntegrationTests: XCTestCase {
         let syncService = SyncService(api: mock)
         let context = try makeInMemoryContext()
 
-        let session = UserSession(workspaceId: "ws-1", workspaceName: "Workspace")
+        let session = UserSession(workspaceId: "ws-1", workspaceName: "Workspace", providerIdentity: .notion)
         session.tasksDatabaseId = "tasks-db"
         session.projectsDatabaseId = "projects-db"
         session.propertyMappings = PropertyMappings()
@@ -180,7 +180,7 @@ final class SyncServiceNotionMappingIntegrationTests: XCTestCase {
         ]
         try await syncService.fullSync(session: session, modelContext: context)
         var task = try XCTUnwrap(try context.fetch(FetchDescriptor<TaskItem>()).first)
-        XCTAssertEqual(task.project?.notionPageId, "proj-1")
+        XCTAssertEqual(task.project?.externalProjectID, "proj-1")
 
         mock.queryAllPagesResult["tasks-db"] = [
             NotionTestFactory.page(
@@ -217,7 +217,7 @@ final class SyncServiceNotionMappingIntegrationTests: XCTestCase {
             ]
         )
 
-        let session = UserSession(workspaceId: "ws-1", workspaceName: "Workspace")
+        let session = UserSession(workspaceId: "ws-1", workspaceName: "Workspace", providerIdentity: .notion)
         session.tasksDatabaseId = "tasks-db"
         session.propertyMappings = PropertyMappings(taskStatusSchema: statusSchema)
         context.insert(session)
@@ -269,7 +269,7 @@ final class SyncServiceNotionMappingIntegrationTests: XCTestCase {
             ])
         ]
 
-        let session = UserSession(workspaceId: "ws-1", workspaceName: "Workspace")
+        let session = UserSession(workspaceId: "ws-1", workspaceName: "Workspace", providerIdentity: .notion)
         session.tasksDatabaseId = "tasks-db"
         session.propertyMappings = PropertyMappings()
         context.insert(session)
@@ -304,7 +304,7 @@ final class SyncServiceNotionMappingIntegrationTests: XCTestCase {
         mappings.taskTargetDateProperty = "Target"
         mappings.taskDueDateProperty = "Due Date"
 
-        let session = UserSession(workspaceId: "ws-1", workspaceName: "Workspace")
+        let session = UserSession(workspaceId: "ws-1", workspaceName: "Workspace", providerIdentity: .notion)
         session.tasksDatabaseId = "tasks-db"
         session.propertyMappings = mappings
         context.insert(session)
@@ -344,7 +344,7 @@ final class SyncServiceNotionMappingIntegrationTests: XCTestCase {
         var mappings = PropertyMappings()
         mappings.taskParentProperty = "Parent task"
 
-        let session = UserSession(workspaceId: "ws-1", workspaceName: "Workspace")
+        let session = UserSession(workspaceId: "ws-1", workspaceName: "Workspace", providerIdentity: .notion)
         session.tasksDatabaseId = "tasks-db"
         session.propertyMappings = mappings
         context.insert(session)

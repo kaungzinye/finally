@@ -72,8 +72,11 @@ final class FinallyServerAccountService {
               account.projects.contains(project) else {
             throw FinallyServerClientError.invalidConfiguration
         }
-        let workspace = UserSession(workspaceId: UUID().uuidString, workspaceName: name)
-        workspace.providerIdentity = .finallyServer
+        let workspace = UserSession(
+            workspaceId: UUID().uuidString,
+            workspaceName: name,
+            providerIdentity: .finallyServer
+        )
         workspace.serverBaseURL = baseURL.absoluteString
         workspace.serverProjectID = project.id
 
@@ -82,6 +85,12 @@ final class FinallyServerAccountService {
         workspace.isSelected = true
         try credentials.saveToken(account.token, workspaceID: workspace.workspaceId)
         store.insert(workspace)
+        let localProject = ProjectItem(
+            externalProjectID: String(project.id),
+            title: project.title
+        )
+        localProject.providerWorkspaceId = workspace.workspaceId
+        store.insert(localProject)
         try store.save()
         return workspace
     }

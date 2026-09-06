@@ -15,16 +15,14 @@ extension ModelContext {
 extension TaskItem {
     func belongs(to workspace: UserSession?) -> Bool {
         guard let workspace else { return false }
-        if providerWorkspaceId == workspace.workspaceId { return true }
-        return providerWorkspaceId == nil && workspace.providerIdentity == .notion
+        return providerWorkspaceId == workspace.workspaceId
     }
 }
 
 extension ProjectItem {
     func belongs(to workspace: UserSession?) -> Bool {
         guard let workspace else { return false }
-        if providerWorkspaceId == workspace.workspaceId { return true }
-        return providerWorkspaceId == nil && workspace.providerIdentity == .notion
+        return providerWorkspaceId == workspace.workspaceId
     }
 }
 

@@ -11,6 +11,8 @@ struct InlineTaskCreator: View {
     @State private var taskTitle = ""
     @State private var dueDate: Date?
     @State private var targetDate: Date?
+    @State private var dueDateHasTime = false
+    @State private var targetDateHasTime = false
     @State private var priority: TaskPriority?
     @State private var tags: [String] = []
     @State private var project: ProjectItem?
@@ -73,7 +75,7 @@ struct InlineTaskCreator: View {
             if showProjectSuggestions && !projectSuggestions.isEmpty {
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: 6) {
-                        ForEach(projectSuggestions.prefix(5), id: \.notionPageId) { proj in
+                        ForEach(projectSuggestions.prefix(5), id: \.externalProjectID) { proj in
                             Button {
                                 selectProjectSuggestion(proj)
                             } label: {
@@ -123,14 +125,14 @@ struct InlineTaskCreator: View {
                     HStack(spacing: 6) {
                         if let dueDate {
                             ChipView(
-                                label: dueDate.formatted(date: .abbreviated, time: .omitted),
+                                label: formatPlanningDate(dueDate, hasTime: dueDateHasTime),
                                 icon: "calendar",
                                 color: .secondary
                             ) { showDatePicker = true }
                         }
                         if let targetDate {
                             ChipView(
-                                label: "Target \(targetDate.formatted(date: .abbreviated, time: .omitted))",
+                                label: "Target \(formatPlanningDate(targetDate, hasTime: targetDateHasTime))",
                                 icon: "scope",
                                 color: .blue
                             ) { showTargetDatePicker = true }
@@ -243,10 +245,10 @@ struct InlineTaskCreator: View {
             isFocused = true
         }
         .sheet(isPresented: $showDatePicker) {
-            DatePickerSheet(selectedDate: $dueDate)
+            DatePickerSheet(selectedDate: $dueDate, hasTime: $dueDateHasTime)
         }
         .sheet(isPresented: $showTargetDatePicker) {
-            DatePickerSheet(selectedDate: $targetDate)
+            DatePickerSheet(selectedDate: $targetDate, hasTime: $targetDateHasTime)
         }
         .sheet(isPresented: $showPriorityPicker) {
             PriorityPicker(selection: $priority)
@@ -293,6 +295,8 @@ struct InlineTaskCreator: View {
         task.providerWorkspaceId = selectedWorkspace?.workspaceId
         task.dueDate = dueDate
         task.targetDate = targetDate
+        task.dueDateHasTime = dueDate != nil && dueDateHasTime
+        task.targetDateHasTime = targetDate != nil && targetDateHasTime
         task.validateTargetDate()
         task.priority = priority
         task.tags = tags
@@ -319,21 +323,10 @@ struct InlineTaskCreator: View {
             NotificationService.shared.rescheduleAllReminders(modelContext: modelContext)
         }
 
-        do {
-            try taskProvider.persistPendingChanges(store: modelContext)
-        } catch {
-            syncErrorMessage = error.localizedDescription
-            return
-        }
-
-        // Push to the selected task provider in the background.
         let context = modelContext
         Task {
-            guard let session = try? context.selectedProviderWorkspace() else { return }
             do {
-                try await taskProvider.synchronize(.push, workspace: session, store: context)
-            } catch let error as TaskSyncError {
-                syncErrorMessage = error.localizedDescription
+                try await taskProvider.submitPendingChanges(for: [task], store: context)
             } catch {
                 syncErrorMessage = error.localizedDescription
             }
@@ -343,6 +336,8 @@ struct InlineTaskCreator: View {
         taskTitle = ""
         dueDate = nil
         targetDate = nil
+        dueDateHasTime = false
+        targetDateHasTime = false
         priority = nil
         tags = []
         if presetProject == nil { project = nil }
@@ -401,6 +396,13 @@ struct InlineTaskCreator: View {
             tags = []
             nlpDetectedTags = false
         }
+    }
+
+    private func formatPlanningDate(_ date: Date, hasTime: Bool) -> String {
+        date.formatted(
+            date: .abbreviated,
+            time: hasTime ? .shortened : .omitted
+        )
     }
 
     // MARK: - Inline Suggestions

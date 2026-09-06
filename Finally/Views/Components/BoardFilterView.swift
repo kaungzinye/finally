@@ -12,12 +12,12 @@ struct BoardFilterView: View {
         NavigationStack {
             List {
                 Section("Projects") {
-                    ForEach(projects.scoped(to: sessions.selectedProviderWorkspace), id: \.notionPageId) { project in
+                    ForEach(projects.scoped(to: sessions.selectedProviderWorkspace), id: \.externalProjectID) { project in
                         Button {
-                            if filterProjects.contains(project.notionPageId) {
-                                filterProjects.remove(project.notionPageId)
+                            if filterProjects.contains(project.externalProjectID) {
+                                filterProjects.remove(project.externalProjectID)
                             } else {
-                                filterProjects.insert(project.notionPageId)
+                                filterProjects.insert(project.externalProjectID)
                             }
                         } label: {
                             HStack {
@@ -27,7 +27,7 @@ struct BoardFilterView: View {
                                 Text(project.title)
                                     .foregroundStyle(.primary)
                                 Spacer()
-                                if filterProjects.contains(project.notionPageId) {
+                                if filterProjects.contains(project.externalProjectID) {
                                     Image(systemName: "checkmark")
                                         .foregroundStyle(.blue)
                                 }

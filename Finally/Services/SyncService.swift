@@ -40,6 +40,11 @@ final class SyncService {
         f.formatOptions = [.withFullDate]
         return f
     }()
+    private let timedDateFormatter: ISO8601DateFormatter = {
+        let f = ISO8601DateFormatter()
+        f.formatOptions = [.withInternetDateTime]
+        return f
+    }()
 
     var isSyncing = false
     var lastError: String?
@@ -172,7 +177,7 @@ final class SyncService {
     private func pushDirtyChangesUsingProvider(session: UserSession, modelContext: ModelContext) async throws {
         let descriptor = FetchDescriptor<TaskItem>(predicate: #Predicate { $0.isDirty == true })
         let dirtyTasks = try modelContext.fetch(descriptor).filter {
-            $0.providerWorkspaceId == nil || $0.providerWorkspaceId == session.workspaceId
+            $0.providerWorkspaceId == session.workspaceId
         }
 
         var mappings = session.propertyMappings
@@ -265,7 +270,7 @@ final class SyncService {
 
             let pageId = page.id
             let descriptor = FetchDescriptor<ProjectItem>(predicate: #Predicate<ProjectItem> { item in
-                item.notionPageId == pageId
+                item.externalProjectID == pageId && item.providerWorkspaceId == workspaceID
             })
 
             if let existing = (try? modelContext.fetch(descriptor))?.first {
@@ -275,7 +280,7 @@ final class SyncService {
                 existing.lastEditedTime = editedTime
                 existing.lastSyncedAt = Date()
             } else {
-                let project = ProjectItem(notionPageId: page.id, title: title, iconEmoji: emoji)
+                let project = ProjectItem(externalProjectID: page.id, title: title, iconEmoji: emoji)
                 project.providerWorkspaceId = workspaceID
                 project.lastEditedTime = editedTime
                 project.lastSyncedAt = Date()
@@ -298,7 +303,7 @@ final class SyncService {
 
             let pageId = page.id
             let descriptor = FetchDescriptor<TaskItem>(predicate: #Predicate<TaskItem> { item in
-                item.externalTaskID == pageId
+                item.externalTaskID == pageId && item.providerWorkspaceId == workspaceID
             })
 
             let task: TaskItem
@@ -384,7 +389,7 @@ final class SyncService {
                let firstRelation = relations.first {
                 let relationId = firstRelation.id
                 let projectDescriptor = FetchDescriptor<ProjectItem>(predicate: #Predicate<ProjectItem> { item in
-                    item.notionPageId == relationId
+                    item.externalProjectID == relationId && item.providerWorkspaceId == workspaceID
                 })
                 task.project = (try? modelContext.fetch(projectDescriptor))?.first
             } else {
@@ -399,7 +404,7 @@ final class SyncService {
                 let parentId = firstRelation.id
                 task.parentId = parentId
                 let parentDescriptor = FetchDescriptor<TaskItem>(predicate: #Predicate<TaskItem> { item in
-                    item.externalTaskID == parentId
+                    item.externalTaskID == parentId && item.providerWorkspaceId == workspaceID
                 })
                 task.parent = (try? modelContext.fetch(parentDescriptor))?.first
             } else if task.parentId == nil {
@@ -407,17 +412,19 @@ final class SyncService {
             }
         }
 
-        linkPendingSubtaskParents(modelContext: modelContext)
+        linkPendingSubtaskParents(workspaceID: workspaceID, modelContext: modelContext)
     }
 
-    private func linkPendingSubtaskParents(modelContext: ModelContext) {
-        let descriptor = FetchDescriptor<TaskItem>(predicate: #Predicate { $0.parentId != nil })
+    private func linkPendingSubtaskParents(workspaceID: String, modelContext: ModelContext) {
+        let descriptor = FetchDescriptor<TaskItem>(predicate: #Predicate {
+            $0.parentId != nil && $0.providerWorkspaceId == workspaceID
+        })
         guard let tasks = try? modelContext.fetch(descriptor) else { return }
 
         for task in tasks {
             guard let parentId = task.parentId else { continue }
             let parentDescriptor = FetchDescriptor<TaskItem>(predicate: #Predicate<TaskItem> { item in
-                item.externalTaskID == parentId
+                item.externalTaskID == parentId && item.providerWorkspaceId == workspaceID
             })
             if let parent = try? modelContext.fetch(parentDescriptor).first {
                 task.parent = parent
@@ -439,11 +446,11 @@ final class SyncService {
         for item in locals {
             // Bug 4 fix: don't delete tasks with unsaved local edits
             if let task = item as? TaskItem {
-                guard task.providerWorkspaceId == nil || task.providerWorkspaceId == workspaceID else { continue }
+                guard task.providerWorkspaceId == workspaceID else { continue }
                 if task.isDirty { continue }
             }
             if let project = item as? ProjectItem {
-                guard project.providerWorkspaceId == nil || project.providerWorkspaceId == workspaceID else { continue }
+                guard project.providerWorkspaceId == workspaceID else { continue }
             }
             if !remoteIds.contains(item.externalProviderID) {
                 modelContext.delete(item)
@@ -466,12 +473,21 @@ final class SyncService {
             "status": ["name": mappings.notionStatusName(for: task.status)]
         ]
 
-        // Due Date
+        // Deadline and planned day
         if let dueDate = task.dueDate {
-            let dateStr = shortDateFormatter.string(from: dueDate)
-            props[mappings.taskDueDateProperty] = [
-                "date": ["start": dateStr]
-            ]
+            let dueDateString = notionDateString(dueDate, hasTime: task.dueDateHasTime)
+            if mappings.taskTargetDateProperty == nil, let targetDate = task.targetDate {
+                props[mappings.taskDueDateProperty] = [
+                    "date": [
+                        "start": notionDateString(targetDate, hasTime: task.targetDateHasTime),
+                        "end": dueDateString,
+                    ]
+                ]
+            } else {
+                props[mappings.taskDueDateProperty] = [
+                    "date": ["start": dueDateString]
+                ]
+            }
         } else {
             props[mappings.taskDueDateProperty] = [
                 "date": NSNull()
@@ -481,9 +497,10 @@ final class SyncService {
         // Target Date
         if let targetKey = mappings.taskTargetDateProperty {
             if let targetDate = task.targetDate {
-                let dateStr = shortDateFormatter.string(from: targetDate)
                 props[targetKey] = [
-                    "date": ["start": dateStr]
+                    "date": [
+                        "start": notionDateString(targetDate, hasTime: task.targetDateHasTime)
+                    ]
                 ]
             } else {
                 props[targetKey] = [
@@ -521,7 +538,7 @@ final class SyncService {
         // Project Relation
         if let projectKey = mappings.taskProjectProperty {
             if let project = task.project {
-                props[projectKey] = ["relation": [["id": project.notionPageId]]]
+                props[projectKey] = ["relation": [["id": project.externalProjectID]]]
             } else {
                 props[projectKey] = ["relation": []]
             }
@@ -582,6 +599,7 @@ final class SyncService {
     private func parseDate(_ string: String) -> Date? {
         // Full ISO8601 with time+timezone — already in correct absolute time
         if let date = dateFormatter.date(from: string) { return date }
+        if let date = timedDateFormatter.date(from: string) { return date }
         // Date-only: "2026-03-20" — ISO8601DateFormatter interprets this as UTC midnight,
         // which is wrong for users in non-UTC timezones. Parse as local calendar date instead.
         if string.count == 10, !string.contains("T") {
@@ -599,6 +617,10 @@ final class SyncService {
             }
         }
         return nil
+    }
+
+    private func notionDateString(_ date: Date, hasTime: Bool) -> String {
+        hasTime ? timedDateFormatter.string(from: date) : shortDateFormatter.string(from: date)
     }
 
     private func reloadWidgetTimelines() {
@@ -619,5 +641,5 @@ extension TaskItem: ProviderSyncable {
 }
 
 extension ProjectItem: ProviderSyncable {
-    var externalProviderID: String { notionPageId }
+    var externalProviderID: String { externalProjectID }
 }
