@@ -11,6 +11,8 @@ final class MockFinallyServerAPIClient: FinallyServerAPIClient {
     var projects = [FinallyServerProject(id: 42, title: "Personal")]
     private(set) var loginRequests = 0
     private(set) var taskOperations: [String] = []
+    var dailyFocus: [String: FinallyServerDailyFocus] = [:]
+    private(set) var dailyFocusOperations: [String] = []
 
     func login(username: String, password: String) async throws -> String {
         loginRequests += 1
@@ -91,6 +93,32 @@ final class MockFinallyServerAPIClient: FinallyServerAPIClient {
     func deleteTask(id: String) async throws {
         if let error { throw error }
         guard tasks.removeValue(forKey: id) != nil else { throw FinallyServerClientError.notFound }
+    }
+
+    static func dailyFocusKey(projectID: Int64, day: String) -> String { "\(projectID)/\(day)" }
+
+    func readDailyFocus(projectID: Int64, day: String) async throws -> FinallyServerDailyFocus? {
+        dailyFocusOperations.append("read")
+        if let error { throw error }
+        return dailyFocus[Self.dailyFocusKey(projectID: projectID, day: day)]
+    }
+
+    func writeDailyFocus(
+        projectID: Int64,
+        day: String,
+        mutation: FinallyServerDailyFocusMutation
+    ) async throws -> FinallyServerDailyFocus {
+        dailyFocusOperations.append("write")
+        if let error { throw error }
+        let record = FinallyServerDailyFocus(
+            projectID: projectID,
+            day: day,
+            picks: mutation.picks,
+            isConfirmed: mutation.isConfirmed,
+            focusLimit: mutation.focusLimit
+        )
+        dailyFocus[Self.dailyFocusKey(projectID: projectID, day: day)] = record
+        return record
     }
 }
 

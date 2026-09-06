@@ -626,6 +626,7 @@ final class TaskProviderContractTests: XCTestCase {
             TaskItem.self,
             ProjectItem.self,
             UserSession.self,
+            DailyFocus.self,
         ])
         let configuration = ModelConfiguration(isStoredInMemoryOnly: true)
         let container = try ModelContainer(for: schema, configurations: [configuration])

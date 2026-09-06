@@ -693,7 +693,7 @@ final class FinallyServerConnectionIntegrationTests: XCTestCase {
     }
 
     private func makeInMemoryContext() throws -> ModelContext {
-        let schema = Schema([TaskItem.self, ProjectItem.self, UserSession.self])
+        let schema = Schema([TaskItem.self, ProjectItem.self, UserSession.self, DailyFocus.self])
         let configuration = ModelConfiguration(isStoredInMemoryOnly: true)
         let container = try ModelContainer(for: schema, configurations: [configuration])
         return ModelContext(container)

@@ -50,6 +50,40 @@ struct FinallyServerTaskMutation: Equatable, Sendable {
     }
 }
 
+struct FinallyServerDailyFocusPick: Codable, Equatable, Sendable {
+    let provider: String
+    let workspaceID: String
+    let externalTaskID: String
+
+    enum CodingKeys: String, CodingKey {
+        case provider
+        case workspaceID = "workspace_id"
+        case externalTaskID = "external_task_id"
+    }
+}
+
+struct FinallyServerDailyFocus: Codable, Equatable, Sendable {
+    let projectID: Int64
+    let day: String
+    let picks: [FinallyServerDailyFocusPick]
+    let isConfirmed: Bool
+    let focusLimit: Int
+
+    enum CodingKeys: String, CodingKey {
+        case projectID = "project_id"
+        case day
+        case picks
+        case isConfirmed = "confirmed"
+        case focusLimit = "focus_limit"
+    }
+}
+
+struct FinallyServerDailyFocusMutation: Equatable, Sendable {
+    let picks: [FinallyServerDailyFocusPick]
+    let isConfirmed: Bool
+    let focusLimit: Int
+}
+
 struct FinallyServerProject: Identifiable, Hashable, Sendable, Decodable {
     let id: Int64
     let title: String
@@ -96,6 +130,13 @@ protocol FinallyServerAPIClient: AnyObject {
     func updateTask(id: String, mutation: FinallyServerTaskMutation) async throws -> FinallyServerTask
     func completeTask(id: String) async throws -> FinallyServerTask
     func deleteTask(id: String) async throws
+    /// The Daily Focus stored for one project and day, or nil when the server holds none.
+    func readDailyFocus(projectID: Int64, day: String) async throws -> FinallyServerDailyFocus?
+    func writeDailyFocus(
+        projectID: Int64,
+        day: String,
+        mutation: FinallyServerDailyFocusMutation
+    ) async throws -> FinallyServerDailyFocus
 }
 
 extension FinallyServerAPIClient {
@@ -249,6 +290,30 @@ final class URLSessionFinallyServerAPIClient: FinallyServerAPIClient {
 
     func deleteTask(id: String) async throws {
         let _: EmptyResponse = try await send(path: "tasks/\(id)", method: "DELETE")
+    }
+
+    func readDailyFocus(projectID: Int64, day: String) async throws -> FinallyServerDailyFocus? {
+        do {
+            return try await send(path: "projects/\(projectID)/daily-focus/\(day)", method: "GET")
+        } catch FinallyServerClientError.notFound {
+            return nil
+        }
+    }
+
+    func writeDailyFocus(
+        projectID: Int64,
+        day: String,
+        mutation: FinallyServerDailyFocusMutation
+    ) async throws -> FinallyServerDailyFocus {
+        try await send(
+            path: "projects/\(projectID)/daily-focus/\(day)",
+            method: "PUT",
+            body: [
+                "picks": mutation.picks,
+                "confirmed": mutation.isConfirmed,
+                "focus_limit": mutation.focusLimit,
+            ]
+        )
     }
 
     private func taskBody(_ mutation: FinallyServerTaskMutation) -> [String: any Encodable] {

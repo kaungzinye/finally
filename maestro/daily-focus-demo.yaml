@@ -1,0 +1,14 @@
+# Prerequisite: the runner launches the app with the demo argument first:
+#   xcrun simctl launch <udid> com.kaungzinye.finally -daily-focus-demo
+appId: com.kaungzinye.finally
+---
+- extendedWaitUntil:
+    visible: "Daily Focus"
+    timeout: 10000
+- assertVisible: "3 of 3"
+- assertVisible: "Draft the brief"
+- assertVisible: "Ship the release notes"
+- assertVisible: "Task no longer available"
+- assertVisible: "Daily Focus is full"
+- tapOn: "Confirm"
+- assertVisible: "Confirmed"

@@ -48,7 +48,7 @@ export JAVA_HOME=/opt/homebrew/opt/openjdk/libexec/openjdk.jdk/Contents/Home
 maestro test maestro/<flow>.yaml
 ```
 
-The `-deadline-demo` launch argument (DEBUG builds) opens a populated task detail screen with no OAuth, giving flows deterministic UI.
+The `-deadline-demo` launch argument (DEBUG builds) opens a populated task detail screen with no OAuth, giving flows deterministic UI. The `-daily-focus-demo` launch argument opens the app over an in-memory store seeded with a full Daily Focus that mixes providers and holds one unavailable pick.
 
 ## No compatibility burden
 

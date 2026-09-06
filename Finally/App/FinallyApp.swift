@@ -8,6 +8,7 @@ struct FinallyApp: App {
     @Environment(\.scenePhase) private var scenePhase
     @State private var router = NavigationRouter()
     @State private var taskProvider = TaskProviderCoordinator()
+    @State private var dailyFocusService = DailyFocusService()
     @State private var authService = NotionAuthService()
     @State private var networkService = NetworkService()
     @State private var hasSession = false
@@ -21,6 +22,8 @@ struct FinallyApp: App {
             Group {
                 if isDeadlineDemoMode {
                     DeadlineDemoView()
+                } else if isDailyFocusDemoMode {
+                    DailyFocusDemoView()
                 } else if isLoading {
                     ProgressView("Loading...")
                 } else if !hasSession {
@@ -39,6 +42,7 @@ struct FinallyApp: App {
             }
             .environment(router)
             .environment(taskProvider)
+            .environment(dailyFocusService)
             .environment(networkService)
             .tint(Color(.label))
             .preferredColorScheme(colorScheme)
@@ -81,6 +85,14 @@ struct FinallyApp: App {
     private var isDeadlineDemoMode: Bool {
 #if DEBUG
         ProcessInfo.processInfo.arguments.contains("-deadline-demo")
+#else
+        false
+#endif
+    }
+
+    private var isDailyFocusDemoMode: Bool {
+#if DEBUG
+        ProcessInfo.processInfo.arguments.contains("-daily-focus-demo")
 #else
         false
 #endif
@@ -204,6 +216,17 @@ private struct DeadlineDemoView: View {
 
     var body: some View {
         TaskDetailView(task: task)
+    }
+}
+
+/// The Today tab over an in-memory store seeded with a Daily Focus that mixes providers and
+/// carries one pick whose task is gone.
+private struct DailyFocusDemoView: View {
+    @State private var container = DailyFocusDemoFixture.makeContainer()
+
+    var body: some View {
+        ContentView()
+            .modelContainer(container)
     }
 }
 #endif
