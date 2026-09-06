@@ -8,7 +8,7 @@ struct TaskPresentationSummary: Codable, Equatable, Identifiable, Sendable {
     let providerWorkspaceID: String
     let externalTaskID: String
     let title: String
-    let dueDate: Date?
+    let deadline: Date?
     let priorityRaw: String?
     let isComplete: Bool
 
@@ -25,9 +25,9 @@ enum TaskPresentationQuery {
                 task.belongs(to: workspace) && !task.isDeleted && !task.isSubtask
             }
             .sorted { lhs, rhs in
-                if let left = lhs.dueDate, let right = rhs.dueDate { return left < right }
-                if lhs.dueDate != nil { return true }
-                if rhs.dueDate != nil { return false }
+                if let left = lhs.deadline, let right = rhs.deadline { return left < right }
+                if lhs.deadline != nil { return true }
+                if rhs.deadline != nil { return false }
                 return lhs.title.localizedCaseInsensitiveCompare(rhs.title) == .orderedAscending
             }
             .map { task in
@@ -35,7 +35,7 @@ enum TaskPresentationQuery {
                     providerWorkspaceID: task.providerWorkspaceId ?? workspace?.workspaceId ?? "unassigned",
                     externalTaskID: task.externalTaskID,
                     title: task.title,
-                    dueDate: task.dueDate,
+                    deadline: task.deadline,
                     priorityRaw: task.priorityRaw,
                     isComplete: task.status == .done
                 )

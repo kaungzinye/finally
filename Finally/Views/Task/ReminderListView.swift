@@ -47,7 +47,7 @@ struct ReminderSectionContent: View {
             } label: {
                 Label("Add Reminder", systemImage: "plus.circle")
             }
-            .disabled(!task.hasValidAnchoredReminderAnchor && task.dueDate == nil && task.targetDate == nil)
+            .disabled(!task.hasValidAnchoredReminderAnchor && task.deadline == nil && task.plannedDay == nil)
         }
         .sheet(isPresented: $showAddReminder) {
             ReminderAddSheet(task: task)
@@ -76,7 +76,7 @@ struct ReminderAddSheet: View {
     @Environment(\.dismiss) private var dismiss
 
     @State private var selectedTab = 0
-    @State private var anchor: ReminderAnchor = .due
+    @State private var anchor: ReminderAnchor = .deadline
     @State private var direction: ReminderOffsetDirection = .before
     @State private var intervalValue = 30
     @State private var intervalUnit: ReminderOffsetUnit = .minutes
@@ -84,8 +84,8 @@ struct ReminderAddSheet: View {
 
     private var availableAnchors: [ReminderAnchor] {
         var anchors: [ReminderAnchor] = []
-        if task.dueDate != nil { anchors.append(.due) }
-        if task.targetDate != nil { anchors.append(.target) }
+        if task.deadline != nil { anchors.append(.deadline) }
+        if task.plannedDay != nil { anchors.append(.plannedDay) }
         return anchors
     }
 
@@ -135,7 +135,7 @@ struct ReminderAddSheet: View {
                 }
             }
             .onAppear {
-                anchor = availableAnchors.first ?? .due
+                anchor = availableAnchors.first ?? .deadline
             }
         }
         .presentationDetents([.medium, .large])
@@ -144,7 +144,7 @@ struct ReminderAddSheet: View {
     @ViewBuilder private var anchoredSection: some View {
         Section {
             if availableAnchors.isEmpty {
-                Text("Set a due date or target date to use anchored reminders.")
+                Text("Set a deadline or planned day to use anchored reminders.")
                     .foregroundStyle(.secondary)
             } else {
                 Picker("Anchor", selection: $anchor) {
@@ -258,7 +258,7 @@ struct SubtaskReminderSheet: View {
     @State private var direction: ReminderOffsetDirection = .before
 
     private var draftReminder: TaskReminder {
-        .anchored(AnchoredReminder(anchor: .due, value: intervalValue, unit: intervalUnit, direction: direction))
+        .anchored(AnchoredReminder(anchor: .deadline, value: intervalValue, unit: intervalUnit, direction: direction))
     }
 
     var body: some View {
@@ -350,6 +350,6 @@ struct SubtaskReminderSheet: View {
 
 private extension TaskItem {
     var hasValidAnchoredReminderAnchor: Bool {
-        dueDate != nil || targetDate != nil
+        deadline != nil || plannedDay != nil
     }
 }

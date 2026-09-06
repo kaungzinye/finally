@@ -3,7 +3,7 @@ import SwiftUI
 struct RecurrencePicker: View {
     @Binding var selection: Recurrence
     var customRule: Binding<RecurrenceRule?>?
-    var contextDate: Date?  // The task's due date, used to derive smart defaults
+    var contextDate: Date?  // The task's deadline, used to derive smart defaults
     @Environment(\.dismiss) private var dismiss
 
     @State private var showCustomEditor = false

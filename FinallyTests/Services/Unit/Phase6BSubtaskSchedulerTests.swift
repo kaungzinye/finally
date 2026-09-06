@@ -8,10 +8,10 @@ final class Phase6BSubtaskSchedulerTests: XCTestCase {
         return cal
     }()
 
-    func testDistributeSubtaskDates_PrefersTargetDateOverDueDate() {
+    func testDistributeSubtaskDates_PrefersPlannedDayOverDeadline() {
         let parent = TaskItem(externalTaskID: "parent", title: "Parent")
-        parent.targetDate = calendar.date(from: DateComponents(year: 2026, month: 12, day: 1))!
-        parent.dueDate = calendar.date(from: DateComponents(year: 2026, month: 12, day: 31))!
+        parent.plannedDay = calendar.date(from: DateComponents(year: 2026, month: 12, day: 1))!
+        parent.deadline = calendar.date(from: DateComponents(year: 2026, month: 12, day: 31))!
 
         let sub1 = TaskItem(externalTaskID: "sub-1", title: "First")
         sub1.parentId = parent.externalTaskID
@@ -29,13 +29,13 @@ final class Phase6BSubtaskSchedulerTests: XCTestCase {
         XCTAssertNotNil(sub2.suggestedDate)
         if let d1 = sub1.suggestedDate, let d2 = sub2.suggestedDate {
             XCTAssertLessThanOrEqual(d1, d2)
-            XCTAssertLessThanOrEqual(d2, parent.targetDate!)
+            XCTAssertLessThanOrEqual(d2, parent.plannedDay!)
         }
     }
 
     func testDistributeSubtaskDates_RespectsSuggestedDateOverride() {
         let parent = TaskItem(externalTaskID: "parent", title: "Parent")
-        parent.dueDate = calendar.date(byAdding: .day, value: 14, to: Date())!
+        parent.deadline = calendar.date(byAdding: .day, value: 14, to: Date())!
 
         let sub = TaskItem(externalTaskID: "sub-1", title: "Locked")
         sub.parentId = parent.externalTaskID

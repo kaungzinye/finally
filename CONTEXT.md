@@ -15,10 +15,10 @@ Finally is a task system that protects attention, with an agent living in it. In
 **Task**: An outcome or obligation managed by one authoritative task provider.
 
 **Planned day**: An optional date-only intention describing when the user hopes to work on a task.
-_Avoid_: target date, targetDate
+_Avoid_: target date
 
 **Deadline**: An optional date or date-time constraint describing when a task must be complete. Deadlines are facts the user states, never values the system invents.
-_Avoid_: due date, dueDate
+_Avoid_: due date
 
 **Suggested date**: A locally computed date for a subtask, derived from its parent's planned window. A manual override replaces the computed value.
 

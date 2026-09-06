@@ -122,7 +122,7 @@ extension SyncService: TaskProviderAdapter {
         [
             .title: .lossless,
             .plannedDay: .lossy(
-                reason: "A separate Target date property is required to preserve every planned-day shape."
+                reason: "A separate Notion planned-day property is required to preserve every planned-day shape."
             ),
             .deadline: .lossless,
             .state: .lossless,
@@ -431,8 +431,8 @@ final class TaskProviderCoordinator {
 
     private func populatedFields(in task: TaskItem) -> Set<CanonicalTaskField> {
         var fields: Set<CanonicalTaskField> = [.title, .state]
-        if task.targetDate != nil { fields.insert(.plannedDay) }
-        if task.dueDate != nil { fields.insert(.deadline) }
+        if task.plannedDay != nil { fields.insert(.plannedDay) }
+        if task.deadline != nil { fields.insert(.deadline) }
         if task.project != nil { fields.insert(.project) }
         if !task.tags.isEmpty { fields.insert(.labels) }
         if task.priority != nil { fields.insert(.priority) }

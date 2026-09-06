@@ -22,11 +22,11 @@ final class NotificationServiceUnitTests: XCTestCase {
         let now = referenceDate
 
         let task = TaskItem(externalTaskID: "t-1", title: "Buy milk")
-        task.dueDate = now.addingTimeInterval(3600)
-        task.dueDateHasTime = true
+        task.deadline = now.addingTimeInterval(3600)
+        task.deadlineHasTime = true
         ctx.insert(task)
 
-        let reminder = TaskReminder.presetThirtyMinutesBeforeDue()
+        let reminder = TaskReminder.presetThirtyMinutesBeforeDeadline()
         task.taskReminders = [reminder]
         try ctx.save()
 
@@ -43,10 +43,10 @@ final class NotificationServiceUnitTests: XCTestCase {
         let now = referenceDate
 
         let task = TaskItem(externalTaskID: "t-2", title: "Old task")
-        task.dueDate = now.addingTimeInterval(-1800)
+        task.deadline = now.addingTimeInterval(-1800)
         ctx.insert(task)
 
-        let reminder = TaskReminder.presetThirtyMinutesBeforeDue()
+        let reminder = TaskReminder.presetThirtyMinutesBeforeDeadline()
         task.taskReminders = [reminder]
         try ctx.save()
 
@@ -56,26 +56,26 @@ final class NotificationServiceUnitTests: XCTestCase {
         XCTAssertEqual(scheduler.addedRequests.count, 0)
     }
 
-    func testNotificationBody_WhenDueDateHasTime_ShowsDueAtTime() throws {
+    func testNotificationBody_WhenDeadlineHasTime_ShowsDeadlineAtTime() throws {
         let task = TaskItem(externalTaskID: "t-body-time", title: "Meeting")
-        task.dueDate = referenceDate.addingTimeInterval(7200)
-        task.dueDateHasTime = true
+        task.deadline = referenceDate.addingTimeInterval(7200)
+        task.deadlineHasTime = true
 
         let body = NotificationService().notificationBody(for: task, using: referenceDate)
-        XCTAssertTrue(body.hasPrefix("Due at "))
+        XCTAssertTrue(body.hasPrefix("Deadline at "))
     }
 
-    func testNotificationBody_WhenDateOnlyAndDueDateIsToday_ShowsDueToday() throws {
+    func testNotificationBody_WhenDateOnlyAndDeadlineIsToday_ShowsDeadlineToday() throws {
         let today = Calendar.current.startOfDay(for: Date())
         let task = TaskItem(externalTaskID: "t-body-today", title: "Grocery run")
-        task.dueDate = today
-        task.dueDateHasTime = false
+        task.deadline = today
+        task.deadlineHasTime = false
 
         let body = NotificationService().notificationBody(for: task, using: today)
-        XCTAssertEqual(body, "Due today")
+        XCTAssertEqual(body, "Deadline today")
     }
 
-    func testNotificationBody_WhenNoDueDate_ReturnsEmptyString() {
+    func testNotificationBody_WhenNoDeadline_ReturnsEmptyString() {
         let task = TaskItem(externalTaskID: "t-body-nil", title: "No date task")
         let body = NotificationService().notificationBody(for: task, using: referenceDate)
         XCTAssertEqual(body, "")
@@ -85,8 +85,8 @@ final class NotificationServiceUnitTests: XCTestCase {
         let scheduler = MockNotificationScheduler()
         let task = TaskItem(externalTaskID: "t-cancel", title: "Cancel me")
         task.taskReminders = [
-            TaskReminder.presetOneDayBeforeDue(),
-            TaskReminder.presetThirtyMinutesBeforeDue(),
+            TaskReminder.presetOneDayBeforeDeadline(),
+            TaskReminder.presetThirtyMinutesBeforeDeadline(),
         ]
 
         makeService(scheduler: scheduler, now: referenceDate).cancelRemindersForTask(task)
@@ -100,9 +100,9 @@ final class NotificationServiceUnitTests: XCTestCase {
         let now = referenceDate
 
         let task = TaskItem(externalTaskID: "t-reschedule", title: "Reschedule me")
-        task.dueDate = now.addingTimeInterval(2 * 86_400)
-        task.dueDateHasTime = true
-        task.taskReminders = [TaskReminder.presetOneDayBeforeDue()]
+        task.deadline = now.addingTimeInterval(2 * 86_400)
+        task.deadlineHasTime = true
+        task.taskReminders = [TaskReminder.presetOneDayBeforeDeadline()]
         ctx.insert(task)
         try ctx.save()
 
@@ -116,9 +116,9 @@ final class NotificationServiceUnitTests: XCTestCase {
         let now = referenceDate
 
         let task = TaskItem(externalTaskID: "t-done", title: "Done task")
-        task.dueDate = now.addingTimeInterval(7200)
+        task.deadline = now.addingTimeInterval(7200)
         task.status = .done
-        task.taskReminders = [TaskReminder.presetOneDayBeforeDue()]
+        task.taskReminders = [TaskReminder.presetOneDayBeforeDeadline()]
         ctx.insert(task)
         try ctx.save()
 
@@ -134,9 +134,9 @@ final class NotificationServiceUnitTests: XCTestCase {
 
         for i in 0..<(limit + 5) {
             let task = TaskItem(externalTaskID: "t-limit-\(i)", title: "Task \(i)")
-            task.dueDate = now.addingTimeInterval(2 * 86_400 + Double(i + 1) * 3600)
-            task.dueDateHasTime = true
-            task.taskReminders = [TaskReminder.presetOneDayBeforeDue()]
+            task.deadline = now.addingTimeInterval(2 * 86_400 + Double(i + 1) * 3600)
+            task.deadlineHasTime = true
+            task.taskReminders = [TaskReminder.presetOneDayBeforeDeadline()]
             ctx.insert(task)
         }
         try ctx.save()

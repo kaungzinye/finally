@@ -19,7 +19,7 @@ struct DatePickerSheet: View {
                     .padding(.horizontal)
 
                 DatePicker(
-                    "Due Date",
+                    "Deadline",
                     selection: $pickerDate,
                     displayedComponents: hasTime ? [.date, .hourAndMinute] : [.date]
                 )

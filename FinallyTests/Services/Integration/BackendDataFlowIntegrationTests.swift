@@ -48,7 +48,7 @@ final class BackendDataFlowIntegrationTests: XCTestCase {
         let task = TaskItem(externalTaskID: UUID().uuidString, title: "Recurring bill")
         task.providerWorkspaceId = session.workspaceId
         task.status = .notStarted
-        task.dueDate = Date(timeIntervalSince1970: 1_700_000_000)
+        task.deadline = Date(timeIntervalSince1970: 1_700_000_000)
         task.recurrence = .weekly
         task.isDirty = true
         task.lastSyncedAt = nil
@@ -63,9 +63,9 @@ final class BackendDataFlowIntegrationTests: XCTestCase {
         XCTAssertEqual(task.externalTaskID, "remote-1")
         XCTAssertNotNil(task.lastSyncedAt)
 
-        // Simulate recurring completion update (status reset + due date in one PATCH payload)
+        // Simulate a recurring obligation starting its next cycle in one PATCH payload.
         task.status = .notStarted
-        task.dueDate = Date(timeIntervalSince1970: 1_700_604_800)
+        task.deadline = Date(timeIntervalSince1970: 1_700_604_800)
         task.isDirty = true
 
         try await syncService.pushDirtyChanges(session: session, modelContext: context)
@@ -73,7 +73,7 @@ final class BackendDataFlowIntegrationTests: XCTestCase {
         XCTAssertEqual(mock.updatedPages.count, 1)
         let properties = try XCTUnwrap(mock.updatedPages.first?.properties)
         XCTAssertNotNil(properties[session.propertyMappings.taskStatusProperty])
-        XCTAssertNotNil(properties[session.propertyMappings.taskDueDateProperty])
+        XCTAssertNotNil(properties[session.propertyMappings.taskDeadlineProperty])
     }
 
     func testNotionPushPreservesDateOnlyAndTimedPlanningSemantics() async throws {
@@ -89,10 +89,10 @@ final class BackendDataFlowIntegrationTests: XCTestCase {
         context.insert(session)
         let task = TaskItem(externalTaskID: UUID().uuidString, title: "Timed deadline")
         task.providerWorkspaceId = session.workspaceId
-        task.targetDate = Date(timeIntervalSince1970: 1_780_000_000)
-        task.targetDateHasTime = false
-        task.dueDate = Date(timeIntervalSince1970: 1_780_086_400)
-        task.dueDateHasTime = true
+        task.plannedDay = Date(timeIntervalSince1970: 1_780_000_000)
+        task.plannedDayHasTime = false
+        task.deadline = Date(timeIntervalSince1970: 1_780_086_400)
+        task.deadlineHasTime = true
         task.isDirty = true
         context.insert(task)
 
@@ -228,7 +228,7 @@ final class BackendDataFlowIntegrationTests: XCTestCase {
         let refreshed = try XCTUnwrap(try context.fetch(FetchDescriptor<TaskItem>()).first)
         XCTAssertEqual(refreshed.title, "New title")
         XCTAssertEqual(refreshed.status, .inProgress)
-        XCTAssertNotNil(refreshed.dueDate)
+        XCTAssertNotNil(refreshed.deadline)
         XCTAssertFalse(mock.queryCalls.isEmpty)
         XCTAssertNotNil(mock.queryCalls.first?.filter)
         XCTAssertNotNil(session.lastFullSyncAt)

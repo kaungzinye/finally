@@ -3,15 +3,15 @@ import Foundation
 // MARK: - Reminder enums (Phase 6B)
 
 enum ReminderAnchor: String, Codable, CaseIterable, Identifiable {
-    case due = "due"
-    case target = "target"
+    case deadline = "deadline"
+    case plannedDay = "plannedDay"
 
     var id: String { rawValue }
 
     var label: String {
         switch self {
-        case .due: return "Due date"
-        case .target: return "Target date"
+        case .deadline: return "Deadline"
+        case .plannedDay: return "Planned day"
         }
     }
 }
@@ -170,24 +170,24 @@ enum TaskReminder: Codable, Equatable, Identifiable {
         }
     }
 
-    static func presetWeekBeforeTarget() -> TaskReminder {
-        .anchored(AnchoredReminder(anchor: .target, value: 1, unit: .weeks, direction: .before))
+    static func presetWeekBeforePlannedDay() -> TaskReminder {
+        .anchored(AnchoredReminder(anchor: .plannedDay, value: 1, unit: .weeks, direction: .before))
     }
 
-    static func presetOneDayBeforeDue() -> TaskReminder {
-        .anchored(AnchoredReminder(anchor: .due, value: 1, unit: .days, direction: .before))
+    static func presetOneDayBeforeDeadline() -> TaskReminder {
+        .anchored(AnchoredReminder(anchor: .deadline, value: 1, unit: .days, direction: .before))
     }
 
-    static func presetTwoDaysBeforeDue() -> TaskReminder {
-        .anchored(AnchoredReminder(anchor: .due, value: 2, unit: .days, direction: .before))
+    static func presetTwoDaysBeforeDeadline() -> TaskReminder {
+        .anchored(AnchoredReminder(anchor: .deadline, value: 2, unit: .days, direction: .before))
     }
 
-    static func presetTwoHoursBeforeDue() -> TaskReminder {
-        .anchored(AnchoredReminder(anchor: .due, value: 2, unit: .hours, direction: .before))
+    static func presetTwoHoursBeforeDeadline() -> TaskReminder {
+        .anchored(AnchoredReminder(anchor: .deadline, value: 2, unit: .hours, direction: .before))
     }
 
-    static func presetThirtyMinutesBeforeDue() -> TaskReminder {
-        .anchored(AnchoredReminder(anchor: .due, value: 30, unit: .minutes, direction: .before))
+    static func presetThirtyMinutesBeforeDeadline() -> TaskReminder {
+        .anchored(AnchoredReminder(anchor: .deadline, value: 30, unit: .minutes, direction: .before))
     }
 
 }

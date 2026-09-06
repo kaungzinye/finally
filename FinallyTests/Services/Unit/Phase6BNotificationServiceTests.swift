@@ -18,11 +18,11 @@ final class Phase6BNotificationServiceTests: XCTestCase {
         let now = referenceDate
 
         let task = TaskItem(externalTaskID: "t-1", title: "Buy milk")
-        task.dueDate = now.addingTimeInterval(3600)
-        task.dueDateHasTime = true
+        task.deadline = now.addingTimeInterval(3600)
+        task.deadlineHasTime = true
         ctx.insert(task)
 
-        let reminder = TaskReminder.presetThirtyMinutesBeforeDue()
+        let reminder = TaskReminder.presetThirtyMinutesBeforeDeadline()
         task.taskReminders = [reminder]
         try ctx.save()
 
@@ -39,9 +39,9 @@ final class Phase6BNotificationServiceTests: XCTestCase {
         let now = referenceDate
 
         let task = TaskItem(externalTaskID: "t-2", title: "Future task")
-        task.dueDate = now.addingTimeInterval(2 * 86_400)
-        task.dueDateHasTime = true
-        task.taskReminders = [TaskReminder.presetOneDayBeforeDue()]
+        task.deadline = now.addingTimeInterval(2 * 86_400)
+        task.deadlineHasTime = true
+        task.taskReminders = [TaskReminder.presetOneDayBeforeDeadline()]
         ctx.insert(task)
         try ctx.save()
 
@@ -55,7 +55,7 @@ final class Phase6BNotificationServiceTests: XCTestCase {
         let scheduler = MockNotificationScheduler()
         let task = TaskItem(externalTaskID: "t-3", title: "Task")
         task.taskReminders = [
-            TaskReminder.presetThirtyMinutesBeforeDue(),
+            TaskReminder.presetThirtyMinutesBeforeDeadline(),
             .explicitDate(ExplicitDateReminder(dateTime: referenceDate.addingTimeInterval(5000))),
         ]
 

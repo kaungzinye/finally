@@ -6,10 +6,10 @@ final class TaskItem {
     var externalTaskID: String
     var title: String
     var statusRaw: String = TaskStatus.notStarted.rawValue
-    var dueDate: Date?
-    var dueDateHasTime: Bool = false
-    var targetDate: Date?
-    var targetDateHasTime: Bool = false
+    var deadline: Date?
+    var deadlineHasTime: Bool = false
+    var plannedDay: Date?
+    var plannedDayHasTime: Bool = false
     var priorityRaw: String?
     var tags: [String] = []
     var tagColors: [String] = []
@@ -67,19 +67,20 @@ final class TaskItem {
     }
 
     var isOverdue: Bool {
-        guard let dueDate, status != .done else { return false }
-        return dueDate < Calendar.current.startOfDay(for: Date())
+        guard let deadline, status != .done else { return false }
+        return deadline < Calendar.current.startOfDay(for: Date())
     }
 
     var isInActiveWindow: Bool {
-        guard let target = targetDate, let due = dueDate, status != .done else { return false }
+        guard let plannedDay, let deadline, status != .done else { return false }
         let today = Calendar.current.startOfDay(for: Date())
-        return today >= Calendar.current.startOfDay(for: target) && today <= Calendar.current.startOfDay(for: due)
+        return today >= Calendar.current.startOfDay(for: plannedDay)
+            && today <= Calendar.current.startOfDay(for: deadline)
     }
 
-    var isDueToday: Bool {
-        guard let dueDate else { return false }
-        return Calendar.current.isDateInToday(dueDate)
+    var isDeadlineToday: Bool {
+        guard let deadline else { return false }
+        return Calendar.current.isDateInToday(deadline)
     }
 
     var isSubtask: Bool { parentId != nil }
@@ -114,7 +115,7 @@ final class TaskItem {
     }
 
     var effectiveDate: Date? {
-        isSubtask ? (effectiveSuggestedDate ?? dueDate) : dueDate
+        isSubtask ? (effectiveSuggestedDate ?? deadline) : deadline
     }
 
     // MARK: - Init
@@ -128,15 +129,15 @@ final class TaskItem {
 
     func anchorDate(for anchor: ReminderAnchor) -> Date? {
         switch anchor {
-        case .due: return dueDate
-        case .target: return targetDate
+        case .deadline: return deadline
+        case .plannedDay: return plannedDay
         }
     }
 
     func hasTimeForAnchor(_ anchor: ReminderAnchor) -> Bool {
         switch anchor {
-        case .due: return dueDateHasTime
-        case .target: return targetDateHasTime
+        case .deadline: return deadlineHasTime
+        case .plannedDay: return plannedDayHasTime
         }
     }
 
@@ -163,7 +164,7 @@ final class TaskItem {
             .sorted { $0.sortIndex < $1.sortIndex }
         guard let index = sorted.firstIndex(where: { $0.externalTaskID == externalTaskID }) else { return nil }
 
-        let planningDate = parent.targetDate ?? parent.dueDate
+        let planningDate = parent.plannedDay ?? parent.deadline
         guard let planningDate else { return nil }
 
         let start = max(Date(), Calendar.current.startOfDay(for: Date()))
@@ -176,10 +177,10 @@ final class TaskItem {
         return start.addingTimeInterval(totalInterval * fraction)
     }
 
-    func validateTargetDate() {
-        guard let targetDate, let dueDate else { return }
-        if targetDate >= dueDate {
-            self.targetDate = Calendar.current.date(byAdding: .day, value: -1, to: dueDate)
+    func validatePlannedDay() {
+        guard let plannedDay, let deadline else { return }
+        if plannedDay >= deadline {
+            self.plannedDay = Calendar.current.date(byAdding: .day, value: -1, to: deadline)
         }
     }
 
@@ -187,23 +188,23 @@ final class TaskItem {
 
     @discardableResult
     func complete() -> Bool {
-        if recurrence != .none, let dueDate {
-            let previousDue = dueDate
-            let previousTarget = targetDate
+        if recurrence != .none, let deadline {
+            let previousDeadline = deadline
+            let previousPlannedDay = plannedDay
 
             let nextDate: Date?
             if recurrence == .custom, let rule = customRecurrenceRule {
-                nextDate = rule.nextDueDate(from: dueDate)
+                nextDate = rule.nextDeadline(from: deadline)
             } else {
-                nextDate = recurrence.nextDueDate(from: dueDate)
+                nextDate = recurrence.nextDeadline(from: deadline)
             }
 
             if let nextDate {
-                self.dueDate = nextDate
-                if let previousTarget {
-                    let offset = previousDue.timeIntervalSince(previousTarget)
-                    self.targetDate = nextDate.addingTimeInterval(-offset)
-                    validateTargetDate()
+                self.deadline = nextDate
+                if let previousPlannedDay {
+                    let offset = previousDeadline.timeIntervalSince(previousPlannedDay)
+                    self.plannedDay = nextDate.addingTimeInterval(-offset)
+                    validatePlannedDay()
                 }
                 self.status = .notStarted
                 self.isDirty = true
@@ -236,11 +237,11 @@ enum DeadlineDemoFixture {
         task.priority = .urgent
         task.tags = ["Launch", "Client"]
         task.recurrence = .weekly
-        task.targetDate = calendar.date(byAdding: .day, value: 9, to: referenceDate)
-        task.dueDate = calendar.date(byAdding: .day, value: 20, to: referenceDate)
+        task.plannedDay = calendar.date(byAdding: .day, value: 9, to: referenceDate)
+        task.deadline = calendar.date(byAdding: .day, value: 20, to: referenceDate)
         task.taskReminders = [
-            .anchored(AnchoredReminder(anchor: .target, value: 1, unit: .days)),
-            .anchored(AnchoredReminder(anchor: .due, value: 2, unit: .hours)),
+            .anchored(AnchoredReminder(anchor: .plannedDay, value: 1, unit: .days)),
+            .anchored(AnchoredReminder(anchor: .deadline, value: 2, unit: .hours)),
         ]
 
         let subtaskDefinitions: [(String, Int, TaskStatus)] = [

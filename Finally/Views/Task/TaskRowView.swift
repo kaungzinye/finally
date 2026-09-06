@@ -13,27 +13,27 @@ struct TaskRowView: View {
     @State private var showRecurrencePicker = false
     @State private var showReminderPicker = false
 
-    private var formattedDueDate: String {
-        guard let dueDate = task.dueDate else { return "—" }
+    private var formattedDeadline: String {
+        guard let deadline = task.deadline else { return "—" }
 
         let calendar = Calendar.current
-        let time = task.dueDateHasTime
-            ? " \(dueDate.formatted(date: .omitted, time: .shortened))"
+        let time = task.deadlineHasTime
+            ? " \(deadline.formatted(date: .omitted, time: .shortened))"
             : ""
-        if calendar.isDateInToday(dueDate) {
+        if calendar.isDateInToday(deadline) {
             return "Today\(time)"
-        } else if calendar.isDateInTomorrow(dueDate) {
+        } else if calendar.isDateInTomorrow(deadline) {
             return "Tomorrow\(time)"
-        } else if calendar.isDateInYesterday(dueDate) {
+        } else if calendar.isDateInYesterday(deadline) {
             return "Yesterday\(time)"
         } else {
-            let daysFromNow = calendar.dateComponents([.day], from: calendar.startOfDay(for: Date()), to: dueDate).day ?? 0
+            let daysFromNow = calendar.dateComponents([.day], from: calendar.startOfDay(for: Date()), to: deadline).day ?? 0
             if daysFromNow > 0 && daysFromNow <= 6 {
                 let formatter = DateFormatter()
                 formatter.dateFormat = "EEEE"
-                return formatter.string(from: dueDate) + time
+                return formatter.string(from: deadline) + time
             } else {
-                return dueDate.formatted(.dateTime.month(.abbreviated).day()) + time
+                return deadline.formatted(.dateTime.month(.abbreviated).day()) + time
             }
         }
     }
@@ -89,9 +89,9 @@ struct TaskRowView: View {
 
             // Line 2: Properties bar + project on the right
             HStack(spacing: 6) {
-                // Due date — orange when in active window, red when overdue
+                // Deadline is orange in the active window and red when overdue.
                 Button { showDatePicker = true } label: {
-                    Text(formattedDueDate)
+                    Text(formattedDeadline)
                         .foregroundStyle(task.isOverdue ? .red : (task.isInActiveWindow ? .orange : .secondary))
                         .font(.caption2)
                         .lineLimit(1)
@@ -214,7 +214,7 @@ struct TaskRowView: View {
             .tint(.orange)
         }
         .sheet(isPresented: $showDatePicker) {
-            DatePickerSheet(selectedDate: dueDateBinding, hasTime: dueDateHasTimeBinding)
+            DatePickerSheet(selectedDate: deadlineBinding, hasTime: deadlineHasTimeBinding)
         }
         .sheet(isPresented: $showPriorityPicker) {
             PriorityPicker(selection: priorityBinding)
@@ -229,7 +229,7 @@ struct TaskRowView: View {
             RecurrencePicker(
                 selection: recurrenceBinding,
                 customRule: customRecurrenceBinding,
-                contextDate: task.dueDate
+                contextDate: task.deadline
             )
         }
         .sheet(isPresented: $showReminderPicker) {
@@ -239,10 +239,10 @@ struct TaskRowView: View {
 
     // MARK: - Bindings that mark task dirty on change
 
-    private var dueDateBinding: Binding<Date?> {
+    private var deadlineBinding: Binding<Date?> {
         Binding(
-            get: { task.dueDate },
-            set: { task.dueDate = $0; task.isDirty = true; submitTaskMutation() }
+            get: { task.deadline },
+            set: { task.deadline = $0; task.isDirty = true; submitTaskMutation() }
         )
     }
 
@@ -253,10 +253,10 @@ struct TaskRowView: View {
         )
     }
 
-    private var dueDateHasTimeBinding: Binding<Bool> {
+    private var deadlineHasTimeBinding: Binding<Bool> {
         Binding(
-            get: { task.dueDateHasTime },
-            set: { task.dueDateHasTime = $0; task.isDirty = true; submitTaskMutation() }
+            get: { task.deadlineHasTime },
+            set: { task.deadlineHasTime = $0; task.isDirty = true; submitTaskMutation() }
         )
     }
 

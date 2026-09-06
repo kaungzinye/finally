@@ -8,7 +8,7 @@ struct TaskDetailView: View {
     @Environment(TaskProviderCoordinator.self) private var taskProvider
 
     @State private var showDatePicker = false
-    @State private var showTargetDatePicker = false
+    @State private var showPlannedDayPicker = false
     @State private var showPriorityPicker = false
     @State private var showTagPicker = false
     @State private var showProjectPicker = false
@@ -17,10 +17,10 @@ struct TaskDetailView: View {
     @State private var subtaskReminderTarget: TaskItem? = nil
 
     @State private var editedTitle: String = ""
-    @State private var editedDueDate: Date?
-    @State private var editedTargetDate: Date?
-    @State private var editedDueDateHasTime = false
-    @State private var editedTargetDateHasTime = false
+    @State private var editedDeadline: Date?
+    @State private var editedPlannedDay: Date?
+    @State private var editedDeadlineHasTime = false
+    @State private var editedPlannedDayHasTime = false
     @State private var editedPriority: TaskPriority?
     @State private var editedTags: [String] = []
     @State private var editedProject: ProjectItem?
@@ -66,15 +66,15 @@ struct TaskDetailView: View {
 
                 // Properties
                 Section {
-                    // Due Date
+                    // Deadline
                     Button {
                         showDatePicker = true
                     } label: {
                         HStack {
-                            Label("Due Date", systemImage: "calendar")
+                            Label("Deadline", systemImage: "calendar")
                             Spacer()
-                            if let date = editedDueDate {
-                                Text(formattedPlanningDate(date, hasTime: editedDueDateHasTime))
+                            if let date = editedDeadline {
+                                Text(formattedPlanningDate(date, hasTime: editedDeadlineHasTime))
                                     .foregroundStyle(.secondary)
                             } else {
                                 Text("None")
@@ -84,13 +84,13 @@ struct TaskDetailView: View {
                     }
 
                     Button {
-                        showTargetDatePicker = true
+                        showPlannedDayPicker = true
                     } label: {
                         HStack {
-                            Label("Target Date", systemImage: "scope")
+                            Label("Planned Day", systemImage: "scope")
                             Spacer()
-                            if let date = editedTargetDate {
-                                Text(formattedPlanningDate(date, hasTime: editedTargetDateHasTime))
+                            if let date = editedPlannedDay {
+                                Text(formattedPlanningDate(date, hasTime: editedPlannedDayHasTime))
                                     .foregroundStyle(.secondary)
                             } else {
                                 Text("None")
@@ -296,10 +296,10 @@ struct TaskDetailView: View {
         }
         .onAppear {
             editedTitle = task.title
-            editedDueDate = task.dueDate
-            editedTargetDate = task.targetDate
-            editedDueDateHasTime = task.dueDateHasTime
-            editedTargetDateHasTime = task.targetDateHasTime
+            editedDeadline = task.deadline
+            editedPlannedDay = task.plannedDay
+            editedDeadlineHasTime = task.deadlineHasTime
+            editedPlannedDayHasTime = task.plannedDayHasTime
             editedPriority = task.priority
             editedTags = task.tags
             editedProject = task.project
@@ -309,10 +309,10 @@ struct TaskDetailView: View {
             editedExternalReferences = task.externalReferences.joined(separator: "\n")
         }
         .sheet(isPresented: $showDatePicker) {
-            DatePickerSheet(selectedDate: $editedDueDate, hasTime: $editedDueDateHasTime)
+            DatePickerSheet(selectedDate: $editedDeadline, hasTime: $editedDeadlineHasTime)
         }
-        .sheet(isPresented: $showTargetDatePicker) {
-            DatePickerSheet(selectedDate: $editedTargetDate, hasTime: $editedTargetDateHasTime)
+        .sheet(isPresented: $showPlannedDayPicker) {
+            DatePickerSheet(selectedDate: $editedPlannedDay, hasTime: $editedPlannedDayHasTime)
         }
         .sheet(isPresented: $showPriorityPicker) {
             PriorityPicker(selection: $editedPriority)
@@ -327,7 +327,7 @@ struct TaskDetailView: View {
             RecurrencePicker(
                 selection: $editedRecurrence,
                 customRule: $editedCustomRule,
-                contextDate: editedDueDate
+                contextDate: editedDeadline
             )
         }
         .sheet(item: $subtaskReminderTarget) { subtask in
@@ -391,15 +391,15 @@ struct TaskDetailView: View {
     }
 
     private func saveChanges() async {
-        let dueDateChanged = task.dueDate != editedDueDate
-        let targetDateChanged = task.targetDate != editedTargetDate
+        let deadlineChanged = task.deadline != editedDeadline
+        let plannedDayChanged = task.plannedDay != editedPlannedDay
 
         task.title = editedTitle
-        task.dueDate = editedDueDate
-        task.targetDate = editedTargetDate
-        task.dueDateHasTime = editedDueDate != nil && editedDueDateHasTime
-        task.targetDateHasTime = editedTargetDate != nil && editedTargetDateHasTime
-        task.validateTargetDate()
+        task.deadline = editedDeadline
+        task.plannedDay = editedPlannedDay
+        task.deadlineHasTime = editedDeadline != nil && editedDeadlineHasTime
+        task.plannedDayHasTime = editedPlannedDay != nil && editedPlannedDayHasTime
+        task.validatePlannedDay()
         task.priority = editedPriority
         task.tags = editedTags
         task.project = editedProject
@@ -412,8 +412,8 @@ struct TaskDetailView: View {
             .filter { !$0.isEmpty }
         task.isDirty = true
 
-        // Reschedule reminders if due date changed
-        if dueDateChanged || targetDateChanged {
+        // Reschedule reminders if deadline changed
+        if deadlineChanged || plannedDayChanged {
             NotificationService.shared.rescheduleAllReminders(modelContext: modelContext)
             // Redistribute subtask dates if parent deadline changed
             if task.hasSubtasks {

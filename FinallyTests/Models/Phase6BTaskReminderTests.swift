@@ -14,44 +14,57 @@ final class Phase6BTaskReminderTests: XCTestCase {
 
     // MARK: - Anchored fire dates
 
-    func testAnchoredReminder_FiresBeforeDueDate() {
+    func testReminderAnchorsUseCanonicalNamesAndResolveDates() {
+        let task = TaskItem(externalTaskID: "canonical-anchors", title: "Plan launch")
+        let plannedDay = makeDate(year: 2026, month: 9, day: 14)
+        let deadline = makeDate(year: 2026, month: 9, day: 21, hour: 17)
+        task.plannedDay = plannedDay
+        task.deadline = deadline
+
+        XCTAssertEqual(ReminderAnchor.plannedDay.rawValue, "plannedDay")
+        XCTAssertEqual(ReminderAnchor.deadline.rawValue, "deadline")
+        XCTAssertEqual(task.anchorDate(for: .plannedDay), plannedDay)
+        XCTAssertEqual(task.anchorDate(for: .deadline), deadline)
+    }
+
+    func testAnchoredReminder_FiresBeforeDeadline() {
         let task = TaskItem(externalTaskID: "t-1", title: "Task")
-        task.dueDate = makeDate(year: 2026, month: 6, day: 15, hour: 17)
-        task.dueDateHasTime = true
+        task.deadline = makeDate(year: 2026, month: 6, day: 15, hour: 17)
+        task.deadlineHasTime = true
 
         let reminder = TaskReminder.anchored(
-            AnchoredReminder(anchor: .due, value: 2, unit: .hours, direction: .before)
+            AnchoredReminder(anchor: .deadline, value: 2, unit: .hours, direction: .before)
         )
 
         let fire = reminder.fireDate(for: task)
         XCTAssertEqual(fire, makeDate(year: 2026, month: 6, day: 15, hour: 15))
     }
 
-    func testAnchoredReminder_FiresAfterDueDate() {
+    func testAnchoredReminder_FiresAfterDeadline() {
         let task = TaskItem(externalTaskID: "t-2", title: "Task")
-        task.dueDate = makeDate(year: 2026, month: 6, day: 15, hour: 17)
-        task.dueDateHasTime = true
+        task.deadline = makeDate(year: 2026, month: 6, day: 15, hour: 17)
+        task.deadlineHasTime = true
 
         let reminder = TaskReminder.anchored(
-            AnchoredReminder(anchor: .due, value: 1, unit: .days, direction: .after)
+            AnchoredReminder(anchor: .deadline, value: 1, unit: .days, direction: .after)
         )
 
         let fire = reminder.fireDate(for: task)
         XCTAssertEqual(fire, makeDate(year: 2026, month: 6, day: 16, hour: 17))
     }
 
-    func testAnchoredReminder_UsesTargetAnchorWhenPresent() {
+    func testAnchoredReminder_UsesPlannedDayAnchorWhenPresent() {
         let task = TaskItem(externalTaskID: "t-3", title: "Task")
-        task.targetDate = makeDate(year: 2026, month: 6, day: 10)
-        task.dueDate = makeDate(year: 2026, month: 6, day: 20)
+        task.plannedDay = makeDate(year: 2026, month: 6, day: 10)
+        task.deadline = makeDate(year: 2026, month: 6, day: 20)
 
         let reminder = TaskReminder.anchored(
-            AnchoredReminder(anchor: .target, value: 1, unit: .weeks, direction: .before)
+            AnchoredReminder(anchor: .plannedDay, value: 1, unit: .weeks, direction: .before)
         )
 
         let fire = reminder.fireDate(for: task, defaultReminderMinutes: 540)
         let expected = calendar.date(byAdding: .weekOfYear, value: -1, to: task.adjustedAnchorDate(
-            task.targetDate!,
+            task.plannedDay!,
             hasTime: false,
             defaultReminderMinutes: 540
         ))
@@ -61,7 +74,7 @@ final class Phase6BTaskReminderTests: XCTestCase {
     func testAnchoredReminder_ReturnsNilWhenAnchorDateMissing() {
         let task = TaskItem(externalTaskID: "t-4", title: "No dates")
         let reminder = TaskReminder.anchored(
-            AnchoredReminder(anchor: .due, value: 1, unit: .days, direction: .before)
+            AnchoredReminder(anchor: .deadline, value: 1, unit: .days, direction: .before)
         )
         XCTAssertNil(reminder.fireDate(for: task))
     }
@@ -71,7 +84,7 @@ final class Phase6BTaskReminderTests: XCTestCase {
         let fixed = makeDate(year: 2026, month: 7, day: 4, hour: 8)
         let reminder = TaskReminder.explicitDate(ExplicitDateReminder(dateTime: fixed))
 
-        task.dueDate = makeDate(year: 2026, month: 8, day: 1)
+        task.deadline = makeDate(year: 2026, month: 8, day: 1)
         XCTAssertEqual(reminder.fireDate(for: task), fixed)
     }
 
@@ -79,7 +92,7 @@ final class Phase6BTaskReminderTests: XCTestCase {
 
     func testTaskReminderCodec_RoundTripsAnchoredAndExplicitReminders() {
         let reminders: [TaskReminder] = [
-            .anchored(AnchoredReminder(anchor: .target, value: 3, unit: .days, direction: .before)),
+            .anchored(AnchoredReminder(anchor: .plannedDay, value: 3, unit: .days, direction: .before)),
             .explicitDate(ExplicitDateReminder(dateTime: makeDate(year: 2026, month: 5, day: 1, hour: 10))),
         ]
 
@@ -94,10 +107,10 @@ final class Phase6BTaskReminderTests: XCTestCase {
     // MARK: - Unit bounds
 
     func testAnchoredReminder_ValidatesUnitBounds() {
-        let valid = AnchoredReminder(anchor: .due, value: 30, unit: .days, direction: .before)
+        let valid = AnchoredReminder(anchor: .deadline, value: 30, unit: .days, direction: .before)
         XCTAssertTrue(valid.isValidValue())
 
-        let invalid = AnchoredReminder(anchor: .due, value: 31, unit: .days, direction: .before)
+        let invalid = AnchoredReminder(anchor: .deadline, value: 31, unit: .days, direction: .before)
         XCTAssertFalse(invalid.isValidValue())
     }
 

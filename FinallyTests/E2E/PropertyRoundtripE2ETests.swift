@@ -59,41 +59,41 @@ final class PropertyRoundtripE2ETests: NotionE2ETestCase {
         XCTAssertEqual(synced.status, .done)
     }
 
-    // MARK: - Due Date
+    // MARK: - Deadline
 
-    func testRoundtrip_DueDate_DateOnly() async throws {
+    func testRoundtrip_Deadline_DateOnly() async throws {
         var cal = Calendar(identifier: .gregorian)
         cal.timeZone = TimeZone(identifier: "UTC")!
-        let dueDate = cal.date(from: DateComponents(year: 2026, month: 6, day: 15))!
+        let deadline = cal.date(from: DateComponents(year: 2026, month: 6, day: 15))!
 
-        let task = try await pushLocalTask(title: "Due Date roundtrip") { t in
-            t.dueDate = dueDate
+        let task = try await pushLocalTask(title: "Deadline roundtrip") { t in
+            t.deadline = deadline
         }
         try await syncService.fullSync(session: session, modelContext: modelContext)
         let synced = try XCTUnwrap(try fetchTask(externalTaskID: task.externalTaskID))
 
-        let syncedComponents = cal.dateComponents([.year, .month, .day], from: try XCTUnwrap(synced.dueDate))
+        let syncedComponents = cal.dateComponents([.year, .month, .day], from: try XCTUnwrap(synced.deadline))
         XCTAssertEqual(syncedComponents.year, 2026)
         XCTAssertEqual(syncedComponents.month, 6)
         XCTAssertEqual(syncedComponents.day, 15)
     }
 
-    func testRoundtrip_TargetAndDueDates() async throws {
+    func testRoundtrip_PlannedDayAndDeadline() async throws {
         var cal = Calendar(identifier: .gregorian)
         cal.timeZone = TimeZone(identifier: "UTC")!
-        let targetDate = cal.date(from: DateComponents(year: 2026, month: 7, day: 1))!
+        let plannedDay = cal.date(from: DateComponents(year: 2026, month: 7, day: 1))!
         let endDate = cal.date(from: DateComponents(year: 2026, month: 7, day: 7))!
 
-        let task = try await pushLocalTask(title: "Target + Due roundtrip") { t in
-            t.targetDate = targetDate
-            t.dueDate = endDate
+        let task = try await pushLocalTask(title: "Planned day and deadline roundtrip") { t in
+            t.plannedDay = plannedDay
+            t.deadline = endDate
         }
         try await syncService.fullSync(session: session, modelContext: modelContext)
         let synced = try XCTUnwrap(try fetchTask(externalTaskID: task.externalTaskID))
 
-        let targetComponents = cal.dateComponents([.year, .month, .day], from: try XCTUnwrap(synced.targetDate))
-        let endComponents = cal.dateComponents([.year, .month, .day], from: try XCTUnwrap(synced.dueDate))
-        XCTAssertEqual(targetComponents.day, 1)
+        let plannedDayComponents = cal.dateComponents([.year, .month, .day], from: try XCTUnwrap(synced.plannedDay))
+        let endComponents = cal.dateComponents([.year, .month, .day], from: try XCTUnwrap(synced.deadline))
+        XCTAssertEqual(plannedDayComponents.day, 1)
         XCTAssertEqual(endComponents.day, 7)
     }
 

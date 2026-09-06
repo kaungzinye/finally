@@ -6,7 +6,7 @@ struct TodayView: View {
         filter: #Predicate<TaskItem> { task in
             task.statusRaw != "Complete" && task.isDeleted == false
         },
-        sort: \TaskItem.dueDate
+        sort: \TaskItem.deadline
     )
     private var nonDoneTasks: [TaskItem]
     @Query private var sessions: [UserSession]
@@ -58,7 +58,7 @@ struct TodayView: View {
     }
 
     private var todayTasks: [TaskItem] {
-        let parentToday = sortStack.sorted(visibleTasks.filter { $0.isDueToday && !$0.isSubtask })
+        let parentToday = sortStack.sorted(visibleTasks.filter { $0.isDeadlineToday && !$0.isSubtask })
         let subtaskToday = sortStack.sorted(actionableSubtasks.filter {
             guard let suggested = $0.suggestedDate else { return false }
             return Calendar.current.isDateInToday(suggested)
@@ -156,7 +156,7 @@ struct TodayView: View {
                     ContentUnavailableView(
                         "All clear!",
                         systemImage: "sun.max",
-                        description: Text("No tasks due today")
+                        description: Text("No deadlines today")
                     )
                 }
             }

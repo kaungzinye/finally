@@ -178,24 +178,24 @@ enum ReminderOffset: String, CaseIterable, Identifiable {
         }
     }
 
-    func toTaskReminder(hasTargetDate: Bool) -> TaskReminder {
+    func toTaskReminder(hasPlannedDay: Bool) -> TaskReminder {
         switch self {
         case .atTime:
-            return .anchored(AnchoredReminder(anchor: .due, value: 0, unit: .minutes, direction: .before))
+            return .anchored(AnchoredReminder(anchor: .deadline, value: 0, unit: .minutes, direction: .before))
         case .fiveMin:
-            return .anchored(AnchoredReminder(anchor: .due, value: 5, unit: .minutes, direction: .before))
+            return .anchored(AnchoredReminder(anchor: .deadline, value: 5, unit: .minutes, direction: .before))
         case .fifteenMin:
-            return .anchored(AnchoredReminder(anchor: .due, value: 15, unit: .minutes, direction: .before))
+            return .anchored(AnchoredReminder(anchor: .deadline, value: 15, unit: .minutes, direction: .before))
         case .thirtyMin:
-            return TaskReminder.presetThirtyMinutesBeforeDue()
+            return TaskReminder.presetThirtyMinutesBeforeDeadline()
         case .oneHour:
-            return .anchored(AnchoredReminder(anchor: .due, value: 1, unit: .hours, direction: .before))
+            return .anchored(AnchoredReminder(anchor: .deadline, value: 1, unit: .hours, direction: .before))
         case .oneDay:
-            return TaskReminder.presetOneDayBeforeDue()
+            return TaskReminder.presetOneDayBeforeDeadline()
         case .oneWeek:
-            return hasTargetDate
-                ? TaskReminder.presetWeekBeforeTarget()
-                : .anchored(AnchoredReminder(anchor: .due, value: 1, unit: .weeks, direction: .before))
+            return hasPlannedDay
+                ? TaskReminder.presetWeekBeforePlannedDay()
+                : .anchored(AnchoredReminder(anchor: .deadline, value: 1, unit: .weeks, direction: .before))
         }
     }
 }
@@ -220,10 +220,10 @@ enum ReminderChoice: Equatable, Identifiable {
         }
     }
 
-    func toTaskReminder(hasTargetDate: Bool) -> TaskReminder {
+    func toTaskReminder(hasPlannedDay: Bool) -> TaskReminder {
         switch self {
         case .preset(let offset):
-            return offset.toTaskReminder(hasTargetDate: hasTargetDate)
+            return offset.toTaskReminder(hasPlannedDay: hasPlannedDay)
         case .custom(let date):
             return .explicitDate(ExplicitDateReminder(dateTime: date))
         }
@@ -254,9 +254,9 @@ enum Recurrence: String, Codable, CaseIterable {
         }
     }
 
-    /// Compute the next due date from the given date.
-    /// For simple presets only — custom rules use RecurrenceRule.nextDueDate.
-    func nextDueDate(from date: Date) -> Date? {
+    /// Compute the next deadline from the given date.
+    /// For simple presets only — custom rules use RecurrenceRule.nextDeadline.
+    func nextDeadline(from date: Date) -> Date? {
         guard self != .none, self != .custom else { return nil }
 
         let calendar = Calendar.current
@@ -353,9 +353,9 @@ struct RecurrenceRule: Codable, Equatable {
         return parts.joined(separator: " ")
     }
 
-    // MARK: - Next Due Date
+    // MARK: - Next Deadline
 
-    func nextDueDate(from date: Date) -> Date? {
+    func nextDeadline(from date: Date) -> Date? {
         let calendar = Calendar.current
 
         switch frequency {

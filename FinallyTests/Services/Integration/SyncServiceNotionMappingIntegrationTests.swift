@@ -11,7 +11,7 @@ final class SyncServiceNotionMappingIntegrationTests: XCTestCase {
         let mappings = PropertyMappings(
             taskTitleProperty: "Name",
             taskStatusProperty: "Status",
-            taskDueDateProperty: "Due Date",
+            taskDeadlineProperty: "Due Date",
             taskPriorityProperty: "Priority",
             taskTagsProperty: "Tags",
             taskProjectProperty: "Project",
@@ -65,7 +65,7 @@ final class SyncServiceNotionMappingIntegrationTests: XCTestCase {
         XCTAssertEqual(task.tags, ["Bills", "Home"])
         XCTAssertEqual(task.recurrence, .monthly)
         XCTAssertEqual(task.project?.externalProjectID, "proj-1")
-        XCTAssertNotNil(task.dueDate)
+        XCTAssertNotNil(task.deadline)
     }
 
     func testFullSync_WhenStatusNameUnknown_DefaultsSafelyToNotStarted() async throws {
@@ -99,7 +99,7 @@ final class SyncServiceNotionMappingIntegrationTests: XCTestCase {
         XCTAssertEqual(tasks.first?.status, .notStarted)
     }
 
-    func testFullSync_WhenDueDateIsISODateTime_ParsesAndWhenNull_ClearsExistingDueDate() async throws {
+    func testFullSync_WhenDeadlineIsISODateTime_ParsesAndWhenNull_ClearsExistingDeadline() async throws {
         let mock = MockNotionAPIClient()
         let syncService = SyncService(api: mock)
         let context = try makeInMemoryContext()
@@ -125,9 +125,9 @@ final class SyncServiceNotionMappingIntegrationTests: XCTestCase {
         ]
         try await syncService.fullSync(session: session, modelContext: context)
         var task = try XCTUnwrap(try context.fetch(FetchDescriptor<TaskItem>()).first)
-        XCTAssertNotNil(task.dueDate)
+        XCTAssertNotNil(task.deadline)
 
-        // Next sync returns null date: due date should clear
+        // The next sync returns a null date, so the deadline clears.
         mock.queryAllPagesResult["tasks-db"] = [
             NotionTestFactory.page(
                 id: "task-1",
@@ -143,7 +143,7 @@ final class SyncServiceNotionMappingIntegrationTests: XCTestCase {
         ]
         try await syncService.fullSync(session: session, modelContext: context)
         task = try XCTUnwrap(try context.fetch(FetchDescriptor<TaskItem>()).first)
-        XCTAssertNil(task.dueDate)
+        XCTAssertNil(task.deadline)
     }
 
     func testFullSync_WhenProjectRelationHasMultipleAndThenEmpty_UsesFirstThenClears() async throws {
@@ -295,14 +295,14 @@ final class SyncServiceNotionMappingIntegrationTests: XCTestCase {
         XCTAssertEqual(session.propertyMappings.taskStatusSchema?.preferredOptionName(for: .done), "✅")
     }
 
-    func testFullSync_MapsTargetDateAndDueDateRange() async throws {
+    func testFullSync_MapsPlannedDayAndDeadlineRange() async throws {
         let mock = MockNotionAPIClient()
         let syncService = SyncService(api: mock)
         let context = try makeInMemoryContext()
 
         var mappings = PropertyMappings()
-        mappings.taskTargetDateProperty = "Target"
-        mappings.taskDueDateProperty = "Due Date"
+        mappings.taskPlannedDayProperty = "Target"
+        mappings.taskDeadlineProperty = "Due Date"
 
         let session = UserSession(workspaceId: "ws-1", workspaceName: "Workspace", providerIdentity: .notion)
         session.tasksDatabaseId = "tasks-db"
@@ -331,9 +331,9 @@ final class SyncServiceNotionMappingIntegrationTests: XCTestCase {
         try await syncService.fullSync(session: session, modelContext: context)
 
         let task = try XCTUnwrap(try context.fetch(FetchDescriptor<TaskItem>()).first)
-        XCTAssertNotNil(task.targetDate)
-        XCTAssertNotNil(task.dueDate)
-        XCTAssertTrue(task.targetDate! < task.dueDate!)
+        XCTAssertNotNil(task.plannedDay)
+        XCTAssertNotNil(task.deadline)
+        XCTAssertTrue(task.plannedDay! < task.deadline!)
     }
 
     func testFullSync_WhenChildArrivesBeforeParent_LinksSubtaskToParent() async throws {

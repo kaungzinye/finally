@@ -2,7 +2,7 @@ import Foundation
 
 struct SubtaskScheduler {
 
-    /// Distribute suggested dates backward from parent's targetDate (preferred) or dueDate.
+    /// Distribute suggested dates backward from the parent's planned day or deadline.
     static func distributeSubtaskDates(parent: TaskItem) {
         let sorted = parent.activeSubtasks
             .filter { $0.status != .done }
@@ -10,8 +10,7 @@ struct SubtaskScheduler {
 
         guard !sorted.isEmpty else { return }
 
-        let planningDate = parent.targetDate ?? parent.dueDate
-        guard let deadline = planningDate else {
+        guard let planningWindowEnd = parent.plannedDay ?? parent.deadline else {
             for subtask in parent.activeSubtasks where subtask.suggestedDateOverride == nil {
                 subtask.suggestedDate = nil
             }
@@ -19,7 +18,7 @@ struct SubtaskScheduler {
         }
 
         let start = max(Date(), Calendar.current.startOfDay(for: Date()))
-        let end = deadline
+        let end = planningWindowEnd
 
         guard end > start else {
             for subtask in sorted where subtask.suggestedDateOverride == nil {
@@ -45,7 +44,7 @@ struct SubtaskScheduler {
         let slip = now.timeIntervalSince(suggestedDate)
         guard slip > 0 else { return }
 
-        let deadline = parent.targetDate ?? parent.dueDate ?? Date.distantFuture
+        let planningWindowEnd = parent.plannedDay ?? parent.deadline ?? Date.distantFuture
 
         let remaining = parent.activeSubtasks
             .filter { $0.status != .done && $0.externalTaskID != completedSubtask.externalTaskID }
@@ -55,7 +54,7 @@ struct SubtaskScheduler {
             guard subtask.suggestedDateOverride == nil,
                   let date = subtask.suggestedDate else { continue }
             let shifted = date.addingTimeInterval(slip)
-            subtask.suggestedDate = min(shifted, deadline)
+            subtask.suggestedDate = min(shifted, planningWindowEnd)
         }
     }
 }
