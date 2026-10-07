@@ -65,6 +65,7 @@ struct DailyFocusSection: View {
             if focus.isConfirmed {
                 Label("Confirmed", systemImage: "checkmark.seal.fill")
                     .foregroundStyle(.green)
+                    .fixedSize()
             } else {
                 Button("Confirm") {
                     focus.confirm()
