@@ -29,6 +29,10 @@ enum AppConstants {
     /// Default: 9:00 AM = 540 minutes from midnight.
     static let defaultReminderTimeMinutes = 540
 
+    // Daily Focus
+    /// UserDefaults key for the focus limit applied to new Daily Focus records.
+    static let focusLimitKey = "focusLimit"
+
     // Widget
     static let widgetKind = "TaskListWidget"
 }

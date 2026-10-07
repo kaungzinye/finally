@@ -6,6 +6,7 @@ struct SettingsView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(TaskProviderCoordinator.self) private var taskProvider
     @State private var authService = NotionAuthService()
+    @AppStorage(AppConstants.focusLimitKey) private var focusLimit = DailyFocus.defaultFocusLimit
 
     private var notionSession: UserSession? {
         sessions.first { $0.providerIdentity == .notion }
@@ -39,6 +40,22 @@ struct SettingsView: View {
                     } label: {
                         Label("Add Finally Server", systemImage: "plus.circle")
                     }
+                }
+
+                Section {
+                    Stepper(value: $focusLimit, in: DailyFocus.focusLimitRange) {
+                        HStack {
+                            Label("Focus limit", systemImage: "scope")
+                            Spacer()
+                            Text("\(focusLimit)")
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                    .accessibilityIdentifier("focus-limit-stepper")
+                } header: {
+                    Text("Daily Focus")
+                } footer: {
+                    Text("New Daily Focus days use this limit, one to five picks. Each existing day keeps its limit.")
                 }
 
                 Section("Notifications") {

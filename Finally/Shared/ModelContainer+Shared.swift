@@ -12,6 +12,7 @@ extension ModelContainer {
             TaskItem.self,
             ProjectItem.self,
             UserSession.self,
+            DailyFocus.self,
         ])
 
         let storeURL: URL

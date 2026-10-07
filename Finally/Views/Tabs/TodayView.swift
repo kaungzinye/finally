@@ -11,8 +11,11 @@ struct TodayView: View {
     private var nonDoneTasks: [TaskItem]
     @Query private var sessions: [UserSession]
     @Environment(TaskProviderCoordinator.self) private var taskProvider
+    @Environment(DailyFocusService.self) private var dailyFocusService
     @Environment(\.modelContext) private var modelContext
+    @AppStorage(AppConstants.focusLimitKey) private var focusLimit = DailyFocus.defaultFocusLimit
 
+    @State private var dailyFocus: DailyFocus?
     @State private var selectedTask: TaskItem?
     @State private var expandedSections: Set<String> = ["Today"]
     @State private var isSelectionMode = false
@@ -80,6 +83,13 @@ struct TodayView: View {
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                 } else {
                     List {
+                        if let dailyFocus {
+                            DailyFocusSection(
+                                focus: dailyFocus,
+                                onChange: saveDailyFocus,
+                                onSelectTask: { selectedTask = $0 }
+                            )
+                        }
                         if !overdueTasks.isEmpty {
                             Section {
                                 if expandedSections.contains("Overdue") {
@@ -93,6 +103,10 @@ struct TodayView: View {
                         }
                         Section {
                             if expandedSections.contains("Today") {
+                                if todayTasks.isEmpty {
+                                    Label("No deadlines today", systemImage: "sun.max")
+                                        .foregroundStyle(.secondary)
+                                }
                                 ForEach(todayTasks, id: \.externalTaskID) { task in
                                     taskRow(task)
                                 }
@@ -109,6 +123,10 @@ struct TodayView: View {
             .navigationTitle(isSelectionMode ? "Select Tasks (\(selectedTasks.count))" : "Today")
             .refreshable {
                 try? await taskProvider.synchronize(.launch, store: modelContext)
+                await loadDailyFocus()
+            }
+            .task(id: selectedWorkspace?.workspaceId) {
+                await loadDailyFocus()
             }
             .toolbar {
                 if isSelectionMode {
@@ -151,15 +169,6 @@ struct TodayView: View {
                     }
                 }
             }
-            .overlay {
-                if overdueTasks.isEmpty && todayTasks.isEmpty {
-                    ContentUnavailableView(
-                        "All clear!",
-                        systemImage: "sun.max",
-                        description: Text("No deadlines today")
-                    )
-                }
-            }
         }
         .sheet(item: $selectedTask) { task in
             TaskDetailView(task: task)
@@ -174,6 +183,24 @@ struct TodayView: View {
                 set: { sortStackJSON = $0.jsonString }
             ))
             .presentationDetents([.medium])
+        }
+    }
+
+    // MARK: - Daily Focus
+
+    private func loadDailyFocus() async {
+        dailyFocus = try? await dailyFocusService.dailyFocus(
+            for: Date(),
+            workspace: selectedWorkspace,
+            store: modelContext,
+            focusLimit: focusLimit
+        )
+    }
+
+    private func saveDailyFocus() {
+        guard let dailyFocus else { return }
+        Task {
+            try? await dailyFocusService.save(dailyFocus, workspace: selectedWorkspace, store: modelContext)
         }
     }
 

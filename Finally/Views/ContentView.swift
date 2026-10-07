@@ -4,6 +4,7 @@ struct ContentView: View {
     @Environment(NavigationRouter.self) private var router
     @Environment(NetworkService.self) private var networkService
     @Environment(TaskProviderCoordinator.self) private var taskProvider
+    @Environment(DailyFocusService.self) private var dailyFocusService
     @Environment(\.modelContext) private var modelContext
 
     @State private var showCreator = false
@@ -30,6 +31,15 @@ struct ContentView: View {
                             Task { await taskProvider.retryPendingChanges(store: modelContext) }
                         },
                         onDismiss: { taskProvider.clearError() }
+                    )
+                    .padding(.horizontal)
+                    .padding(.vertical, 8)
+                }
+
+                if let message = dailyFocusService.lastError {
+                    SyncErrorBanner(
+                        message: message,
+                        onDismiss: { dailyFocusService.clearError() }
                     )
                     .padding(.horizontal)
                     .padding(.vertical, 8)
