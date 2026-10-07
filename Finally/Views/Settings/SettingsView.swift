@@ -55,7 +55,7 @@ struct SettingsView: View {
                 } header: {
                     Text("Daily Focus")
                 } footer: {
-                    Text("Daily Focus holds at most this many picks, one to five.")
+                    Text("New Daily Focus days use this limit, one to five picks. Each existing day keeps its limit.")
                 }
 
                 Section("Notifications") {

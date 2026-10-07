@@ -128,11 +128,6 @@ struct TodayView: View {
             .task(id: selectedWorkspace?.workspaceId) {
                 await loadDailyFocus()
             }
-            .onChange(of: focusLimit) { _, limit in
-                guard let dailyFocus else { return }
-                dailyFocus.focusLimit = DailyFocus.clampedFocusLimit(limit)
-                saveDailyFocus()
-            }
             .toolbar {
                 if isSelectionMode {
                     ToolbarItem(placement: .topBarLeading) {
