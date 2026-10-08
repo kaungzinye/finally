@@ -22,13 +22,13 @@ struct InlineReminderPicker: View {
                         } label: {
                             HStack {
                                 Image(systemName: "bell")
-                                    .foregroundStyle(.orange)
+                                    .foregroundStyle(Palette.ink)
                                 Text(offset.rawValue)
                                     .foregroundStyle(.primary)
                                 Spacer()
                                 if selectedChoices.contains(choice) {
                                     Image(systemName: "checkmark")
-                                        .foregroundStyle(.blue)
+                                        .foregroundStyle(.tint)
                                 }
                             }
                         }
@@ -41,7 +41,7 @@ struct InlineReminderPicker: View {
                     } label: {
                         HStack {
                             Image(systemName: "clock")
-                                .foregroundStyle(.orange)
+                                .foregroundStyle(Palette.ink)
                             Text("Pick exact date & time")
                                 .foregroundStyle(.primary)
                             Spacer()
@@ -82,7 +82,7 @@ struct InlineReminderPicker: View {
                     ForEach(customChoices) { choice in
                         HStack {
                             Image(systemName: "clock.fill")
-                                .foregroundStyle(.orange)
+                                .foregroundStyle(Palette.ink)
                             Text(choice.displayLabel)
                                 .foregroundStyle(.primary)
                             Spacer()

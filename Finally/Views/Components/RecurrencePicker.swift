@@ -27,7 +27,7 @@ struct RecurrencePicker: View {
                                 Spacer()
                                 if selection == recurrence {
                                     Image(systemName: "checkmark")
-                                        .foregroundStyle(.blue)
+                                        .foregroundStyle(.tint)
                                 }
                             }
                         }
@@ -40,13 +40,13 @@ struct RecurrencePicker: View {
                         // Show current custom rule summary
                         HStack {
                             Image(systemName: "repeat")
-                                .foregroundStyle(.blue)
+                                .foregroundStyle(.tint)
                                 .frame(width: 24)
                             Text(rule.summary)
                                 .foregroundStyle(.primary)
                             Spacer()
                             Image(systemName: "checkmark")
-                                .foregroundStyle(.blue)
+                                .foregroundStyle(.tint)
                         }
                     }
 
@@ -136,11 +136,11 @@ struct CustomRecurrenceEditor: View {
                                         .frame(width: 36, height: 36)
                                         .background(
                                             rule.weekdays.contains(day)
-                                                ? Color.blue
-                                                : Color(.systemGray5)
+                                                ? Palette.ink
+                                                : Palette.wash
                                         )
                                         .foregroundStyle(
-                                            rule.weekdays.contains(day) ? .white : .primary
+                                            rule.weekdays.contains(day) ? Palette.onInk : Palette.ink
                                         )
                                         .clipShape(Circle())
                                 }
@@ -165,7 +165,7 @@ struct CustomRecurrenceEditor: View {
                                 Spacer()
                                 if rule.monthlyMode == .dayOfMonth {
                                     Image(systemName: "checkmark")
-                                        .foregroundStyle(.blue)
+                                        .foregroundStyle(.tint)
                                 }
                             }
                         }
@@ -185,7 +185,7 @@ struct CustomRecurrenceEditor: View {
                                 Spacer()
                                 if rule.monthlyMode == .nthWeekday {
                                     Image(systemName: "checkmark")
-                                        .foregroundStyle(.blue)
+                                        .foregroundStyle(.tint)
                                 }
                             }
                         }
@@ -217,7 +217,7 @@ struct CustomRecurrenceEditor: View {
                 Section("Preview") {
                     HStack {
                         Image(systemName: "repeat")
-                            .foregroundStyle(.blue)
+                            .foregroundStyle(.tint)
                         Text(rule.summary)
                             .foregroundStyle(.primary)
                     }

@@ -56,7 +56,7 @@ struct InlineTaskCreator: View {
     var body: some View {
         VStack(spacing: 10) {
             if let syncErrorMessage {
-                SyncErrorBanner(message: syncErrorMessage) {
+                Callout(message: syncErrorMessage) {
                     self.syncErrorMessage = nil
                 }
             }
@@ -86,10 +86,9 @@ struct InlineTaskCreator: View {
                                     Text(proj.title)
                                         .font(.caption)
                                 }
-                                .padding(.horizontal, 8)
-                                .padding(.vertical, 4)
-                                .background(Color(.systemGray5))
-                                .clipShape(Capsule())
+                                .padding(.horizontal, 10)
+                                .padding(.vertical, 6)
+                                .background(Palette.wash, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
                             }
                             .buttonStyle(.plain)
                         }
@@ -107,10 +106,9 @@ struct InlineTaskCreator: View {
                             } label: {
                                 Text("#\(tag)")
                                     .font(.caption)
-                                    .padding(.horizontal, 8)
-                                    .padding(.vertical, 4)
-                                    .background(Color.purple.opacity(0.15))
-                                    .clipShape(Capsule())
+                                    .padding(.horizontal, 10)
+                                    .padding(.vertical, 6)
+                                    .background(Palette.wash, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
                             }
                             .buttonStyle(.plain)
                         }
@@ -126,15 +124,13 @@ struct InlineTaskCreator: View {
                         if let deadline {
                             ChipView(
                                 label: formatPlanningDate(deadline, hasTime: deadlineHasTime),
-                                icon: "calendar",
-                                color: .secondary
+                                icon: "calendar"
                             ) { showDatePicker = true }
                         }
                         if let plannedDay {
                             ChipView(
                                 label: "Planned \(formatPlanningDate(plannedDay, hasTime: plannedDayHasTime))",
-                                icon: "scope",
-                                color: .blue
+                                icon: "scope"
                             ) { showPlannedDayPicker = true }
                         }
                         if let priority {
@@ -147,36 +143,31 @@ struct InlineTaskCreator: View {
                         if !tags.isEmpty {
                             ChipView(
                                 label: "\(tags.count) tag\(tags.count == 1 ? "" : "s")",
-                                icon: "tag",
-                                color: .purple
+                                icon: "tag"
                             ) { showTagPicker = true }
                         }
                         if let project {
                             ChipView(
                                 label: project.title,
-                                icon: "folder",
-                                color: .secondary
+                                icon: "folder"
                             ) { showProjectPicker = true }
                         }
                         if !reminderChoices.isEmpty {
                             ChipView(
                                 label: "\(reminderChoices.count) reminder\(reminderChoices.count == 1 ? "" : "s")",
-                                icon: "bell.fill",
-                                color: .orange
+                                icon: "bell.fill"
                             ) { showReminderPicker = true }
                         }
                         if let parentTask {
                             ChipView(
                                 label: "↳ \(parentTask.title)",
-                                icon: "list.bullet.indent",
-                                color: .blue
+                                icon: "list.bullet.indent"
                             ) { showParentPicker = true }
                         }
                         if recurrence != .none {
                             ChipView(
                                 label: recurrence == .custom ? (customRecurrenceRule?.summary ?? "Custom") : recurrence.rawValue,
-                                icon: "repeat",
-                                color: .green
+                                icon: "repeat"
                             ) { showRecurrencePicker = true }
                         }
                     }
@@ -188,35 +179,35 @@ struct InlineTaskCreator: View {
             HStack(spacing: 18) {
                 Button { showDatePicker = true } label: {
                     Image(systemName: "calendar")
-                        .foregroundStyle(deadline != nil ? .primary : .secondary)
+                        .foregroundStyle(deadline != nil ? Palette.ink : Palette.muted)
                 }
                 Button { showPlannedDayPicker = true } label: {
                     Image(systemName: "scope")
-                        .foregroundStyle(plannedDay != nil ? .blue : .secondary)
+                        .foregroundStyle(plannedDay != nil ? Palette.ink : Palette.muted)
                 }
                 Button { showPriorityPicker = true } label: {
                     Image(systemName: "flag")
-                        .foregroundStyle(priority != nil ? priority!.color : .secondary)
+                        .foregroundStyle(priority?.color ?? Palette.muted)
                 }
                 Button { showReminderPicker = true } label: {
                     Image(systemName: !reminderChoices.isEmpty ? "bell.fill" : "bell")
-                        .foregroundStyle(!reminderChoices.isEmpty ? .orange : .secondary)
+                        .foregroundStyle(!reminderChoices.isEmpty ? Palette.ink : Palette.muted)
                 }
                 Button { showTagPicker = true } label: {
                     Image(systemName: "tag")
-                        .foregroundStyle(!tags.isEmpty ? .purple : .secondary)
+                        .foregroundStyle(!tags.isEmpty ? Palette.ink : Palette.muted)
                 }
                 Button { showProjectPicker = true } label: {
                     Image(systemName: "folder")
-                        .foregroundStyle(project != nil ? .primary : .secondary)
+                        .foregroundStyle(project != nil ? Palette.ink : Palette.muted)
                 }
                 Button { showParentPicker = true } label: {
                     Image(systemName: "list.bullet.indent")
-                        .foregroundStyle(parentTask != nil ? .blue : .secondary)
+                        .foregroundStyle(parentTask != nil ? Palette.ink : Palette.muted)
                 }
                 Button { showRecurrencePicker = true } label: {
                     Image(systemName: "repeat")
-                        .foregroundStyle(recurrence != .none ? .green : .secondary)
+                        .foregroundStyle(recurrence != .none ? Palette.ink : Palette.muted)
                 }
                 Spacer()
                 Button {
@@ -224,7 +215,7 @@ struct InlineTaskCreator: View {
                 } label: {
                     Image(systemName: "arrow.up.circle.fill")
                         .font(.title)
-                        .foregroundStyle(taskTitle.isEmpty ? Color.secondary : Color.primary)
+                        .foregroundStyle(taskTitle.isEmpty ? Palette.hairline : Palette.ink)
                 }
                 .disabled(taskTitle.trimmingCharacters(in: .whitespaces).isEmpty || syncErrorMessage != nil)
             }
@@ -234,10 +225,15 @@ struct InlineTaskCreator: View {
         }
         .padding(.top, 12)
         .background(
-            Color(.secondarySystemBackground)
+            Palette.card
                 .ignoresSafeArea(edges: .bottom)
         )
-        .clipShape(.rect(topLeadingRadius: 16, topTrailingRadius: 16))
+        .clipShape(.rect(topLeadingRadius: 24, topTrailingRadius: 24))
+        .overlay(alignment: .top) {
+            UnevenRoundedRectangle(topLeadingRadius: 24, topTrailingRadius: 24, style: .continuous)
+                .strokeBorder(Palette.hairline, lineWidth: 1)
+                .mask(alignment: .top) { Rectangle().frame(height: 24) }
+        }
         .onAppear {
             if project == nil, let presetProject {
                 project = presetProject

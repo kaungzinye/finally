@@ -29,7 +29,7 @@ struct BoardFilterView: View {
                                 Spacer()
                                 if filterProjects.contains(project.externalProjectID) {
                                     Image(systemName: "checkmark")
-                                        .foregroundStyle(.blue)
+                                        .foregroundStyle(.tint)
                                 }
                             }
                         }
@@ -53,7 +53,7 @@ struct BoardFilterView: View {
                                 Spacer()
                                 if filterPriorities.contains(priority.rawValue) {
                                     Image(systemName: "checkmark")
-                                        .foregroundStyle(.blue)
+                                        .foregroundStyle(.tint)
                                 }
                             }
                         }

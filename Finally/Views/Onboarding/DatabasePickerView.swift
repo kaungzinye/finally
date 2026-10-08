@@ -20,104 +20,108 @@ struct DatabasePickerView: View {
     var body: some View {
         NavigationStack {
             List {
-                if isLoading {
-                    Section {
-                        HStack {
-                            ProgressView()
-                            Text("Loading databases...")
-                                .padding(.leading, 8)
-                        }
-                    }
-                } else if let errorMessage {
-                    Section {
-                        Text(errorMessage)
-                            .foregroundStyle(.red)
-                        Button("Retry") {
-                            Task { await loadDatabases() }
-                        }
-                    }
-                } else if databases.isEmpty {
-                    Section {
-                        Text("No databases found. You may need to share pages with this integration in Notion.")
-                            .foregroundStyle(.secondary)
-                        Button {
-                            Task {
-                                let success = await authService.startOAuthFlow(modelContext: modelContext)
-                                if success {
-                                    await loadDatabases()
-                                }
-                            }
-                        } label: {
-                            Label("Update Notion Permissions", systemImage: "arrow.triangle.2.circlepath")
-                        }
-                    }
-                } else {
-                    Section("Tasks Database (Required)") {
-                        ForEach(databases, id: \.id) { db in
-                            Button {
-                                selectedTasksDb = db.id
-                            } label: {
-                                HStack {
-                                    Text(db.title?.first?.plainText ?? "Untitled")
-                                    Spacer()
-                                    if selectedTasksDb == db.id {
-                                        Image(systemName: "checkmark")
-                                            .foregroundStyle(.primary)
-                                    }
-                                }
-                            }
-                        }
-                    }
-
-                    Section("Projects Database (Optional)") {
-                        Button {
-                            selectedProjectsDb = nil
-                        } label: {
+                Group {
+                    if isLoading {
+                        Section {
                             HStack {
-                                Text("None")
-                                Spacer()
-                                if selectedProjectsDb == nil {
-                                    Image(systemName: "checkmark")
-                                        .foregroundStyle(.primary)
+                                ProgressView()
+                                Text("Loading databases...")
+                                    .padding(.leading, 8)
+                            }
+                        }
+                    } else if let errorMessage {
+                        Section {
+                            Text(errorMessage)
+                                .foregroundStyle(Palette.urgent)
+                            Button("Retry") {
+                                Task { await loadDatabases() }
+                            }
+                        }
+                    } else if databases.isEmpty {
+                        Section {
+                            Text("No databases found. You may need to share pages with this integration in Notion.")
+                                .foregroundStyle(.secondary)
+                            Button {
+                                Task {
+                                    let success = await authService.startOAuthFlow(modelContext: modelContext)
+                                    if success {
+                                        await loadDatabases()
+                                    }
+                                }
+                            } label: {
+                                Label("Update Notion Permissions", systemImage: "arrow.triangle.2.circlepath")
+                            }
+                        }
+                    } else {
+                        Section("Tasks Database (Required)") {
+                            ForEach(databases, id: \.id) { db in
+                                Button {
+                                    selectedTasksDb = db.id
+                                } label: {
+                                    HStack {
+                                        Text(db.title?.first?.plainText ?? "Untitled")
+                                        Spacer()
+                                        if selectedTasksDb == db.id {
+                                            Image(systemName: "checkmark")
+                                                .foregroundStyle(.tint)
+                                        }
+                                    }
                                 }
                             }
                         }
 
-                        ForEach(databases, id: \.id) { db in
+                        Section("Projects Database (Optional)") {
                             Button {
-                                selectedProjectsDb = db.id
+                                selectedProjectsDb = nil
                             } label: {
                                 HStack {
-                                    Text(db.title?.first?.plainText ?? "Untitled")
+                                    Text("None")
                                     Spacer()
-                                    if selectedProjectsDb == db.id {
+                                    if selectedProjectsDb == nil {
                                         Image(systemName: "checkmark")
-                                            .foregroundStyle(.primary)
+                                            .foregroundStyle(.tint)
+                                    }
+                                }
+                            }
+
+                            ForEach(databases, id: \.id) { db in
+                                Button {
+                                    selectedProjectsDb = db.id
+                                } label: {
+                                    HStack {
+                                        Text(db.title?.first?.plainText ?? "Untitled")
+                                        Spacer()
+                                        if selectedProjectsDb == db.id {
+                                            Image(systemName: "checkmark")
+                                                .foregroundStyle(.tint)
+                                        }
                                     }
                                 }
                             }
                         }
-                    }
 
-                    if !validationErrors.isEmpty {
-                        Section("Schema Issues") {
-                            ForEach(validationErrors, id: \.propertyName) { issue in
-                                VStack(alignment: .leading, spacing: 4) {
-                                    HStack {
-                                        Image(systemName: "exclamationmark.triangle.fill")
-                                            .foregroundStyle(.orange)
-                                        Text(issue.propertyName)
-                                            .fontWeight(.medium)
+                        if !validationErrors.isEmpty {
+                            Section("Schema Issues") {
+                                ForEach(validationErrors, id: \.propertyName) { issue in
+                                    VStack(alignment: .leading, spacing: 4) {
+                                        HStack {
+                                            Image(systemName: "exclamationmark.triangle.fill")
+                                                .foregroundStyle(Palette.high)
+                                            Text(issue.propertyName)
+                                                .fontWeight(.medium)
+                                        }
+                                        Text(issue.message)
+                                            .font(.caption)
+                                            .foregroundStyle(.secondary)
                                     }
-                                    Text(issue.message)
-                                        .font(.caption)
-                                        .foregroundStyle(.secondary)
                                 }
                             }
                         }
                     }
                 }
+                .cardRow()
             }
+            .paperList()
             .navigationTitle("Select Databases")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {

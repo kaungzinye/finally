@@ -17,6 +17,18 @@ struct FinallyApp: App {
     @State private var notificationDelegate: NotificationDelegate?
     @AppStorage("appearanceMode") private var appearanceMode: Int = 0 // 0=system, 1=light, 2=dark
 
+    init() {
+        let navigationBar = UINavigationBar.appearance()
+        navigationBar.largeTitleTextAttributes = [
+            .font: UIFont.rounded(.largeTitle, weight: .bold),
+            .foregroundColor: UIColor(Palette.ink),
+        ]
+        navigationBar.titleTextAttributes = [
+            .font: UIFont.rounded(.headline, weight: .semibold),
+            .foregroundColor: UIColor(Palette.ink),
+        ]
+    }
+
     var body: some Scene {
         WindowGroup {
             Group {
@@ -26,6 +38,8 @@ struct FinallyApp: App {
                     DailyFocusDemoView()
                 } else if isLoading {
                     ProgressView("Loading...")
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        .background(Palette.paper.ignoresSafeArea())
                 } else if !hasSession {
                     NotionConnectView(onConnected: {
                         needsDatabaseSetup = true
@@ -44,7 +58,7 @@ struct FinallyApp: App {
             .environment(taskProvider)
             .environment(dailyFocusService)
             .environment(networkService)
-            .tint(Color(.label))
+            .tint(Palette.ink)
             .preferredColorScheme(colorScheme)
             .onOpenURL { url in
                 router.handleURL(url)
@@ -230,3 +244,13 @@ private struct DailyFocusDemoView: View {
     }
 }
 #endif
+
+private extension UIFont {
+    /// SF Pro Rounded at a Dynamic Type text style.
+    static func rounded(_ style: UIFont.TextStyle, weight: UIFont.Weight) -> UIFont {
+        let base = UIFont.preferredFont(forTextStyle: style)
+        let weighted = base.fontDescriptor.addingAttributes([.traits: [UIFontDescriptor.TraitKey.weight: weight]])
+        let descriptor = weighted.withDesign(.rounded) ?? weighted
+        return UIFont(descriptor: descriptor, size: base.pointSize)
+    }
+}

@@ -40,7 +40,7 @@ struct InboxView: View {
                     ForEach(inboxTasks, id: \.externalTaskID) { task in
                         ZStack(alignment: .leading) {
                             if isSelectionMode && selectedTasks.contains(task.externalTaskID) {
-                                Color.blue.opacity(0.1)
+                                Palette.selection
                             }
                             TaskRowView(task: task)
                         }
@@ -66,7 +66,7 @@ struct InboxView: View {
                         }
                     }
                 }
-                .listStyle(.plain)
+                .paperList()
                 .navigationTitle(isSelectionMode ? "Select Tasks (\(selectedTasks.count))" : "Inbox")
                 .refreshable {
                     try? await taskProvider.synchronize(.launch, store: modelContext)

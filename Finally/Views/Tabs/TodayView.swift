@@ -17,7 +17,7 @@ struct TodayView: View {
 
     @State private var dailyFocus: DailyFocus?
     @State private var selectedTask: TaskItem?
-    @State private var expandedSections: Set<String> = ["Today"]
+    @State private var expandedSections: Set<String> = ["Deadlines today"]
     @State private var isSelectionMode = false
     @State private var selectedTasks: Set<String> = []
     @State private var showSearch = false
@@ -83,6 +83,8 @@ struct TodayView: View {
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                 } else {
                     List {
+                        TodayHeader(focus: dailyFocus)
+                            .paperRow()
                         if let dailyFocus {
                             DailyFocusSection(
                                 focus: dailyFocus,
@@ -98,29 +100,31 @@ struct TodayView: View {
                                     }
                                 }
                             } header: {
-                                collapsibleHeader("Overdue")
+                                collapsibleHeader("Overdue", count: overdueTasks.count)
                             }
                         }
                         Section {
-                            if expandedSections.contains("Today") {
+                            if expandedSections.contains("Deadlines today") {
                                 if todayTasks.isEmpty {
                                     Label("No deadlines today", systemImage: "sun.max")
-                                        .foregroundStyle(.secondary)
+                                        .foregroundStyle(Palette.muted)
+                                        .cardRow()
                                 }
                                 ForEach(todayTasks, id: \.externalTaskID) { task in
                                     taskRow(task)
                                 }
                             }
                         } header: {
-                            collapsibleHeader("Today")
+                            collapsibleHeader("Deadlines today", count: todayTasks.count)
                         }
                     }
+                    .paperList()
                 }
             }
-            .listStyle(.plain)
             .animation(.default, value: todayTasks.map(\.externalTaskID))
             .animation(.default, value: overdueTasks.map(\.externalTaskID))
-            .navigationTitle(isSelectionMode ? "Select Tasks (\(selectedTasks.count))" : "Today")
+            .navigationTitle(isSelectionMode ? "Select Tasks (\(selectedTasks.count))" : "")
+            .navigationBarTitleDisplayMode(.inline)
             .refreshable {
                 try? await taskProvider.synchronize(.launch, store: modelContext)
                 await loadDailyFocus()
@@ -211,8 +215,8 @@ struct TodayView: View {
         TaskRowView(task: task)
         .listRowBackground(
             isSelectionMode && selectedTasks.contains(task.externalTaskID)
-                ? Color.blue.opacity(0.15)
-                : Color(.systemBackground)
+                ? Palette.selection
+                : Palette.card
         )
         .contentShape(Rectangle())
         .onTapGesture {
@@ -238,7 +242,7 @@ struct TodayView: View {
 
     // MARK: - Collapsible Header
 
-    private func collapsibleHeader(_ title: String) -> some View {
+    private func collapsibleHeader(_ title: String, count: Int) -> some View {
         Button {
             withAnimation {
                 if expandedSections.contains(title) {
@@ -248,12 +252,13 @@ struct TodayView: View {
                 }
             }
         } label: {
-            HStack {
-                Image(systemName: expandedSections.contains(title) ? "chevron.down" : "chevron.right")
-                    .font(.caption)
-                Text(title)
+            SectionLabel(title: title) {
+                HStack(spacing: 6) {
+                    Text("\(count)")
+                    Image(systemName: "chevron.right")
+                        .rotationEffect(.degrees(expandedSections.contains(title) ? 90 : 0))
+                }
             }
-            .foregroundStyle(.primary)
         }
         .buttonStyle(.plain)
     }
@@ -294,5 +299,28 @@ struct TodayView: View {
         Task {
             await taskProvider.submitPendingChangesReportingFailure(for: tasks, store: modelContext)
         }
+    }
+}
+
+/// The page heading: the weekday, the date, and how much of the Daily Focus is done.
+private struct TodayHeader: View {
+    let focus: DailyFocus?
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text("Today · \(Date.now.formatted(.dateTime.weekday(.wide)))".uppercased())
+                .font(.eyebrow)
+                .tracking(0.5)
+                .foregroundStyle(Palette.muted)
+            Text(Date.now.formatted(.dateTime.day().month(.wide)))
+                .font(.pageTitle)
+                .foregroundStyle(Palette.ink)
+            if let focus, !focus.picks.isEmpty {
+                DailyFocusProgress(focus: focus)
+                    .padding(.top, 8)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.bottom, 4)
     }
 }

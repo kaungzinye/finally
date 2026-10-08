@@ -14,7 +14,7 @@ struct UpcomingView: View {
     @Environment(\.modelContext) private var modelContext
 
     @State private var selectedTask: TaskItem?
-    @State private var expandedSections: Set<String> = []
+    @State private var collapsedDays: Set<Date> = []
     @State private var isSelectionMode = false
     @State private var selectedTasks: Set<String> = []
     @State private var showSearch = false
@@ -33,22 +33,22 @@ struct UpcomingView: View {
         }
     }
 
-    private var groupedByDate: [(String, [TaskItem])] {
-        let formatter = DateFormatter()
-        formatter.dateStyle = .medium
-
-        let grouped = Dictionary(grouping: upcomingTasks) { task -> String in
-            guard let date = task.deadline else { return "No Date" }
-            return formatter.string(from: date)
+    private var groupedByDay: [(Date, [TaskItem])] {
+        let calendar = Calendar.current
+        let grouped = Dictionary(grouping: upcomingTasks) { task in
+            calendar.startOfDay(for: task.deadline ?? .distantFuture)
         }
-
-        return grouped.sorted { lhs, rhs in
-            let lhsDate = lhs.value.first?.deadline ?? .distantFuture
-            let rhsDate = rhs.value.first?.deadline ?? .distantFuture
-            return lhsDate < rhsDate
-        }.map { (key, tasks) in
-            (key, sortStack.sorted(tasks))
+        return grouped.keys.sorted().map { day in
+            (day, sortStack.sorted(grouped[day] ?? []))
         }
+    }
+
+    private func dayTitle(_ day: Date) -> String {
+        let calendar = Calendar.current
+        let date = day.formatted(.dateTime.weekday(.abbreviated).day())
+        if calendar.isDateInToday(day) { return "Today · \(date)" }
+        if calendar.isDateInTomorrow(day) { return "Tomorrow · \(date)" }
+        return day.formatted(.dateTime.weekday(.abbreviated).day().month(.abbreviated))
     }
 
     var body: some View {
@@ -64,36 +64,46 @@ struct UpcomingView: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .navigationTitle("Upcoming")
             } else {
-                List {
-                    ForEach(groupedByDate, id: \.0) { dateString, tasks in
-                        Section {
-                            if expandedSections.contains(dateString) {
-                                ForEach(tasks, id: \.externalTaskID) { task in
-                                    taskRow(task)
-                                }
-                            }
-                        } header: {
-                            Button {
-                                withAnimation {
-                                    if expandedSections.contains(dateString) {
-                                        expandedSections.remove(dateString)
-                                    } else {
-                                        expandedSections.insert(dateString)
+                ScrollViewReader { proxy in
+                    List {
+                        WeekStrip(daysWithTasks: Set(groupedByDay.map(\.0))) { day in
+                            collapsedDays.remove(day)
+                            withAnimation { proxy.scrollTo(day, anchor: .top) }
+                        }
+                        .paperRow()
+
+                        ForEach(groupedByDay, id: \.0) { day, tasks in
+                            Section {
+                                if !collapsedDays.contains(day) {
+                                    ForEach(tasks, id: \.externalTaskID) { task in
+                                        taskRow(task)
                                     }
                                 }
-                            } label: {
-                                HStack {
-                                    Image(systemName: expandedSections.contains(dateString) ? "chevron.down" : "chevron.right")
-                                        .font(.caption)
-                                    Text(dateString)
+                            } header: {
+                                Button {
+                                    withAnimation {
+                                        if collapsedDays.contains(day) {
+                                            collapsedDays.remove(day)
+                                        } else {
+                                            collapsedDays.insert(day)
+                                        }
+                                    }
+                                } label: {
+                                    SectionLabel(title: dayTitle(day)) {
+                                        HStack(spacing: 6) {
+                                            Text("\(tasks.count)")
+                                            Image(systemName: "chevron.right")
+                                                .rotationEffect(.degrees(collapsedDays.contains(day) ? 0 : 90))
+                                        }
+                                    }
                                 }
-                                .foregroundStyle(.primary)
+                                .buttonStyle(.plain)
                             }
-                            .buttonStyle(.plain)
+                            .id(day)
                         }
-                    }
                 }
-                .listStyle(.plain)
+                .paperList()
+                }
                 .navigationTitle(isSelectionMode ? "Select Tasks (\(selectedTasks.count))" : "Upcoming")
                 .refreshable {
                     try? await taskProvider.synchronize(.launch, store: modelContext)
@@ -173,8 +183,8 @@ struct UpcomingView: View {
         TaskRowView(task: task)
         .listRowBackground(
             isSelectionMode && selectedTasks.contains(task.externalTaskID)
-                ? Color.blue.opacity(0.15)
-                : Color(.systemBackground)
+                ? Palette.selection
+                : Palette.card
         )
         .contentShape(Rectangle())
         .onTapGesture {
@@ -234,5 +244,50 @@ struct UpcomingView: View {
         Task {
             await taskProvider.submitPendingChangesReportingFailure(for: tasks, store: modelContext)
         }
+    }
+}
+
+/// The next seven days. A dot marks a day with deadlines, and tapping a day scrolls to it.
+private struct WeekStrip: View {
+    let daysWithTasks: Set<Date>
+    let onSelect: (Date) -> Void
+
+    @State private var selectedDay = Calendar.current.startOfDay(for: .now)
+
+    private var days: [Date] {
+        let calendar = Calendar.current
+        let today = calendar.startOfDay(for: .now)
+        return (0..<7).compactMap { calendar.date(byAdding: .day, value: $0, to: today) }
+    }
+
+    var body: some View {
+        HStack(spacing: 0) {
+            ForEach(days, id: \.self) { day in
+                let isSelected = day == selectedDay
+                Button {
+                    selectedDay = day
+                    onSelect(day)
+                } label: {
+                    VStack(spacing: 2) {
+                        Text(day.formatted(.dateTime.weekday(.abbreviated)))
+                            .font(.meta)
+                        Text(day.formatted(.dateTime.day()))
+                            .font(.system(.title3, design: .rounded, weight: .semibold))
+                            .foregroundStyle(isSelected ? Palette.onInk : Palette.ink)
+                        Circle()
+                            .frame(width: 4, height: 4)
+                            .opacity(daysWithTasks.contains(day) ? 0.6 : 0)
+                    }
+                    .foregroundStyle(isSelected ? Palette.onInk : Palette.muted)
+                    .frame(maxWidth: .infinity, minHeight: 62)
+                    .background(
+                        RoundedRectangle(cornerRadius: 16, style: .continuous)
+                            .fill(isSelected ? Palette.ink : Color.clear)
+                    )
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .padding(.vertical, 4)
     }
 }

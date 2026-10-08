@@ -35,17 +35,18 @@ struct DailyFocusPickerView: View {
                 } label: {
                     HStack {
                         Text(task.title)
-                            .foregroundStyle(.primary)
+                            .foregroundStyle(Palette.ink)
                         Spacer()
                         if let deadline = task.deadline {
                             Text(deadline, style: .date)
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
+                                .font(.meta)
+                                .foregroundStyle(Palette.muted)
                         }
                     }
                 }
+                .cardRow()
             }
-            .listStyle(.plain)
+            .paperList()
             .searchable(text: $searchText, prompt: "Search tasks")
             .overlay {
                 if candidates.isEmpty {

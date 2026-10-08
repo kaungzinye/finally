@@ -40,9 +40,9 @@ struct SortConfigView: View {
                                 } label: {
                                     Image(systemName: criterion.ascending ? "arrow.up" : "arrow.down")
                                         .font(.caption.bold())
-                                        .foregroundStyle(.blue)
+                                        .foregroundStyle(.tint)
                                         .padding(6)
-                                        .background(Color.blue.opacity(0.1))
+                                        .background(Palette.wash)
                                         .clipShape(Circle())
                                 }
                                 .buttonStyle(.plain)
@@ -88,7 +88,7 @@ struct SortConfigView: View {
                                         .foregroundStyle(.primary)
                                     Spacer()
                                     Image(systemName: "plus.circle")
-                                        .foregroundStyle(.blue)
+                                        .foregroundStyle(.tint)
                                 }
                             }
                         }

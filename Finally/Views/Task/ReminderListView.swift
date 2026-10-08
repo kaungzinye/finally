@@ -8,7 +8,7 @@ struct ReminderSectionContent: View {
     @State private var showAddReminder = false
 
     var body: some View {
-        Section("Reminders") {
+        Section {
             if task.taskReminders.isEmpty {
                 Text("No reminders set")
                     .foregroundStyle(.secondary)
@@ -18,7 +18,7 @@ struct ReminderSectionContent: View {
                         VStack(alignment: .leading, spacing: 4) {
                             HStack(spacing: 6) {
                                 Image(systemName: "bell")
-                                    .foregroundStyle(.orange)
+                                    .foregroundStyle(Palette.ink)
                                 Text(reminder.displayLabel)
                             }
                             if let fireDate = reminder.fireDate(for: task) {
@@ -48,6 +48,8 @@ struct ReminderSectionContent: View {
                 Label("Add Reminder", systemImage: "plus.circle")
             }
             .disabled(!task.hasValidAnchoredReminderAnchor && task.deadline == nil && task.plannedDay == nil)
+        } header: {
+            SectionLabel("Reminders")
         }
         .sheet(isPresented: $showAddReminder) {
             ReminderAddSheet(task: task)
@@ -184,7 +186,7 @@ struct ReminderAddSheet: View {
             if let fire = previewFireDate {
                 if fireDateIsInPast {
                     Label("This time is already in the past", systemImage: "exclamationmark.triangle.fill")
-                        .foregroundStyle(.red)
+                        .foregroundStyle(Palette.urgent)
                 } else {
                     Text("Fires: \(fire.formatted(date: .abbreviated, time: .shortened))")
                         .foregroundStyle(.secondary)
@@ -268,7 +270,7 @@ struct SubtaskReminderSheet: View {
                     Section("Current Reminders") {
                         ForEach(subtask.taskReminders) { reminder in
                             HStack {
-                                Image(systemName: "bell").foregroundStyle(.orange)
+                                Image(systemName: "bell").foregroundStyle(Palette.ink)
                                 VStack(alignment: .leading, spacing: 2) {
                                     Text(reminder.displayLabel)
                                     if let fire = reminder.fireDate(for: subtask) {
