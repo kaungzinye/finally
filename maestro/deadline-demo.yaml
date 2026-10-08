@@ -1,9 +1,7 @@
+# Prerequisite: the runner launches the app with the demo argument first:
+#   xcrun simctl launch <udid> com.kaungzinye.finally -deadline-demo
 appId: com.kaungzinye.finally
 ---
-- launchApp:
-    clearState: true
-    arguments:
-      deadline-demo: true
 - extendedWaitUntil:
     visible: "Ship the project proposal"
     timeout: 10000
