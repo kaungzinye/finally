@@ -391,7 +391,6 @@ final class TaskProviderContractTests: XCTestCase {
         let task = TaskItem(externalTaskID: UUID().uuidString, title: "Plan launch")
         task.providerWorkspaceId = workspace.workspaceId
         task.tags = ["Launch"]
-        task.estimateMinutes = 30
         task.isDirty = true
         context.insert(workspace)
         context.insert(task)
@@ -400,7 +399,7 @@ final class TaskProviderContractTests: XCTestCase {
 
         XCTAssertEqual(
             coordinator.lastWarning,
-            "This provider keeps these fields on this device: estimate, labels."
+            "This provider keeps these fields on this device: labels."
         )
     }
 
@@ -419,7 +418,6 @@ final class TaskProviderContractTests: XCTestCase {
         task.deadlineHasTime = true
         task.priority = .urgent
         task.tags = ["Launch"]
-        task.estimateMinutes = 90
         task.recurrence = .weekly
         task.taskReminders = [
             .explicitDate(ExplicitDateReminder(dateTime: Date(timeIntervalSince1970: 1_780_050_000)))
@@ -433,7 +431,6 @@ final class TaskProviderContractTests: XCTestCase {
         XCTAssertNotEqual(stored.plannedDay, stored.deadline)
         XCTAssertFalse(stored.plannedDayHasTime)
         XCTAssertTrue(stored.deadlineHasTime)
-        XCTAssertEqual(stored.estimateMinutes, 90)
         XCTAssertEqual(stored.externalReferences, ["https://example.com/brief"])
         XCTAssertEqual(stored.taskReminders.count, 1)
     }

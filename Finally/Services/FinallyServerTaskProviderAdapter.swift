@@ -30,7 +30,6 @@ final class FinallyServerTaskProviderAdapter: TaskProviderAdapter {
         ),
         .labels: .unsupported(reason: "Finally Server does not expose labels."),
         .priority: .lossless,
-        .estimate: .unsupported(reason: "Finally Server does not expose estimates."),
         .subtasks: .unsupported(reason: "Finally Server does not expose parent relationships."),
         .recurrence: .unsupported(reason: "Finally Server does not expose recurrence."),
         .reminders: .unsupported(reason: "Finally Server does not expose reminders."),

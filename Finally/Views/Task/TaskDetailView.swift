@@ -26,7 +26,6 @@ struct TaskDetailView: View {
     @State private var editedProject: ProjectItem?
     @State private var editedRecurrence: Recurrence = .none
     @State private var editedCustomRule: RecurrenceRule?
-    @State private var editedEstimate = ""
     @State private var editedExternalReferences = ""
     @State private var syncErrorMessage: String?
 
@@ -74,18 +73,6 @@ struct TaskDetailView: View {
                 // Reminders (inline)
                 ReminderSectionContent(task: task)
                     .cardRow()
-
-                Section {
-                    HStack {
-                        Label("Estimate", systemImage: "timer")
-                        Spacer()
-                        TextField("Minutes", text: $editedEstimate)
-                            .keyboardType(.numberPad)
-                            .multilineTextAlignment(.trailing)
-                            .frame(maxWidth: 100)
-                    }
-                    .cardRow()
-                }
 
                 Section {
                     TextField(
@@ -220,7 +207,6 @@ struct TaskDetailView: View {
             editedProject = task.project
             editedRecurrence = task.recurrence
             editedCustomRule = task.customRecurrenceRule
-            editedEstimate = task.estimateMinutes.map(String.init) ?? ""
             editedExternalReferences = task.externalReferences.joined(separator: "\n")
         }
         .sheet(isPresented: $showDatePicker) {
@@ -358,7 +344,6 @@ struct TaskDetailView: View {
         task.project = editedProject
         task.recurrence = editedRecurrence
         task.customRecurrenceRule = editedCustomRule
-        task.estimateMinutes = Int(editedEstimate.trimmingCharacters(in: .whitespacesAndNewlines))
         task.externalReferences = editedExternalReferences
             .split(whereSeparator: { $0.isNewline })
             .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }

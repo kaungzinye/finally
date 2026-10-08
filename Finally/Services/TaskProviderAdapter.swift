@@ -45,7 +45,6 @@ enum CanonicalTaskField: String, Codable, CaseIterable, Hashable, Sendable {
     case project
     case labels
     case priority
-    case estimate
     case subtasks
     case recurrence
     case reminders
@@ -129,7 +128,6 @@ extension SyncService: TaskProviderAdapter {
             .project: .lossless,
             .labels: .lossless,
             .priority: .lossless,
-            .estimate: .unsupported(reason: "No estimate property is configured."),
             .subtasks: .lossless,
             .recurrence: .lossless,
             .reminders: .unsupported(reason: "Reminders are scheduled by Finally on-device."),
@@ -436,7 +434,6 @@ final class TaskProviderCoordinator {
         if task.project != nil { fields.insert(.project) }
         if !task.tags.isEmpty { fields.insert(.labels) }
         if task.priority != nil { fields.insert(.priority) }
-        if task.estimateMinutes != nil { fields.insert(.estimate) }
         if task.isSubtask || task.hasSubtasks { fields.insert(.subtasks) }
         if task.recurrence != .none { fields.insert(.recurrence) }
         if !task.taskReminders.isEmpty { fields.insert(.reminders) }
