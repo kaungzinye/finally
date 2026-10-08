@@ -124,8 +124,10 @@ final class MockFinallyServerAPIClient: FinallyServerAPIClient {
 
 final class InMemoryCredentialStore: FinallyServerCredentialStore {
     private(set) var credentials: [String: String] = [:]
+    var saveError: Error?
 
     func saveToken(_ token: String, workspaceID: String) throws {
+        if let saveError { throw saveError }
         credentials[workspaceID] = token
     }
 

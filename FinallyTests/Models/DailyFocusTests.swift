@@ -105,6 +105,118 @@ final class DailyFocusTests: XCTestCase {
         XCTAssertFalse(task.isDirty)
     }
 
+    func testDisplacementReplacesTheChosenPositionAndKeepsTheLimit() throws {
+        let focus = DailyFocus(day: day, focusLimit: 2)
+        try focus.add(pick("first"))
+        try focus.add(pick("second"))
+        focus.confirm()
+
+        try focus.replace(pick("second"), with: pick("urgent", workspace: "server-workspace"))
+
+        XCTAssertEqual(focus.picks, [pick("first"), pick("urgent", workspace: "server-workspace")])
+        XCTAssertTrue(focus.isFull)
+        XCTAssertTrue(focus.isConfirmed)
+        XCTAssertThrowsError(try focus.replace(pick("missing"), with: pick("new")))
+        XCTAssertThrowsError(try focus.replace(pick("urgent", workspace: "server-workspace"), with: pick("first")))
+        XCTAssertEqual(focus.picks.count, 2)
+    }
+
+    func testKeepRequiresSpaceOrChosenDisplacementAndLeavesTaskDatesFixed() throws {
+        let task = TaskItem(externalTaskID: "unfinished", title: "Draft the brief")
+        task.providerWorkspaceId = "notion-workspace"
+        task.plannedDay = day
+        task.deadline = day.addingTimeInterval(86_400 * 4)
+        let source = DailyFocus(day: day)
+        try source.add(task.dailyFocusPick)
+        let target = DailyFocus(day: day.addingTimeInterval(86_400), focusLimit: 1)
+        try target.add(pick("next"))
+        target.confirm()
+
+        XCTAssertThrowsError(try source.replan(task.dailyFocusPick, decision: .keep, task: task, nextFocus: target))
+        XCTAssertEqual(source.picks, [task.dailyFocusPick])
+        XCTAssertEqual(target.picks, [pick("next")])
+        XCTAssertTrue(target.isConfirmed)
+
+        try source.replan(task.dailyFocusPick, decision: .keep, task: task, nextFocus: target, displacing: pick("next"))
+
+        XCTAssertTrue(source.picks.isEmpty)
+        XCTAssertEqual(target.picks, [task.dailyFocusPick])
+        XCTAssertFalse(target.isConfirmed)
+        XCTAssertEqual(task.plannedDay, day)
+        XCTAssertEqual(task.deadline, day.addingTimeInterval(86_400 * 4))
+        XCTAssertFalse(task.isDirty)
+    }
+
+    func testDropKeepsTheTaskAndBothDates() throws {
+        let context = try makeInMemoryContext()
+        let task = TaskItem(externalTaskID: "unfinished", title: "Draft the brief")
+        task.providerWorkspaceId = "notion-workspace"
+        task.plannedDay = day
+        task.deadline = day.addingTimeInterval(86_400 * 4)
+        context.insert(task)
+        let focus = DailyFocus(day: day)
+        context.insert(focus)
+        try focus.add(task.dailyFocusPick)
+
+        try focus.replan(task.dailyFocusPick, decision: .drop, task: task)
+        try context.save()
+
+        XCTAssertTrue(focus.picks.isEmpty)
+        XCTAssertEqual(try context.fetchCount(FetchDescriptor<TaskItem>()), 1)
+        XCTAssertFalse(task.isDeleted)
+        XCTAssertEqual(task.plannedDay, day)
+        XCTAssertEqual(task.deadline, day.addingTimeInterval(86_400 * 4))
+        XCTAssertFalse(task.isDirty)
+    }
+
+    func testScheduleAndDeferEditOnlyThePlannedDay() throws {
+        let task = TaskItem(externalTaskID: "unfinished", title: "Draft the brief")
+        task.providerWorkspaceId = "notion-workspace"
+        let deadline = day.addingTimeInterval(86_400 * 2)
+        task.deadline = deadline
+        let focus = DailyFocus(day: day)
+        try focus.add(task.dailyFocusPick)
+        let scheduled = day.addingTimeInterval(86_400 * 5)
+
+        try focus.replan(task.dailyFocusPick, decision: .schedule(scheduled), task: task)
+        XCTAssertEqual(task.plannedDay, Calendar.current.startOfDay(for: scheduled))
+        XCTAssertEqual(task.deadline, deadline)
+        XCTAssertTrue(task.isDirty)
+        XCTAssertTrue(focus.picks.isEmpty)
+
+        try focus.add(task.dailyFocusPick)
+        try focus.replan(task.dailyFocusPick, decision: .deferTask, task: task)
+        XCTAssertNil(task.plannedDay)
+        XCTAssertEqual(task.deadline, deadline)
+        XCTAssertFalse(task.isDeleted)
+        XCTAssertTrue(focus.picks.isEmpty)
+    }
+
+    func testBreakDownRequiresAnUnfinishedStep() throws {
+        let task = TaskItem(externalTaskID: "unfinished", title: "Draft the brief")
+        task.providerWorkspaceId = "notion-workspace"
+        let focus = DailyFocus(day: day)
+        try focus.add(task.dailyFocusPick)
+        XCTAssertThrowsError(try focus.replan(task.dailyFocusPick, decision: .breakDown, task: task))
+        XCTAssertEqual(focus.picks, [task.dailyFocusPick])
+
+        let step = TaskItem(externalTaskID: "step", title: "Outline the brief")
+        task.subtasks = [step]
+        try focus.replan(task.dailyFocusPick, decision: .breakDown, task: task)
+        XCTAssertTrue(focus.picks.isEmpty)
+        XCTAssertEqual(task.activeSubtasks.map(\.title), ["Outline the brief"])
+        XCTAssertFalse(task.isDeleted)
+    }
+
+    func testUnavailablePickRequiresDropAndStaysUntilTheDecision() throws {
+        let focus = DailyFocus(day: day)
+        try focus.add(pick("missing"))
+        XCTAssertThrowsError(try focus.replan(pick("missing"), decision: .deferTask, task: nil))
+        XCTAssertEqual(focus.picks, [pick("missing")])
+        try focus.replan(pick("missing"), decision: .drop, task: nil)
+        XCTAssertTrue(focus.picks.isEmpty)
+    }
+
     private func makeInMemoryContext() throws -> ModelContext {
         let schema = Schema([TaskItem.self, ProjectItem.self, UserSession.self, DailyFocus.self])
         let configuration = ModelConfiguration(isStoredInMemoryOnly: true)

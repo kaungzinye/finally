@@ -5,12 +5,7 @@ struct NotionConnectView: View {
     var onConnected: () -> Void
 
     @Environment(\.modelContext) private var modelContext
-    @Environment(\.colorScheme) private var colorScheme
-    @State private var authService = NotionAuthService()
-
-    private var buttonBackground: Color {
-        colorScheme == .dark ? Color(.systemGray5) : Color.black
-    }
+    @Environment(NotionAuthService.self) private var authService
 
     var body: some View {
         VStack(spacing: 32) {
@@ -20,10 +15,10 @@ struct NotionConnectView: View {
                 .font(.system(size: 80))
                 .foregroundStyle(.primary)
 
-            Text("Finally")
+            Text("Connect Notion")
                 .font(.largeTitle.bold())
 
-            Text("Connect any Notion workspace where you're a member")
+            Text("Authorize your Notion workspace, then choose the database that holds your tasks.")
                 .font(.body)
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
@@ -37,45 +32,44 @@ struct NotionConnectView: View {
                     .padding(.horizontal, 40)
             }
 
-            Button {
-                Task {
-                    let success = await authService.startOAuthFlow(modelContext: modelContext)
-                    if success {
-                        onConnected()
-                    }
-                }
-            } label: {
-                HStack {
-                    if authService.isAuthenticating {
-                        ProgressView()
-                            .tint(.white)
-                    }
-                    Text(authService.isAuthenticating ? "Connecting..." : "Connect to Notion")
-                        .fontWeight(.medium)
-                }
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 14)
-                .background(buttonBackground)
-                .foregroundStyle(.white)
-                .clipShape(RoundedRectangle(cornerRadius: 12))
-            }
-            .buttonStyle(.plain)
+            connectButton
             .disabled(authService.isAuthenticating)
+            .accessibilityIdentifier("notion-authorize")
             .padding(.horizontal, 40)
 
             Spacer()
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Color(.systemBackground).ignoresSafeArea())
-        .onAppear {
-            print("[NotionConnectView] appeared, colorScheme=\(colorScheme)")
+        .navigationTitle("Notion")
+        .navigationBarTitleDisplayMode(.inline)
+    }
+
+    @ViewBuilder
+    private var connectButton: some View {
+        if #available(iOS 26, *) {
+            Button(action: connect) { connectLabel }
+                .buttonStyle(.glassProminent)
+        } else {
+            Button(action: connect) { connectLabel }
+                .buttonStyle(.borderedProminent)
         }
-        .background(
-            GeometryReader { geo in
-                Color.clear.onAppear {
-                    print("[NotionConnectView] frame size: \(geo.size)")
-                }
+    }
+
+    private var connectLabel: some View {
+        HStack {
+            if authService.isAuthenticating { ProgressView() }
+            Text(authService.isAuthenticating ? "Connecting…" : "Connect to Notion")
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 8)
+    }
+
+    private func connect() {
+        Task {
+            if await authService.startOAuthFlow(modelContext: modelContext) {
+                onConnected()
             }
-        )
+        }
     }
 }

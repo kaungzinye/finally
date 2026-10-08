@@ -63,14 +63,41 @@ final class DailyFocusService {
 
     @MainActor
     func save(_ focus: DailyFocus, workspace: UserSession?, store: ModelContext) async throws {
-        guard let workspace, workspace.providerIdentity == .finallyServer else {
-            focus.isDirty = false
-            try store.save()
-            return
-        }
-        focus.isDirty = true
+        try await save([focus], workspace: workspace, store: store)
+    }
+
+    /// Persists every changed day together before attempting provider writes.
+    @MainActor
+    func save(_ focuses: [DailyFocus], workspace: UserSession?, store: ModelContext) async throws {
+        let usesServer = workspace?.providerIdentity == .finallyServer
+        for focus in focuses { focus.isDirty = usesServer }
         try store.save()
-        try await push(focus, workspace: workspace, store: store)
+        guard usesServer, let workspace else { return }
+        var firstError: Error?
+        for focus in focuses {
+            do {
+                try await push(focus, workspace: workspace, store: store)
+            } catch {
+                if firstError == nil { firstError = error }
+            }
+        }
+        if let firstError {
+            lastError = firstError.localizedDescription
+            throw firstError
+        }
+    }
+
+    @MainActor
+    func retryPendingChanges(store: ModelContext) async {
+        do {
+            let workspace = try store.fetch(FetchDescriptor<UserSession>()).selectedProviderWorkspace
+            guard workspace?.providerIdentity == .finallyServer else { return }
+            let dirty = try store.fetch(FetchDescriptor<DailyFocus>(predicate: #Predicate { $0.isDirty }))
+            try await save(dirty, workspace: workspace, store: store)
+            lastError = nil
+        } catch {
+            lastError = error.localizedDescription
+        }
     }
 
     // MARK: - Finally Server round trips

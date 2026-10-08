@@ -8,8 +8,32 @@ struct DailyFocusPick: Codable, Hashable, Sendable {
     let externalTaskID: String
 }
 
-enum DailyFocusError: Error, Equatable {
+enum DailyFocusError: LocalizedError, Equatable {
     case full(limit: Int)
+    case pickMissing
+    case duplicatePick
+    case taskUnavailable
+    case needsSteps
+    case needsNextDay
+
+    var errorDescription: String? {
+        switch self {
+        case .full(let limit): "Choose a pick to replace. Daily Focus holds \(limit) picks."
+        case .pickMissing: "This pick has changed. Review Daily Focus and try again."
+        case .duplicatePick: "This task is already in Daily Focus."
+        case .taskUnavailable: "This task is unavailable. You can drop its focus pick."
+        case .needsSteps: "Add an unfinished step to this task, then finish breaking it down."
+        case .needsNextDay: "Choose Daily Focus for a later day."
+        }
+    }
+}
+
+enum DailyFocusReplanningDecision {
+    case keep
+    case breakDown
+    case schedule(Date)
+    case deferTask
+    case drop
 }
 
 /// The few tasks picked for one day, bounded by the focus limit.
@@ -70,6 +94,58 @@ final class DailyFocus {
 
     func remove(_ pick: DailyFocusPick) {
         picks = picks.filter { $0 != pick }
+    }
+
+    func replace(_ pick: DailyFocusPick, with replacement: DailyFocusPick) throws {
+        var current = picks
+        guard let index = current.firstIndex(of: pick) else { throw DailyFocusError.pickMissing }
+        guard pick != replacement else { return }
+        guard !current.contains(replacement) else { throw DailyFocusError.duplicatePick }
+        current[index] = replacement
+        picks = current
+    }
+
+    /// Applies one explicit decision. Validation finishes before either day's picks change.
+    func replan(
+        _ pick: DailyFocusPick,
+        decision: DailyFocusReplanningDecision,
+        task: TaskItem?,
+        nextFocus: DailyFocus? = nil,
+        displacing: DailyFocusPick? = nil
+    ) throws {
+        guard picks.contains(pick) else { throw DailyFocusError.pickMissing }
+        if case .drop = decision {
+            remove(pick)
+            return
+        }
+        guard let task, !task.isDeleted, task.dailyFocusPick == pick else {
+            throw DailyFocusError.taskUnavailable
+        }
+        switch decision {
+        case .keep:
+            guard let nextFocus, nextFocus.day > day else { throw DailyFocusError.needsNextDay }
+            if !nextFocus.picks.contains(pick) {
+                if let displacing {
+                    try nextFocus.replace(displacing, with: pick)
+                } else {
+                    try nextFocus.add(pick)
+                }
+            }
+            nextFocus.isConfirmed = false
+        case .breakDown:
+            guard task.nextActionableSubtask != nil else { throw DailyFocusError.needsSteps }
+        case .schedule(let date):
+            task.plannedDay = Calendar.current.startOfDay(for: date)
+            task.plannedDayHasTime = false
+            task.isDirty = true
+        case .deferTask:
+            task.plannedDay = nil
+            task.plannedDayHasTime = false
+            task.isDirty = true
+        case .drop:
+            break
+        }
+        remove(pick)
     }
 
     func remove(atOffsets offsets: IndexSet) {

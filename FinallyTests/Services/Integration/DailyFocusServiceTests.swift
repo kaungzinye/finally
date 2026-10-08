@@ -102,6 +102,79 @@ final class DailyFocusServiceTests: XCTestCase {
         XCTAssertEqual(api.dailyFocus[key]?.picks.map(\.externalTaskID), ["17"])
     }
 
+    func testPromptedServerWriteLoadsUnconfirmedAndConfirmationUpdatesTheSameDay() async throws {
+        let api = MockFinallyServerAPIClient()
+        let context = try makeInMemoryContext()
+        let server = makeServerWorkspace()
+        context.insert(server)
+        let task = TaskItem(externalTaskID: "17", title: "Draft the brief")
+        task.providerWorkspaceId = server.workspaceId
+        task.plannedDay = day
+        task.deadline = day.addingTimeInterval(86_400 * 4)
+        context.insert(task)
+        let tomorrow = Calendar.current.date(byAdding: .day, value: 1, to: day)!
+        let dayKey = DailyFocus.dayKey(for: tomorrow)
+        _ = try await api.writeDailyFocus(projectID: 42, day: dayKey, mutation: FinallyServerDailyFocusMutation(
+            picks: [FinallyServerDailyFocusPick(provider: "finally-server", workspaceID: server.workspaceId, externalTaskID: "17")],
+            isConfirmed: false, focusLimit: 3
+        ))
+        let service = DailyFocusService(serverClient: { _ in api })
+        let focus = try await service.dailyFocus(for: tomorrow, workspace: server, store: context)
+        let identity = focus.persistentModelID
+        XCTAssertFalse(focus.isConfirmed)
+        XCTAssertEqual(focus.picks, [task.dailyFocusPick])
+
+        focus.confirm()
+        try await service.save(focus, workspace: server, store: context)
+
+        XCTAssertEqual(focus.persistentModelID, identity)
+        XCTAssertEqual(try context.fetchCount(FetchDescriptor<DailyFocus>()), 1)
+        let stored = try XCTUnwrap(api.dailyFocus[MockFinallyServerAPIClient.dailyFocusKey(projectID: 42, day: dayKey)])
+        XCTAssertTrue(stored.isConfirmed)
+        XCTAssertEqual(stored.picks.map(\.externalTaskID), ["17"])
+        XCTAssertEqual(task.plannedDay, day)
+        XCTAssertEqual(task.deadline, day.addingTimeInterval(86_400 * 4))
+        XCTAssertFalse(task.isDirty)
+    }
+
+    func testOfflineKeepPersistsBothDaysAndRetriesBothServerWrites() async throws {
+        let api = MockFinallyServerAPIClient()
+        let context = try makeInMemoryContext()
+        let server = makeServerWorkspace()
+        context.insert(server)
+        let task = TaskItem(externalTaskID: "17", title: "Draft the brief")
+        task.providerWorkspaceId = server.workspaceId
+        context.insert(task)
+        let service = DailyFocusService(serverClient: { _ in api })
+        let source = try await service.dailyFocus(for: day, workspace: server, store: context)
+        try source.add(task.dailyFocusPick)
+        try await service.save(source, workspace: server, store: context)
+        let tomorrow = Calendar.current.date(byAdding: .day, value: 1, to: day)!
+        let target = try await service.dailyFocus(for: tomorrow, workspace: server, store: context)
+        try source.replan(task.dailyFocusPick, decision: .keep, task: task, nextFocus: target)
+        api.error = FinallyServerClientError.serverUnavailable
+
+        do {
+            try await service.save([target, source], workspace: server, store: context)
+            XCTFail("Expected a recoverable server failure")
+        } catch FinallyServerClientError.serverUnavailable {}
+        let fresh = ModelContext(context.container)
+        let persisted = try fresh.fetch(FetchDescriptor<DailyFocus>())
+        XCTAssertEqual(persisted.count, 2)
+        XCTAssertTrue(persisted.allSatisfy(\.isDirty))
+        XCTAssertTrue(try XCTUnwrap(persisted.first { $0.dayKey == source.dayKey }).picks.isEmpty)
+        XCTAssertEqual(try XCTUnwrap(persisted.first { $0.dayKey == target.dayKey }).picks, [task.dailyFocusPick])
+
+        api.error = nil
+        await service.retryPendingChanges(store: context)
+
+        XCTAssertFalse(source.isDirty)
+        XCTAssertFalse(target.isDirty)
+        XCTAssertNil(service.lastError)
+        XCTAssertEqual(api.dailyFocus[MockFinallyServerAPIClient.dailyFocusKey(projectID: 42, day: source.dayKey)]?.picks, [])
+        XCTAssertEqual(api.dailyFocus[MockFinallyServerAPIClient.dailyFocusKey(projectID: 42, day: target.dayKey)]?.picks.map(\.externalTaskID), ["17"])
+    }
+
     // MARK: - Helpers
 
     private func makeNotionWorkspace() -> UserSession {

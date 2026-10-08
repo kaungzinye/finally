@@ -3,6 +3,7 @@ import SwiftData
 
 struct DatabasePickerView: View {
     var onComplete: () -> Void
+    var onChooseProvider: () -> Void
 
     @Environment(\.modelContext) private var modelContext
     @State private var databases: [NotionAPIService.NotionSearchResult] = []
@@ -12,7 +13,7 @@ struct DatabasePickerView: View {
     @State private var selectedProjectsDb: String?
     @State private var isValidating = false
     @State private var validationErrors: [ValidationResult.Issue] = []
-    @State private var authService = NotionAuthService()
+    @Environment(NotionAuthService.self) private var authService
 
     private let api = NotionAPIService()
     private let validator = SchemaValidator()
@@ -49,6 +50,11 @@ struct DatabasePickerView: View {
                             }
                         } label: {
                             Label("Update Notion Permissions", systemImage: "arrow.triangle.2.circlepath")
+                        }
+                        .disabled(authService.isAuthenticating)
+                        if let message = authService.errorMessage {
+                            Text(message)
+                                .foregroundStyle(.red)
                         }
                     }
                 } else {
@@ -125,7 +131,12 @@ struct DatabasePickerView: View {
                     Button("Continue") {
                         Task { await validateAndContinue() }
                     }
-                    .disabled(selectedTasksDb == nil || isValidating)
+                    .disabled(selectedTasksDb == nil || isLoading || isValidating || authService.isAuthenticating)
+                }
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Task Providers", action: onChooseProvider)
+                        .disabled(isValidating || authService.isAuthenticating)
+                        .accessibilityIdentifier("choose-task-provider")
                 }
             }
         }
@@ -137,6 +148,9 @@ struct DatabasePickerView: View {
     private func loadDatabases() async {
         isLoading = true
         errorMessage = nil
+        selectedTasksDb = nil
+        selectedProjectsDb = nil
+        validationErrors = []
         do {
             databases = try await api.searchDatabases()
             isLoading = false
@@ -174,13 +188,16 @@ struct DatabasePickerView: View {
             }
 
             // Save to session
-            let descriptor = FetchDescriptor<UserSession>()
-            if let session = try? modelContext.fetch(descriptor).first(where: { $0.providerIdentity == .notion }) {
-                session.tasksDatabaseId = tasksDbId
-                session.projectsDatabaseId = selectedProjectsDb ?? ""
-                session.propertyMappings = finalMappings
-                try modelContext.save()
+            guard let session = try modelContext.selectedProviderWorkspace(),
+                  session.providerIdentity == .notion else {
+                errorMessage = "Connect a Notion workspace to select its databases."
+                isValidating = false
+                return
             }
+            session.tasksDatabaseId = tasksDbId
+            session.projectsDatabaseId = selectedProjectsDb ?? ""
+            session.propertyMappings = finalMappings
+            try modelContext.save()
 
             isValidating = false
             onComplete()

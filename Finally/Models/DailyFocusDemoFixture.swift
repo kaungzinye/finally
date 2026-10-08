@@ -4,7 +4,7 @@ import SwiftData
 
 /// Seeds an in-memory store for the `-daily-focus-demo` launch argument: a selected Notion
 /// workspace, a Finally Server workspace, open tasks in both, and a full Daily Focus whose picks
-/// span both providers and include one task that no longer exists.
+/// span both providers and include one unavailable task.
 enum DailyFocusDemoFixture {
     static let notionWorkspaceID = "demo-notion-workspace"
     static let serverWorkspaceID = "demo-server-workspace"

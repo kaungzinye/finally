@@ -39,6 +39,9 @@ struct ContentView: View {
                 if let message = dailyFocusService.lastError {
                     SyncErrorBanner(
                         message: message,
+                        onRetry: {
+                            Task { await dailyFocusService.retryPendingChanges(store: modelContext) }
+                        },
                         onDismiss: { dailyFocusService.clearError() }
                     )
                     .padding(.horizontal)

@@ -1,7 +1,7 @@
 import SwiftData
 import SwiftUI
 
-/// Picks one open task from the selected workspace into today's Daily Focus.
+/// Adds a task, with a user-chosen displacement when Daily Focus is full.
 struct DailyFocusPickerView: View {
     let focus: DailyFocus
     let onPick: () -> Void
@@ -16,12 +16,16 @@ struct DailyFocusPickerView: View {
     private var openTasks: [TaskItem]
     @Query private var sessions: [UserSession]
     @State private var searchText = ""
+    @State private var replacementTask: TaskItem?
+    @State private var errorMessage: String?
+    @Query private var allTasks: [TaskItem]
 
     private var candidates: [TaskItem] {
         let picked = Set(focus.picks)
         let workspace = sessions.selectedProviderWorkspace
         return openTasks.filter { task in
-            task.belongs(to: workspace)
+            task.nextActionableSubtask == nil
+                && task.belongs(to: workspace)
                 && !picked.contains(task.dailyFocusPick)
                 && (searchText.isEmpty || task.title.localizedCaseInsensitiveContains(searchText))
         }
@@ -29,18 +33,23 @@ struct DailyFocusPickerView: View {
 
     var body: some View {
         NavigationStack {
-            List(candidates, id: \.externalTaskID) { task in
-                Button {
-                    pick(task)
-                } label: {
-                    HStack {
-                        Text(task.title)
-                            .foregroundStyle(.primary)
-                        Spacer()
-                        if let deadline = task.deadline {
-                            Text(deadline, style: .date)
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
+            List {
+                if let errorMessage {
+                    Text(errorMessage).foregroundStyle(.red)
+                }
+                ForEach(candidates) { task in
+                    Button {
+                        pick(task)
+                    } label: {
+                        HStack {
+                            Text(task.title)
+                                .foregroundStyle(.primary)
+                            Spacer()
+                            if let deadline = task.deadline {
+                                Text(deadline, style: .date)
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
                         }
                     }
                 }
@@ -52,12 +61,42 @@ struct DailyFocusPickerView: View {
                     ContentUnavailableView(
                         "Nothing to pick",
                         systemImage: "scope",
-                        description: Text("Every open task in this workspace is already in Daily Focus.")
+                        description: Text(searchText.isEmpty ? "Choose an open task or an actionable step in this provider workspace." : "Try another search.")
                     )
                 }
             }
             .navigationTitle("Add to Daily Focus")
             .navigationBarTitleDisplayMode(.inline)
+            .sheet(item: $replacementTask) { task in
+                NavigationStack {
+                    List(focus.resolvedPicks(among: allTasks)) { item in
+                        Button {
+                            do {
+                                try focus.replace(item.pick, with: task.dailyFocusPick)
+                                onPick()
+                                replacementTask = nil
+                                dismiss()
+                            } catch {
+                                errorMessage = error.localizedDescription
+                                replacementTask = nil
+                            }
+                        } label: {
+                            Label(item.task?.title ?? "Unavailable task", systemImage: "arrow.left.arrow.right")
+                        }
+                    }
+                    .navigationTitle("Choose a pick to replace")
+                    .navigationBarTitleDisplayMode(.inline)
+                    .safeAreaInset(edge: .top) {
+                        Text("Make room for \(task.title). The displaced task stays in its provider.")
+                            .font(.subheadline).foregroundStyle(.secondary).padding()
+                    }
+                    .toolbar {
+                        ToolbarItem(placement: .cancellationAction) {
+                            Button("Cancel") { replacementTask = nil }
+                        }
+                    }
+                }
+            }
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Text("\(focus.picks.count) of \(focus.focusLimit)")
@@ -71,12 +110,16 @@ struct DailyFocusPickerView: View {
     }
 
     private func pick(_ task: TaskItem) {
+        if focus.isFull {
+            replacementTask = task
+            return
+        }
         do {
             try focus.add(task.dailyFocusPick)
             onPick()
             dismiss()
         } catch {
-            dismiss()
+            errorMessage = error.localizedDescription
         }
     }
 }
