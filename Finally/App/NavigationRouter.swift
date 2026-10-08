@@ -3,14 +3,15 @@ import SwiftUI
 @Observable
 final class NavigationRouter {
     enum Tab: Int, CaseIterable {
-        case board = 0
+        case today = 0
         case upcoming
-        case today
+        case board
         case browse
-        case settings
     }
 
-    var selectedTab: Tab = .today // Default to Today tab
+    var selectedTab: Tab = .today
+    /// The project a new task starts in, set while a project's screen is open.
+    var creatorProject: ProjectItem?
     var deepLinkTaskId: String?
     var showNewTaskSheet: Bool = false
     var showReauthPrompt: Bool = false

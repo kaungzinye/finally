@@ -64,6 +64,9 @@ The app has not shipped. There are no released data contracts and no user vaults
 - Always wrap iOS 26 styling in `if #available(iOS 26, *)` with an iOS 17 fallback.
 - Follow Todoist patterns: inline task creation, chip-based fields, clean typography.
 - Priority colors: Urgent is red, High is orange, Medium is blue, Low is default.
+- The look is warm ink on paper. Take colors from `Palette` in `Finally/Shared/FinallyStyle.swift`, which the widget also compiles. Ink is the accent, so color only carries priority, deadlines, and warnings.
+- Chrome speaks in SF Pro Rounded (`.pageTitle`, `.eyebrow`, `.chip`, `.meta`) and task text stays in SF Pro.
+- Lists use `.paperList()` with `.cardRow()` rows, and every task row is one line at the shared 48-point height. `PaperChrome.swift` holds these, `InkButtonStyle`, `SectionLabel`, and the glass helper.
 
 ## Architecture planning in Enso
 

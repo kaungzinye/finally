@@ -5,37 +5,34 @@ struct NotionConnectView: View {
     var onConnected: () -> Void
 
     @Environment(\.modelContext) private var modelContext
-    @Environment(\.colorScheme) private var colorScheme
     @State private var authService = NotionAuthService()
 
-    private var buttonBackground: Color {
-        colorScheme == .dark ? Color(.systemGray5) : Color.black
-    }
-
     var body: some View {
-        VStack(spacing: 32) {
-            Spacer()
-
-            Image(systemName: "checkmark.circle.fill")
-                .font(.system(size: 80))
-                .foregroundStyle(.primary)
+        VStack(alignment: .leading, spacing: 0) {
+            Text("F")
+                .font(.system(size: 30, weight: .bold, design: .rounded))
+                .foregroundStyle(Palette.onInk)
+                .frame(width: 56, height: 56)
+                .background(Palette.ink, in: RoundedRectangle(cornerRadius: 15, style: .continuous))
+                .rotationEffect(.degrees(-4))
+                .padding(.top, 48)
 
             Text("Finally")
-                .font(.largeTitle.bold())
+                .font(.pageTitle)
+                .foregroundStyle(Palette.ink)
+                .padding(.top, 28)
 
-            Text("Connect any Notion workspace where you're a member")
-                .font(.body)
-                .foregroundStyle(.secondary)
-                .multilineTextAlignment(.center)
-                .padding(.horizontal, 40)
+            Text("Connect any Notion workspace where you're a member. Your tasks stay in Notion.")
+                .font(.system(.body, design: .rounded))
+                .foregroundStyle(Palette.muted)
+                .padding(.top, 10)
 
             if let errorMessage = authService.errorMessage {
-                Text(errorMessage)
-                    .font(.callout)
-                    .foregroundStyle(.red)
-                    .multilineTextAlignment(.center)
-                    .padding(.horizontal, 40)
+                Callout(message: errorMessage)
+                    .padding(.top, 20)
             }
+
+            Spacer()
 
             Button {
                 Task {
@@ -45,37 +42,26 @@ struct NotionConnectView: View {
                     }
                 }
             } label: {
-                HStack {
+                HStack(spacing: 8) {
                     if authService.isAuthenticating {
                         ProgressView()
-                            .tint(.white)
+                            .tint(Palette.onInk)
                     }
                     Text(authService.isAuthenticating ? "Connecting..." : "Connect to Notion")
-                        .fontWeight(.medium)
                 }
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 14)
-                .background(buttonBackground)
-                .foregroundStyle(.white)
-                .clipShape(RoundedRectangle(cornerRadius: 12))
             }
-            .buttonStyle(.plain)
+            .buttonStyle(.ink)
             .disabled(authService.isAuthenticating)
-            .padding(.horizontal, 40)
 
-            Spacer()
+            Text("You'll sign in on notion.so")
+                .font(.meta)
+                .foregroundStyle(Palette.muted)
+                .frame(maxWidth: .infinity)
+                .padding(.top, 14)
+                .padding(.bottom, 12)
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(Color(.systemBackground).ignoresSafeArea())
-        .onAppear {
-            print("[NotionConnectView] appeared, colorScheme=\(colorScheme)")
-        }
-        .background(
-            GeometryReader { geo in
-                Color.clear.onAppear {
-                    print("[NotionConnectView] frame size: \(geo.size)")
-                }
-            }
-        )
+        .padding(.horizontal, 24)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .background(Palette.paper.ignoresSafeArea())
     }
 }

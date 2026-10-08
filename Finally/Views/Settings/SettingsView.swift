@@ -5,6 +5,7 @@ struct SettingsView: View {
     @Query private var sessions: [UserSession]
     @Environment(\.modelContext) private var modelContext
     @Environment(TaskProviderCoordinator.self) private var taskProvider
+    @Environment(\.dismiss) private var dismiss
     @State private var authService = NotionAuthService()
     @AppStorage(AppConstants.focusLimitKey) private var focusLimit = DailyFocus.defaultFocusLimit
 
@@ -15,117 +16,126 @@ struct SettingsView: View {
     var body: some View {
         NavigationStack {
             List {
-                Section("Workspaces") {
-                    ForEach(sessions, id: \.id) { workspace in
-                        Button {
-                            select(workspace)
-                        } label: {
-                            HStack {
-                                Label(
-                                    workspace.workspaceName,
-                                    systemImage: workspace.providerIdentity == .finallyServer ? "server.rack" : "building.2"
-                                )
-                                Spacer()
-                                if workspace.isSelected {
-                                    Image(systemName: "checkmark")
-                                        .foregroundStyle(.tint)
+                Group {
+                    Section("Workspaces") {
+                        ForEach(sessions, id: \.id) { workspace in
+                            Button {
+                                select(workspace)
+                            } label: {
+                                HStack {
+                                    Label(
+                                        workspace.workspaceName,
+                                        systemImage: workspace.providerIdentity == .finallyServer ? "server.rack" : "building.2"
+                                    )
+                                    Spacer()
+                                    if workspace.isSelected {
+                                        Image(systemName: "checkmark")
+                                            .foregroundStyle(.tint)
+                                    }
                                 }
                             }
+                            .foregroundStyle(.primary)
                         }
-                        .foregroundStyle(.primary)
-                    }
 
-                    NavigationLink {
-                        FinallyServerConnectView()
-                    } label: {
-                        Label("Add Finally Server", systemImage: "plus.circle")
-                    }
-                }
-
-                Section {
-                    Stepper(value: $focusLimit, in: DailyFocus.focusLimitRange) {
-                        HStack {
-                            Label("Focus limit", systemImage: "scope")
-                            Spacer()
-                            Text("\(focusLimit)")
-                                .foregroundStyle(.secondary)
-                        }
-                    }
-                    .accessibilityIdentifier("focus-limit-stepper")
-                } header: {
-                    Text("Daily Focus")
-                } footer: {
-                    Text("New Daily Focus days use this limit, one to five picks. Each existing day keeps its limit.")
-                }
-
-                Section("Notifications") {
-                    NavigationLink {
-                        NotificationTimePickerView()
-                    } label: {
-                        HStack {
-                            Label("Default Reminder Time", systemImage: "clock")
-                            Spacer()
-                            DefaultReminderTimeLabel()
-                                .foregroundStyle(.secondary)
-                        }
-                    }
-                }
-
-                Section("Appearance") {
-                    NavigationLink {
-                        AppearanceSettingView()
-                    } label: {
-                        Label("Theme", systemImage: "paintbrush")
-                    }
-                }
-
-                Section("Notion") {
-                    if let notionSession {
-                        HStack {
-                            Label("Workspace", systemImage: "building.2")
-                            Spacer()
-                            Text(notionSession.workspaceName)
-                                .foregroundStyle(.secondary)
+                        NavigationLink {
+                            FinallyServerConnectView()
+                        } label: {
+                            Label("Add Finally Server", systemImage: "plus.circle")
                         }
                     }
 
-                    Button {
-                        Task {
-                            let success = await authService.startOAuthFlow(modelContext: modelContext)
-                            if success {
-                                reselectDatabases()
+                    Section {
+                        Stepper(value: $focusLimit, in: DailyFocus.focusLimitRange) {
+                            HStack {
+                                Label("Focus limit", systemImage: "scope")
+                                Spacer()
+                                Text("\(focusLimit)")
+                                    .foregroundStyle(.secondary)
                             }
                         }
-                    } label: {
-                        Label("Update Notion Permissions", systemImage: "arrow.triangle.2.circlepath")
+                        .accessibilityIdentifier("focus-limit-stepper")
+                    } header: {
+                        Text("Daily Focus")
+                    } footer: {
+                        Text("New Daily Focus days use this limit, one to five picks. Each existing day keeps its limit.")
                     }
 
-                    NavigationLink {
-                        DatabaseSetupGuideView()
-                    } label: {
-                        Label("Database Setup Guide", systemImage: "book")
+                    Section("Notifications") {
+                        NavigationLink {
+                            NotificationTimePickerView()
+                        } label: {
+                            HStack {
+                                Label("Default Reminder Time", systemImage: "clock")
+                                Spacer()
+                                DefaultReminderTimeLabel()
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
+                    }
+
+                    Section("Appearance") {
+                        NavigationLink {
+                            AppearanceSettingView()
+                        } label: {
+                            Label("Theme", systemImage: "paintbrush")
+                        }
+                    }
+
+                    Section("Notion") {
+                        if let notionSession {
+                            HStack {
+                                Label("Workspace", systemImage: "building.2")
+                                Spacer()
+                                Text(notionSession.workspaceName)
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
+
+                        Button {
+                            Task {
+                                let success = await authService.startOAuthFlow(modelContext: modelContext)
+                                if success {
+                                    reselectDatabases()
+                                }
+                            }
+                        } label: {
+                            Label("Update Notion Permissions", systemImage: "arrow.triangle.2.circlepath")
+                        }
+
+                        NavigationLink {
+                            DatabaseSetupGuideView()
+                        } label: {
+                            Label("Database Setup Guide", systemImage: "book")
+                        }
+                    }
+
+                    Section("Account") {
+                        if notionSession != nil {
+                            Button(role: .destructive) {
+                                disconnectNotion()
+                            } label: {
+                                Label("Disconnect Notion", systemImage: "arrow.right.square")
+                            }
+                        }
+
+                        ForEach(sessions.filter { $0.providerIdentity == .finallyServer }, id: \.id) { server in
+                            Button(role: .destructive) {
+                                removeServer(server)
+                            } label: {
+                                Label("Remove \(server.workspaceName)", systemImage: "trash")
+                            }
+                        }
                     }
                 }
-
-                Section("Account") {
-                    if notionSession != nil {
-                        Button(role: .destructive) {
-                            disconnectNotion()
-                        } label: {
-                            Label("Disconnect Notion", systemImage: "arrow.right.square")
-                        }
-                    }
-
-                    ForEach(sessions.filter { $0.providerIdentity == .finallyServer }, id: \.id) { server in
-                        Button(role: .destructive) {
-                            removeServer(server)
-                        } label: {
-                            Label("Remove \(server.workspaceName)", systemImage: "trash")
-                        }
-                    }
+                .cardRow()
+            }
+            .paperList()
+            .navigationTitle("Settings")
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Done") { dismiss() }
                 }
             }
-            .navigationTitle("Settings")
         }
     }
 
@@ -178,59 +188,63 @@ private struct FinallyServerConnectView: View {
 
     var body: some View {
         Form {
-            Section("Workspace") {
-                TextField("Workspace name", text: $name)
-                    .textContentType(.organizationName)
-                TextField("https://tasks.example.com", text: $address)
-                    .textContentType(.URL)
-                    .textInputAutocapitalization(.never)
-                    .autocorrectionDisabled()
-                    .disabled(authenticatedAccount != nil)
+            Group {
+                Section("Workspace") {
+                    TextField("Workspace name", text: $name)
+                        .textContentType(.organizationName)
+                    TextField("https://tasks.example.com", text: $address)
+                        .textContentType(.URL)
+                        .textInputAutocapitalization(.never)
+                        .autocorrectionDisabled()
+                        .disabled(authenticatedAccount != nil)
 
-                if let account = authenticatedAccount {
-                    Picker("Workspace", selection: $selectedProject) {
-                        Text("Select a workspace").tag(Optional<FinallyServerProject>.none)
-                        ForEach(account.projects) { project in
-                            Text(project.title).tag(Optional(project))
+                    if let account = authenticatedAccount {
+                        Picker("Workspace", selection: $selectedProject) {
+                            Text("Select a workspace").tag(Optional<FinallyServerProject>.none)
+                            ForEach(account.projects) { project in
+                                Text(project.title).tag(Optional(project))
+                            }
                         }
                     }
                 }
-            }
 
-            Section("Account") {
-                TextField("Username", text: $username)
-                    .textContentType(.username)
-                    .textInputAutocapitalization(.never)
-                    .autocorrectionDisabled()
-                    .disabled(authenticatedAccount != nil)
-                SecureField("Password", text: $password)
-                    .textContentType(.password)
-                    .disabled(authenticatedAccount != nil)
+                Section("Account") {
+                    TextField("Username", text: $username)
+                        .textContentType(.username)
+                        .textInputAutocapitalization(.never)
+                        .autocorrectionDisabled()
+                        .disabled(authenticatedAccount != nil)
+                    SecureField("Password", text: $password)
+                        .textContentType(.password)
+                        .disabled(authenticatedAccount != nil)
 
-                if authenticatedAccount != nil {
-                    Button("Use a different account") {
-                        authenticatedAccount = nil
-                        selectedProject = nil
-                        connectedWorkspace = nil
-                        password = ""
+                    if authenticatedAccount != nil {
+                        Button("Use a different account") {
+                            authenticatedAccount = nil
+                            selectedProject = nil
+                            connectedWorkspace = nil
+                            password = ""
+                        }
                     }
                 }
-            }
 
-            if let errorMessage {
+                if let errorMessage {
+                    Section {
+                        Text(errorMessage)
+                            .foregroundStyle(Palette.urgent)
+                            .accessibilityIdentifier("finally-server-connection-error")
+                    }
+                }
+
                 Section {
-                    Text(errorMessage)
-                        .foregroundStyle(.red)
-                        .accessibilityIdentifier("finally-server-connection-error")
+                    primaryButton
+                } footer: {
+                    Text("Finally stores the server token in Keychain. Your password is used only to sign in.")
                 }
             }
-
-            Section {
-                primaryButton
-            } footer: {
-                Text("Finally stores the server token in Keychain. Your password is used only to sign in.")
-            }
+            .cardRow()
         }
+        .paperList()
         .navigationTitle("Connect Server")
         .navigationBarTitleDisplayMode(.inline)
         .onDisappear {

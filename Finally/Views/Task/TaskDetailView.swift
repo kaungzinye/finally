@@ -20,14 +20,11 @@ struct TaskDetailView: View {
     @State private var editedDeadline: Date?
     @State private var editedPlannedDay: Date?
     @State private var editedDeadlineHasTime = false
-    @State private var editedPlannedDayHasTime = false
     @State private var editedPriority: TaskPriority?
     @State private var editedTags: [String] = []
     @State private var editedProject: ProjectItem?
     @State private var editedRecurrence: Recurrence = .none
     @State private var editedCustomRule: RecurrenceRule?
-    @State private var editedEstimate = ""
-    @State private var editedExternalReferences = ""
     @State private var syncErrorMessage: String?
 
     var body: some View {
@@ -35,7 +32,7 @@ struct TaskDetailView: View {
             List {
                 if let syncErrorMessage {
                     Section {
-                        SyncErrorBanner(message: syncErrorMessage) {
+                        Callout(message: syncErrorMessage) {
                             self.syncErrorMessage = nil
                         }
                         .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
@@ -43,14 +40,12 @@ struct TaskDetailView: View {
                     }
                 }
 
-                // Title
-                Section {
-                    TextField("Task name", text: $editedTitle)
-                        .font(.title3)
-                }
+                Group {
+                    TextField("Task name", text: $editedTitle, axis: .vertical)
+                        .font(.system(.title, design: .rounded, weight: .bold))
+                        .foregroundStyle(Palette.ink)
+                        .padding(.top, 4)
 
-                // Status
-                Section("Status") {
                     Picker("Status", selection: Binding(
                         get: { task.status },
                         set: { newStatus in
@@ -62,148 +57,34 @@ struct TaskDetailView: View {
                             Text(status.rawValue).tag(status)
                         }
                     }
+                    .pickerStyle(.segmented)
+
+                    FlowLayout(spacing: 8) {
+                        fieldChips
+                    }
+                    .padding(.top, 8)
+                    .padding(.bottom, 8)
                 }
-
-                // Properties
-                Section {
-                    // Deadline
-                    Button {
-                        showDatePicker = true
-                    } label: {
-                        HStack {
-                            Label("Deadline", systemImage: "calendar")
-                            Spacer()
-                            if let date = editedDeadline {
-                                Text(formattedPlanningDate(date, hasTime: editedDeadlineHasTime))
-                                    .foregroundStyle(.secondary)
-                            } else {
-                                Text("None")
-                                    .foregroundStyle(.tertiary)
-                            }
-                        }
-                    }
-
-                    Button {
-                        showPlannedDayPicker = true
-                    } label: {
-                        HStack {
-                            Label("Planned Day", systemImage: "scope")
-                            Spacer()
-                            if let date = editedPlannedDay {
-                                Text(formattedPlanningDate(date, hasTime: editedPlannedDayHasTime))
-                                    .foregroundStyle(.secondary)
-                            } else {
-                                Text("None")
-                                    .foregroundStyle(.tertiary)
-                            }
-                        }
-                    }
-
-                    // Priority
-                    Button {
-                        showPriorityPicker = true
-                    } label: {
-                        HStack {
-                            Label("Priority", systemImage: "flag")
-                            Spacer()
-                            if let priority = editedPriority {
-                                HStack(spacing: 4) {
-                                    Image(systemName: priority.icon)
-                                        .foregroundStyle(priority.color)
-                                    Text(priority.rawValue)
-                                        .foregroundStyle(.secondary)
-                                }
-                            } else {
-                                Text("None")
-                                    .foregroundStyle(.tertiary)
-                            }
-                        }
-                    }
-
-                    // Project
-                    Button {
-                        showProjectPicker = true
-                    } label: {
-                        HStack {
-                            Label("Project", systemImage: "folder")
-                            Spacer()
-                            Text(editedProject?.title ?? "Inbox")
-                                .foregroundStyle(.secondary)
-                        }
-                    }
-
-                    // Tags
-                    Button {
-                        showTagPicker = true
-                    } label: {
-                        HStack {
-                            Label("Tags", systemImage: "tag")
-                            Spacer()
-                            if editedTags.isEmpty {
-                                Text("None")
-                                    .foregroundStyle(.tertiary)
-                            } else {
-                                Text(editedTags.joined(separator: ", "))
-                                    .foregroundStyle(.secondary)
-                                    .lineLimit(1)
-                            }
-                        }
-                    }
-
-                    // Recurrence
-                    Button {
-                        showRecurrencePicker = true
-                    } label: {
-                        HStack {
-                            Label("Repeat", systemImage: "repeat")
-                            Spacer()
-                            if editedRecurrence == .custom, let rule = editedCustomRule {
-                                Text(rule.summary)
-                                    .foregroundStyle(.secondary)
-                                    .lineLimit(1)
-                            } else {
-                                Text(editedRecurrence.rawValue)
-                                    .foregroundStyle(.secondary)
-                            }
-                        }
-                    }
-
-                    HStack {
-                        Label("Estimate", systemImage: "timer")
-                        Spacer()
-                        TextField("Minutes", text: $editedEstimate)
-                            .keyboardType(.numberPad)
-                            .multilineTextAlignment(.trailing)
-                            .frame(maxWidth: 100)
-                    }
-                }
-
-                Section("External References") {
-                    TextField(
-                        "One URL per line",
-                        text: $editedExternalReferences,
-                        axis: .vertical
-                    )
-                    .lineLimit(2...5)
-                    .textInputAutocapitalization(.never)
-                    .autocorrectionDisabled()
-                }
+                .paperRow()
+                .listRowSeparator(.hidden)
 
                 // Reminders (inline)
                 ReminderSectionContent(task: task)
+                    .cardRow()
 
                 // Sub-tasks (only for non-subtask tasks)
                 if !task.isSubtask {
-                    Section("Sub-tasks") {
+                    Group {
+                    Section {
                         // Progress
                         if task.hasSubtasks {
                             let progress = task.subtaskProgress
                             HStack {
                                 ProgressView(value: Double(progress.done), total: Double(progress.total))
-                                    .tint(progress.done == progress.total ? .green : .blue)
+                                    .tint(Palette.ink)
                                 Text("\(progress.done)/\(progress.total)")
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
+                                    .font(.meta)
+                                    .foregroundStyle(Palette.muted)
                             }
                         }
 
@@ -220,18 +101,18 @@ struct TaskDetailView: View {
                                         }
                                     }
                                 } label: {
-                                    Image(systemName: subtask.status == .done ? "checkmark.circle.fill" : "circle")
-                                        .foregroundStyle(subtask.status == .done ? .green : .secondary)
+                                    PriorityRing(color: subtask.priority?.color ?? Palette.low, isDone: subtask.status == .done)
                                 }
+                                .buttonStyle(.plain)
 
                                 VStack(alignment: .leading, spacing: 2) {
                                     Text(subtask.title)
-                                        .strikethrough(subtask.status == .done)
-                                        .foregroundStyle(subtask.status == .done ? .secondary : .primary)
+                                        .strikethrough(subtask.status == .done, color: Palette.hairline)
+                                        .foregroundStyle(subtask.status == .done ? Palette.muted : Palette.ink)
                                     if let suggested = subtask.effectiveSuggestedDate {
                                         Text(suggested.formatted(date: .abbreviated, time: .omitted))
-                                            .font(.caption2)
-                                            .foregroundStyle(suggested < Calendar.current.startOfDay(for: Date()) && subtask.status != .done ? .red : .secondary)
+                                            .font(.meta)
+                                            .foregroundStyle(suggested < Calendar.current.startOfDay(for: Date()) && subtask.status != .done ? Palette.urgent : Palette.muted)
                                     }
                                 }
 
@@ -243,7 +124,7 @@ struct TaskDetailView: View {
                                     subtaskReminderTarget = subtask
                                 } label: {
                                     Image(systemName: subtask.taskReminders.isEmpty ? "bell" : "bell.badge")
-                                        .foregroundStyle(subtask.taskReminders.isEmpty ? Color.secondary : Color.orange)
+                                        .foregroundStyle(subtask.taskReminders.isEmpty ? Palette.muted : Palette.ink)
                                 }
                                 .buttonStyle(.plain)
                             }
@@ -263,17 +144,21 @@ struct TaskDetailView: View {
 
                         // Add subtask
                         HStack {
-                            Image(systemName: "plus.circle")
-                                .foregroundStyle(.blue)
+                            Image(systemName: "plus")
+                                .foregroundStyle(Palette.muted)
                             TextField("Add sub-task...", text: $newSubtaskTitle)
                                 .onSubmit {
                                     addSubtask()
                                 }
                         }
+                    } header: {
+                        SectionLabel("Subtasks")
                     }
+                    }
+                    .cardRow()
                 }
             }
-            .navigationTitle("Edit Task")
+            .paperList(background: Palette.sheet)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
@@ -294,25 +179,23 @@ struct TaskDetailView: View {
                 }
             }
         }
+        .presentationBackground(Palette.sheet)
         .onAppear {
             editedTitle = task.title
             editedDeadline = task.deadline
             editedPlannedDay = task.plannedDay
             editedDeadlineHasTime = task.deadlineHasTime
-            editedPlannedDayHasTime = task.plannedDayHasTime
             editedPriority = task.priority
             editedTags = task.tags
             editedProject = task.project
             editedRecurrence = task.recurrence
             editedCustomRule = task.customRecurrenceRule
-            editedEstimate = task.estimateMinutes.map(String.init) ?? ""
-            editedExternalReferences = task.externalReferences.joined(separator: "\n")
         }
         .sheet(isPresented: $showDatePicker) {
             DatePickerSheet(selectedDate: $editedDeadline, hasTime: $editedDeadlineHasTime)
         }
         .sheet(isPresented: $showPlannedDayPicker) {
-            DatePickerSheet(selectedDate: $editedPlannedDay, hasTime: $editedPlannedDayHasTime)
+            DatePickerSheet(selectedDate: $editedPlannedDay)
         }
         .sheet(isPresented: $showPriorityPicker) {
             PriorityPicker(selection: $editedPriority)
@@ -336,13 +219,51 @@ struct TaskDetailView: View {
     }
 
     @ViewBuilder
+    private var fieldChips: some View {
+        ChipView(
+            label: editedPlannedDay.map { formattedPlanningDate($0, hasTime: false) } ?? "Planned day",
+            icon: "scope",
+            isPlaceholder: editedPlannedDay == nil
+        ) { showPlannedDayPicker = true }
+
+        ChipView(
+            label: editedDeadline.map { "Due \(formattedPlanningDate($0, hasTime: editedDeadlineHasTime))" } ?? "Deadline",
+            icon: "calendar",
+            isPlaceholder: editedDeadline == nil
+        ) { showDatePicker = true }
+
+        ChipView(
+            label: editedPriority?.rawValue ?? "Priority",
+            icon: "flag",
+            color: editedPriority?.color ?? Palette.ink,
+            isPlaceholder: editedPriority == nil
+        ) { showPriorityPicker = true }
+
+        ChipView(label: editedProject?.title ?? "Inbox", icon: "folder") { showProjectPicker = true }
+
+        ChipView(
+            label: editedTags.isEmpty ? "Tags" : editedTags.joined(separator: ", "),
+            icon: "tag",
+            isPlaceholder: editedTags.isEmpty
+        ) { showTagPicker = true }
+
+        ChipView(
+            label: editedRecurrence == .custom
+                ? (editedCustomRule?.summary ?? "Custom")
+                : (editedRecurrence == .none ? "Repeat" : editedRecurrence.rawValue),
+            icon: "repeat",
+            isPlaceholder: editedRecurrence == .none
+        ) { showRecurrencePicker = true }
+    }
+
+    @ViewBuilder
     private func subtaskReminderIndicator(_ subtask: TaskItem) -> some View {
         let now = Date()
         let nextFire = subtask.taskReminders.compactMap { $0.fireDate(for: subtask) }.filter { $0 > now }.min()
         if let fire = nextFire {
             Label(fire.formatted(date: .omitted, time: .shortened), systemImage: "bell.fill")
-                .font(.caption2)
-                .foregroundStyle(Color.orange)
+                .font(.meta)
+                .foregroundStyle(Palette.muted)
         }
     }
 
@@ -398,18 +319,12 @@ struct TaskDetailView: View {
         task.deadline = editedDeadline
         task.plannedDay = editedPlannedDay
         task.deadlineHasTime = editedDeadline != nil && editedDeadlineHasTime
-        task.plannedDayHasTime = editedPlannedDay != nil && editedPlannedDayHasTime
         task.validatePlannedDay()
         task.priority = editedPriority
         task.tags = editedTags
         task.project = editedProject
         task.recurrence = editedRecurrence
         task.customRecurrenceRule = editedCustomRule
-        task.estimateMinutes = Int(editedEstimate.trimmingCharacters(in: .whitespacesAndNewlines))
-        task.externalReferences = editedExternalReferences
-            .split(whereSeparator: { $0.isNewline })
-            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
-            .filter { !$0.isEmpty }
         task.isDirty = true
 
         // Reschedule reminders if deadline changed

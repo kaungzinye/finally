@@ -75,6 +75,7 @@ targets:
     platform: iOS
     sources:
       - FinallyWidget
+      - Finally/Shared/FinallyStyle.swift
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.kaungzinye.finally.widget

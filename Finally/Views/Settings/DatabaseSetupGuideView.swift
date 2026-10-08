@@ -52,7 +52,7 @@ struct DatabaseSetupGuideView: View {
                 if required {
                     Text("Required")
                         .font(.caption2)
-                        .foregroundStyle(.red)
+                        .foregroundStyle(Palette.urgent)
                 }
             }
             Text(note)

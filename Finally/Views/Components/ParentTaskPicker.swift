@@ -72,7 +72,7 @@ struct ParentTaskPicker: View {
                                 Spacer()
                                 if selection?.externalTaskID == task.externalTaskID {
                                     Image(systemName: "checkmark")
-                                        .foregroundStyle(.blue)
+                                        .foregroundStyle(.tint)
                                 }
                             }
                         }

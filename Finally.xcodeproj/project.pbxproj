@@ -27,6 +27,7 @@
 		34F63FDAE9AF83CAA6DCA4AF /* BackendDataFlowIntegrationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8C46663913189E0200BD2F8C /* BackendDataFlowIntegrationTests.swift */; };
 		355ED7047F5FF404C3DA161E /* BrowseProjectsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6BB4558F2F9209A1B689A505 /* BrowseProjectsView.swift */; };
 		39ABF7688CFAFFBB508BBEC7 /* ReminderListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A9D29A2B7B51E63416C26971 /* ReminderListView.swift */; };
+		3ACE76E7D33CE342604A9A8A /* Callout.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8C11FDA883FD1D38F4386188 /* Callout.swift */; };
 		3C2153D7726A70A8C8FA36D9 /* FinallyServerWorkspaceConfiguration.swift in Sources */ = {isa = PBXBuildFile; fileRef = 44DC53FF019C668FF0D59C8D /* FinallyServerWorkspaceConfiguration.swift */; };
 		3CA4410030B1E74631426C25 /* BoardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E9BD1FA3D9F8FEBD66440D73 /* BoardView.swift */; };
 		3CFA67FC7F70638613BE6E15 /* DailyFocusDemoFixture.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9D910ABD0BF620F725F4A368 /* DailyFocusDemoFixture.swift */; };
@@ -54,6 +55,8 @@
 		743614B7C47D1C37E35131B8 /* InlineTaskCreator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 837D45B286A6CB5EEF5A4D27 /* InlineTaskCreator.swift */; };
 		74C65A22FA4C6AEEF8B6E9EB /* TaskDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 44FC30A47CA1D9B4F15234D2 /* TaskDetailView.swift */; };
 		75C247FB0B0194F59F0C4E73 /* SubtaskScheduler.swift in Sources */ = {isa = PBXBuildFile; fileRef = 886B142AE74239CB20B81B88 /* SubtaskScheduler.swift */; };
+		77E5A5E02CC2F6EF149C682F /* FinallyStyle.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4DF65C99D85D8706CD946C4D /* FinallyStyle.swift */; };
+		7B1928F312FA550AEB3106A6 /* PaperChrome.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0587AFE7BA6C571E38D93D08 /* PaperChrome.swift */; };
 		7DE3A9452E030B8502AAE1DD /* InlineReminderPicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = E210597AFF8D4995D1175AA3 /* InlineReminderPicker.swift */; };
 		7F28CFF83DE1D846D59CA0F7 /* Phase6BTaskReminderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3ABC777961172CED511BBF03 /* Phase6BTaskReminderTests.swift */; };
 		864E88A77E43EF2501AF5022 /* ModelContainer+Shared.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E39FF666B9D58E28B14FBBA /* ModelContainer+Shared.swift */; };
@@ -68,9 +71,9 @@
 		A41849D5AB514AB24F495A57 /* MockURLProtocol.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4D283DE85CFFB6238F20D533 /* MockURLProtocol.swift */; };
 		A44B70C6027FB5BFC252B8CA /* NavigationRouter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 33A9FE20A98C304B52360113 /* NavigationRouter.swift */; };
 		A59E2BE759B908F6E72C69D3 /* TaskPresentationSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0DC87C0E85822FBBDBF2B9E3 /* TaskPresentationSnapshot.swift */; };
-		A7A759AD35ADFF96495DD15D /* SyncErrorBanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = 054C505CC74E80E9EDF43954 /* SyncErrorBanner.swift */; };
 		A9060BC5E46C493F61E105DD /* DatePickerSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8AFC4C0D33FEEB196CFC5B9E /* DatePickerSheet.swift */; };
 		AA82CDE694D91D5E61C9CBDE /* RecurrenceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BDF3A5C0B718FB3F9D18C039 /* RecurrenceTests.swift */; };
+		ACAF4BA177AC802C6C6C2110 /* FinallyStyle.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4DF65C99D85D8706CD946C4D /* FinallyStyle.swift */; };
 		ACB67A088AA0A224717E6FEE /* TaskReminder.swift in Sources */ = {isa = PBXBuildFile; fileRef = E23557EFB66C7C96C459D609 /* TaskReminder.swift */; };
 		ADEA4999510EE5FB567BDFEE /* Phase6BTaskItemTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3AF8954557BC6A8854C1F5D7 /* Phase6BTaskItemTests.swift */; };
 		B10CF70E9A7E831C514E4F59 /* WorkspaceScope.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1CAC1083AD59B4081B77077 /* WorkspaceScope.swift */; };
@@ -130,7 +133,7 @@
 		02F22C959A8815F6DCE53E20 /* SchemaErrorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SchemaErrorView.swift; sourceTree = "<group>"; };
 		038C576AF41A21C7B7DF9981 /* FinallyWidget.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = FinallyWidget.entitlements; sourceTree = "<group>"; };
 		03F3B629AECA1694C5B528B5 /* FinallyWidgetExtension.appex */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = "wrapper.app-extension"; path = FinallyWidgetExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
-		054C505CC74E80E9EDF43954 /* SyncErrorBanner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SyncErrorBanner.swift; sourceTree = "<group>"; };
+		0587AFE7BA6C571E38D93D08 /* PaperChrome.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PaperChrome.swift; sourceTree = "<group>"; };
 		076DC8A4A8CF43403DD2050E /* RecurrencePicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecurrencePicker.swift; sourceTree = "<group>"; };
 		08A9E12B9A89E0FDD5D30146 /* ChipView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChipView.swift; sourceTree = "<group>"; };
 		0B13C11F80B93B61065C6CAD /* DatabasePickerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DatabasePickerView.swift; sourceTree = "<group>"; };
@@ -154,6 +157,7 @@
 		4D283DE85CFFB6238F20D533 /* MockURLProtocol.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MockURLProtocol.swift; sourceTree = "<group>"; };
 		4D6A9D885F54EDA96C38C007 /* Phase6BNotificationServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Phase6BNotificationServiceTests.swift; sourceTree = "<group>"; };
 		4DBCF7ABA6666B3B50A24B37 /* DailyFocusServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DailyFocusServiceTests.swift; sourceTree = "<group>"; };
+		4DF65C99D85D8706CD946C4D /* FinallyStyle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FinallyStyle.swift; sourceTree = "<group>"; };
 		51287207D87EE2EEC6133185 /* Phase6BSubtaskSchedulerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Phase6BSubtaskSchedulerTests.swift; sourceTree = "<group>"; };
 		5433380C376ADA260E8BAFA3 /* TaskStatusMappingUnitTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskStatusMappingUnitTests.swift; sourceTree = "<group>"; };
 		57297B6B182C9224FF27FA72 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
@@ -185,6 +189,7 @@
 		8A0F563FE7E903936791CA0D /* TaskProviderAdapter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskProviderAdapter.swift; sourceTree = "<group>"; };
 		8AF288D737D929B86F432D4C /* E2ETestBase.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = E2ETestBase.swift; sourceTree = "<group>"; };
 		8AFC4C0D33FEEB196CFC5B9E /* DatePickerSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DatePickerSheet.swift; sourceTree = "<group>"; };
+		8C11FDA883FD1D38F4386188 /* Callout.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Callout.swift; sourceTree = "<group>"; };
 		8C46663913189E0200BD2F8C /* BackendDataFlowIntegrationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackendDataFlowIntegrationTests.swift; sourceTree = "<group>"; };
 		92344AD11CDB9C5B2DCC2F2B /* NotificationTimePickerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationTimePickerView.swift; sourceTree = "<group>"; };
 		92CF91D6E32CC4A8D97E20CC /* MockFinallyServerAPIClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MockFinallyServerAPIClient.swift; sourceTree = "<group>"; };
@@ -262,15 +267,16 @@
 			isa = PBXGroup;
 			children = (
 				8241A4815501F18DBAF175F6 /* BoardFilterView.swift */,
+				8C11FDA883FD1D38F4386188 /* Callout.swift */,
 				08A9E12B9A89E0FDD5D30146 /* ChipView.swift */,
 				8AFC4C0D33FEEB196CFC5B9E /* DatePickerSheet.swift */,
 				E210597AFF8D4995D1175AA3 /* InlineReminderPicker.swift */,
+				0587AFE7BA6C571E38D93D08 /* PaperChrome.swift */,
 				CCE5F29F716D6CB80D87B657 /* ParentTaskPicker.swift */,
 				2BB0C1AC47E9326D0A6E9F36 /* PriorityPicker.swift */,
 				832612E5901E80295CD69C97 /* ProjectPicker.swift */,
 				076DC8A4A8CF43403DD2050E /* RecurrencePicker.swift */,
 				59DCDD8E8EB5F548CA2EC0AE /* SortConfigView.swift */,
-				054C505CC74E80E9EDF43954 /* SyncErrorBanner.swift */,
 				6D0E48E011BE7F2F17609008 /* TagPicker.swift */,
 			);
 			path = Components;
@@ -294,6 +300,7 @@
 			isa = PBXGroup;
 			children = (
 				7EAF47BA098BEE13C1604C57 /* Constants.swift */,
+				4DF65C99D85D8706CD946C4D /* FinallyStyle.swift */,
 				7E39FF666B9D58E28B14FBBA /* ModelContainer+Shared.swift */,
 			);
 			path = Shared;
@@ -624,6 +631,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				ACAF4BA177AC802C6C6C2110 /* FinallyStyle.swift in Sources */,
 				5302FE2A976A0B3E00D80B65 /* TaskListWidget.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -636,6 +644,7 @@
 				02CFBD5EFB60B00BD26ED866 /* BoardFilterView.swift in Sources */,
 				3CA4410030B1E74631426C25 /* BoardView.swift in Sources */,
 				355ED7047F5FF404C3DA161E /* BrowseProjectsView.swift in Sources */,
+				3ACE76E7D33CE342604A9A8A /* Callout.swift in Sources */,
 				55F711B9628F214966D1A267 /* ChipView.swift in Sources */,
 				4504EC7F248400D129B20F3E /* Constants.swift in Sources */,
 				14783BBA2AA4669DF1A810EA /* ContentView.swift in Sources */,
@@ -653,6 +662,7 @@
 				F6B3FF871A5A1CF311AE3AB5 /* FinallyServerAccountService.swift in Sources */,
 				27BF1D534BBE6EB6981C137C /* FinallyServerTaskProviderAdapter.swift in Sources */,
 				3C2153D7726A70A8C8FA36D9 /* FinallyServerWorkspaceConfiguration.swift in Sources */,
+				77E5A5E02CC2F6EF149C682F /* FinallyStyle.swift in Sources */,
 				2BA18E36246E875B2071B500 /* InboxView.swift in Sources */,
 				7DE3A9452E030B8502AAE1DD /* InlineReminderPicker.swift in Sources */,
 				743614B7C47D1C37E35131B8 /* InlineTaskCreator.swift in Sources */,
@@ -667,6 +677,7 @@
 				72B3C47A213C17281F6CC2C9 /* NotionAuthService.swift in Sources */,
 				27541C233B7309950256A7CC /* NotionConnectView.swift in Sources */,
 				D71410F4BEF4D1538E8D6A5D /* NotionWorkspaceConfiguration.swift in Sources */,
+				7B1928F312FA550AEB3106A6 /* PaperChrome.swift in Sources */,
 				D5423739046AE1DC495CD241 /* ParentTaskPicker.swift in Sources */,
 				10B3C0F097CEDFDC88AF04A1 /* PriorityPicker.swift in Sources */,
 				531A6FD89E09145823875703 /* ProjectItem.swift in Sources */,
@@ -679,7 +690,6 @@
 				29E5ADA85E0F38D1F3E98CB0 /* SettingsView.swift in Sources */,
 				9255166257397CF0AE207DFD /* SortConfigView.swift in Sources */,
 				75C247FB0B0194F59F0C4E73 /* SubtaskScheduler.swift in Sources */,
-				A7A759AD35ADFF96495DD15D /* SyncErrorBanner.swift in Sources */,
 				CAAB2900354A6287A3F6EE19 /* SyncService.swift in Sources */,
 				57CE613AD4B410992C4696B8 /* TagPicker.swift in Sources */,
 				74C65A22FA4C6AEEF8B6E9EB /* TaskDetailView.swift in Sources */,

@@ -338,8 +338,7 @@ final class SyncService {
             if let dateProp = page.properties[mappings.taskDeadlineProperty],
                let dateStr = dateProp.date?.start {
                 if let endStr = dateProp.date?.end {
-                    task.plannedDay = parseDate(dateStr)
-                    task.plannedDayHasTime = dateStr.contains("T")
+                    task.plannedDay = parseDate(dateStr).map { Calendar.current.startOfDay(for: $0) }
                     task.deadline = parseDate(endStr)
                     task.deadlineHasTime = endStr.contains("T")
                 } else {
@@ -355,8 +354,7 @@ final class SyncService {
             if let targetKey = mappings.taskPlannedDayProperty,
                let targetProp = page.properties[targetKey],
                let targetStr = targetProp.date?.start {
-                task.plannedDay = parseDate(targetStr)
-                task.plannedDayHasTime = targetStr.contains("T")
+                task.plannedDay = parseDate(targetStr).map { Calendar.current.startOfDay(for: $0) }
             }
 
             task.validatePlannedDay()
@@ -479,7 +477,7 @@ final class SyncService {
             if mappings.taskPlannedDayProperty == nil, let plannedDay = task.plannedDay {
                 props[mappings.taskDeadlineProperty] = [
                     "date": [
-                        "start": notionDateString(plannedDay, hasTime: task.plannedDayHasTime),
+                        "start": notionDateString(plannedDay, hasTime: false),
                         "end": deadlineString,
                     ]
                 ]
@@ -499,7 +497,7 @@ final class SyncService {
             if let plannedDay = task.plannedDay {
                 props[targetKey] = [
                     "date": [
-                        "start": notionDateString(plannedDay, hasTime: task.plannedDayHasTime)
+                        "start": notionDateString(plannedDay, hasTime: false)
                     ]
                 ]
             } else {
