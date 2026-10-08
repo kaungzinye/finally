@@ -9,14 +9,12 @@ final class TaskItem {
     var deadline: Date?
     var deadlineHasTime: Bool = false
     var plannedDay: Date?
-    var plannedDayHasTime: Bool = false
     var priorityRaw: String?
     var tags: [String] = []
     var tagColors: [String] = []
     var recurrenceRaw: String = Recurrence.none.rawValue
     var customRecurrenceJSON: String?
     var remindersJSON: String?
-    var externalReferences: [String] = []
     var lastEditedTime: Date?
     var lastSyncedAt: Date?
     var isDirty: Bool = false
@@ -25,7 +23,6 @@ final class TaskItem {
 
     var parentId: String?
     var suggestedDate: Date?
-    var suggestedDateOverride: Date?
     var sortIndex: Int = 0
 
     var project: ProjectItem?
@@ -110,7 +107,7 @@ final class TaskItem {
     }
 
     var effectiveSuggestedDate: Date? {
-        suggestedDateOverride ?? suggestedDate ?? computedSuggestedDate
+        suggestedDate ?? computedSuggestedDate
     }
 
     var effectiveDate: Date? {
@@ -136,7 +133,7 @@ final class TaskItem {
     func hasTimeForAnchor(_ anchor: ReminderAnchor) -> Bool {
         switch anchor {
         case .deadline: return deadlineHasTime
-        case .plannedDay: return plannedDayHasTime
+        case .plannedDay: return false
         }
     }
 
@@ -255,7 +252,7 @@ enum DeadlineDemoFixture {
             subtask.parent = task
             subtask.sortIndex = index
             subtask.status = status
-            subtask.suggestedDateOverride = calendar.date(byAdding: .day, value: index * 3, to: referenceDate)
+            subtask.suggestedDate = calendar.date(byAdding: .day, value: index * 3, to: referenceDate)
             return subtask
         }
 

@@ -20,13 +20,11 @@ struct TaskDetailView: View {
     @State private var editedDeadline: Date?
     @State private var editedPlannedDay: Date?
     @State private var editedDeadlineHasTime = false
-    @State private var editedPlannedDayHasTime = false
     @State private var editedPriority: TaskPriority?
     @State private var editedTags: [String] = []
     @State private var editedProject: ProjectItem?
     @State private var editedRecurrence: Recurrence = .none
     @State private var editedCustomRule: RecurrenceRule?
-    @State private var editedExternalReferences = ""
     @State private var syncErrorMessage: String?
 
     var body: some View {
@@ -73,20 +71,6 @@ struct TaskDetailView: View {
                 // Reminders (inline)
                 ReminderSectionContent(task: task)
                     .cardRow()
-
-                Section {
-                    TextField(
-                        "One URL per line",
-                        text: $editedExternalReferences,
-                        axis: .vertical
-                    )
-                    .lineLimit(2...5)
-                    .textInputAutocapitalization(.never)
-                    .autocorrectionDisabled()
-                    .cardRow()
-                } header: {
-                    SectionLabel("External references")
-                }
 
                 // Sub-tasks (only for non-subtask tasks)
                 if !task.isSubtask {
@@ -201,19 +185,17 @@ struct TaskDetailView: View {
             editedDeadline = task.deadline
             editedPlannedDay = task.plannedDay
             editedDeadlineHasTime = task.deadlineHasTime
-            editedPlannedDayHasTime = task.plannedDayHasTime
             editedPriority = task.priority
             editedTags = task.tags
             editedProject = task.project
             editedRecurrence = task.recurrence
             editedCustomRule = task.customRecurrenceRule
-            editedExternalReferences = task.externalReferences.joined(separator: "\n")
         }
         .sheet(isPresented: $showDatePicker) {
             DatePickerSheet(selectedDate: $editedDeadline, hasTime: $editedDeadlineHasTime)
         }
         .sheet(isPresented: $showPlannedDayPicker) {
-            DatePickerSheet(selectedDate: $editedPlannedDay, hasTime: $editedPlannedDayHasTime)
+            DatePickerSheet(selectedDate: $editedPlannedDay)
         }
         .sheet(isPresented: $showPriorityPicker) {
             PriorityPicker(selection: $editedPriority)
@@ -239,7 +221,7 @@ struct TaskDetailView: View {
     @ViewBuilder
     private var fieldChips: some View {
         ChipView(
-            label: editedPlannedDay.map { formattedPlanningDate($0, hasTime: editedPlannedDayHasTime) } ?? "Planned day",
+            label: editedPlannedDay.map { formattedPlanningDate($0, hasTime: false) } ?? "Planned day",
             icon: "scope",
             isPlaceholder: editedPlannedDay == nil
         ) { showPlannedDayPicker = true }
@@ -337,17 +319,12 @@ struct TaskDetailView: View {
         task.deadline = editedDeadline
         task.plannedDay = editedPlannedDay
         task.deadlineHasTime = editedDeadline != nil && editedDeadlineHasTime
-        task.plannedDayHasTime = editedPlannedDay != nil && editedPlannedDayHasTime
         task.validatePlannedDay()
         task.priority = editedPriority
         task.tags = editedTags
         task.project = editedProject
         task.recurrence = editedRecurrence
         task.customRecurrenceRule = editedCustomRule
-        task.externalReferences = editedExternalReferences
-            .split(whereSeparator: { $0.isNewline })
-            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
-            .filter { !$0.isEmpty }
         task.isDirty = true
 
         // Reschedule reminders if deadline changed

@@ -48,7 +48,6 @@ enum CanonicalTaskField: String, Codable, CaseIterable, Hashable, Sendable {
     case subtasks
     case recurrence
     case reminders
-    case externalReferences
 }
 
 enum TaskProviderFieldSupport: Codable, Equatable, Sendable {
@@ -131,7 +130,6 @@ extension SyncService: TaskProviderAdapter {
             .subtasks: .lossless,
             .recurrence: .lossless,
             .reminders: .unsupported(reason: "Reminders are scheduled by Finally on-device."),
-            .externalReferences: .unsupported(reason: "No external-reference property is configured."),
         ]
     }
 
@@ -437,7 +435,6 @@ final class TaskProviderCoordinator {
         if task.isSubtask || task.hasSubtasks { fields.insert(.subtasks) }
         if task.recurrence != .none { fields.insert(.recurrence) }
         if !task.taskReminders.isEmpty { fields.insert(.reminders) }
-        if !task.externalReferences.isEmpty { fields.insert(.externalReferences) }
         return fields
     }
 }

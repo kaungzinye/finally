@@ -12,7 +12,6 @@ struct InlineTaskCreator: View {
     @State private var deadline: Date?
     @State private var plannedDay: Date?
     @State private var deadlineHasTime = false
-    @State private var plannedDayHasTime = false
     @State private var priority: TaskPriority?
     @State private var tags: [String] = []
     @State private var project: ProjectItem?
@@ -129,7 +128,7 @@ struct InlineTaskCreator: View {
                         }
                         if let plannedDay {
                             ChipView(
-                                label: "Planned \(formatPlanningDate(plannedDay, hasTime: plannedDayHasTime))",
+                                label: "Planned \(formatPlanningDate(plannedDay, hasTime: false))",
                                 icon: "scope"
                             ) { showPlannedDayPicker = true }
                         }
@@ -244,7 +243,7 @@ struct InlineTaskCreator: View {
             DatePickerSheet(selectedDate: $deadline, hasTime: $deadlineHasTime)
         }
         .sheet(isPresented: $showPlannedDayPicker) {
-            DatePickerSheet(selectedDate: $plannedDay, hasTime: $plannedDayHasTime)
+            DatePickerSheet(selectedDate: $plannedDay)
         }
         .sheet(isPresented: $showPriorityPicker) {
             PriorityPicker(selection: $priority)
@@ -292,7 +291,6 @@ struct InlineTaskCreator: View {
         task.deadline = deadline
         task.plannedDay = plannedDay
         task.deadlineHasTime = deadline != nil && deadlineHasTime
-        task.plannedDayHasTime = plannedDay != nil && plannedDayHasTime
         task.validatePlannedDay()
         task.priority = priority
         task.tags = tags
@@ -333,7 +331,6 @@ struct InlineTaskCreator: View {
         deadline = nil
         plannedDay = nil
         deadlineHasTime = false
-        plannedDayHasTime = false
         priority = nil
         tags = []
         if presetProject == nil { project = nil }
