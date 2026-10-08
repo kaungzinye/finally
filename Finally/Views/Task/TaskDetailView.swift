@@ -71,6 +71,10 @@ struct TaskDetailView: View {
                 .paperRow()
                 .listRowSeparator(.hidden)
 
+                // Reminders (inline)
+                ReminderSectionContent(task: task)
+                    .cardRow()
+
                 Section {
                     HStack {
                         Label("Estimate", systemImage: "timer")
@@ -96,10 +100,6 @@ struct TaskDetailView: View {
                 } header: {
                     SectionLabel("External references")
                 }
-
-                // Reminders (inline)
-                ReminderSectionContent(task: task)
-                    .cardRow()
 
                 // Sub-tasks (only for non-subtask tasks)
                 if !task.isSubtask {
