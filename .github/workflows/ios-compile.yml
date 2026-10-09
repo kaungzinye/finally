@@ -6,6 +6,7 @@ on:
       - "Finally/**"
       - "FinallyWidget/**"
       - "FinallyTests/**"
+      - "FinallyUITests/**"
       - "Finally.xcodeproj/**"
       - "project.yml"
       - ".github/workflows/ios-compile.yml"
@@ -16,6 +17,7 @@ on:
       - "Finally/**"
       - "FinallyWidget/**"
       - "FinallyTests/**"
+      - "FinallyUITests/**"
       - "Finally.xcodeproj/**"
       - "project.yml"
       - ".github/workflows/ios-compile.yml"
@@ -52,5 +54,40 @@ jobs:
           -project Finally.xcodeproj
           -scheme Finally
           -destination 'generic/platform=iOS'
+          CODE_SIGNING_ALLOWED=NO
+          -quiet
+
+  launch:
+    runs-on: macos-26
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        ios: ["17.5", "26.5"]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Select Xcode 26.6
+        run: sudo xcode-select -s /Applications/Xcode_26.6.app
+
+      - name: Install simulator runtime
+        run: xcodebuild -downloadPlatform iOS -buildVersion '${{ matrix.ios }}'
+
+      - name: Create fresh iPhone simulator
+        run: |
+          version='${{ matrix.ios }}'
+          runtime="com.apple.CoreSimulator.SimRuntime.iOS-${version//./-}"
+          device=$(xcrun simctl create 'Finally launch' com.apple.CoreSimulator.SimDeviceType.iPhone-15-Pro "$runtime")
+          echo "LAUNCH_SIMULATOR=$device" >> "$GITHUB_ENV"
+          xcrun simctl boot "$device"
+          xcrun simctl bootstatus "$device" -b
+
+      - name: Verify onboarding and task screens
+        run: >-
+          xcodebuild test
+          -project Finally.xcodeproj
+          -scheme Finally
+          -destination "platform=iOS Simulator,id=$LAUNCH_SIMULATOR"
+          -only-testing:FinallyUITests
           CODE_SIGNING_ALLOWED=NO
           -quiet

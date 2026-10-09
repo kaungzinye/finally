@@ -11,12 +11,14 @@ schemes:
       targets:
         Finally: all
         FinallyTests: [test]
+        FinallyUITests: [test]
     run:
       config: Debug
     test:
       config: Debug
       targets:
         - FinallyTests
+        - FinallyUITests
     profile:
       config: Release
     analyze:
@@ -99,6 +101,17 @@ targets:
     platform: iOS
     sources:
       - FinallyTests
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: YES
+    dependencies:
+      - target: Finally
+
+  FinallyUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    sources:
+      - FinallyUITests
     settings:
       base:
         GENERATE_INFOPLIST_FILE: YES

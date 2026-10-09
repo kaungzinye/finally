@@ -35,6 +35,20 @@
                ReferencedContainer = "container:Finally.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "NO"
+            buildForProfiling = "NO"
+            buildForArchiving = "NO"
+            buildForAnalyzing = "NO">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "295E10F393BCEDFA898C0AB8"
+               BuildableName = "FinallyUITests.xctest"
+               BlueprintName = "FinallyUITests"
+               ReferencedContainer = "container:Finally.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
       </BuildActionEntries>
    </BuildAction>
    <TestAction
@@ -61,6 +75,17 @@
                BlueprintIdentifier = "901A6A2C0687EC6BE943FB3E"
                BuildableName = "FinallyTests.xctest"
                BlueprintName = "FinallyTests"
+               ReferencedContainer = "container:Finally.xcodeproj">
+            </BuildableReference>
+         </TestableReference>
+         <TestableReference
+            skipped = "NO"
+            parallelizable = "NO">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "295E10F393BCEDFA898C0AB8"
+               BuildableName = "FinallyUITests.xctest"
+               BlueprintName = "FinallyUITests"
                ReferencedContainer = "container:Finally.xcodeproj">
             </BuildableReference>
          </TestableReference>
