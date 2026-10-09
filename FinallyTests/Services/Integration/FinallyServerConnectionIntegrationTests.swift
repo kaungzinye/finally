@@ -43,6 +43,29 @@ final class FinallyServerConnectionIntegrationTests: XCTestCase {
         XCTAssertEqual(storedProjects.map(\.providerWorkspaceId), [server.workspaceId])
     }
 
+    func testCredentialFailurePreservesTheSelectedProviderWorkspace() async throws {
+        let api = MockFinallyServerAPIClient()
+        let credentials = InMemoryCredentialStore()
+        credentials.saveError = FinallyServerClientError.unauthorized
+        let context = try makeInMemoryContext()
+        let notion = UserSession(workspaceId: "notion-workspace", workspaceName: "Shared", providerIdentity: .notion)
+        notion.isSelected = true
+        context.insert(notion)
+        try context.save()
+        let service = FinallyServerAccountService(api: api, credentials: credentials)
+        let account = try await service.authenticate(baseURL: URL(string: "https://tasks.example.com")!, username: "demo", password: "demo")
+
+        XCTAssertThrowsError(try service.connect(
+            name: "Server", baseURL: URL(string: "https://tasks.example.com")!,
+            project: try XCTUnwrap(account.projects.first), account: account, store: context
+        ))
+
+        XCTAssertTrue(notion.isSelected)
+        XCTAssertEqual(try context.fetchCount(FetchDescriptor<UserSession>()), 1)
+        XCTAssertEqual(try context.fetchCount(FetchDescriptor<ProjectItem>()), 0)
+        XCTAssertTrue(credentials.credentials.isEmpty)
+    }
+
     func testRemovingServerAccountPreservesNotionWorkspaceAndCredential() async throws {
         let api = MockFinallyServerAPIClient()
         let credentials = InMemoryCredentialStore()
@@ -75,6 +98,8 @@ final class FinallyServerConnectionIntegrationTests: XCTestCase {
         context.insert(serverTask)
         context.insert(notionProject)
         context.insert(serverProject)
+        context.insert(DailyFocus(day: Date(), storageWorkspaceID: server.workspaceId))
+        context.insert(DailyFocus(day: Date(), storageWorkspaceID: notion.workspaceId))
         try context.save()
 
         try accounts.remove(server, store: context)
@@ -85,6 +110,7 @@ final class FinallyServerConnectionIntegrationTests: XCTestCase {
         XCTAssertNil(credentials.token(workspaceID: server.workspaceId))
         XCTAssertEqual(try context.fetch(FetchDescriptor<TaskItem>()).map(\.title), ["Shared task"])
         XCTAssertEqual(try context.fetch(FetchDescriptor<ProjectItem>()).map(\.title), ["Shared project"])
+        XCTAssertEqual(try context.fetch(FetchDescriptor<DailyFocus>()).map(\.storageWorkspaceID), [notion.workspaceId])
     }
 
     func testFailedConnectionDoesNotPersistAccountOrCredential() async throws {

@@ -1,153 +1,114 @@
 import SwiftData
 import SwiftUI
 
-/// The Daily Focus picks for today, shown ahead of every deadline bucket.
-/// Once the user confirms the day, the first unfinished pick becomes the current one.
 struct DailyFocusSection: View {
     let focus: DailyFocus
     let onChange: () -> Void
     let onSelectTask: (TaskItem) -> Void
+    let onAddPick: () -> Void
+    let onEditPicks: () -> Void
 
     @Query private var tasks: [TaskItem]
-    @State private var showPicker = false
 
-    private var resolvedPicks: [ResolvedDailyFocusPick] {
-        focus.resolvedPicks(among: tasks)
-    }
-
-    /// Once the day is confirmed, the first pick whose task is still open.
-    private var current: (pick: DailyFocusPick, task: TaskItem)? {
-        guard focus.isConfirmed else { return nil }
-        for item in resolvedPicks {
-            if let task = item.task, task.status != .done {
-                return (item.pick, task)
-            }
-        }
-        return nil
-    }
-
-    /// Positions in `focus.picks` of the picks listed below the current one.
-    private var listedIndices: [Int] {
-        resolvedPicks.indices.filter { resolvedPicks[$0].pick != current?.pick }
-    }
+    private var resolved: [ResolvedDailyFocusPick] { focus.resolvedPicks(among: tasks) }
+    private var unfinished: [ResolvedDailyFocusPick] { resolved.filter { $0.task?.status != .done } }
+    private var actionable: [ResolvedDailyFocusPick] { focus.executionPicks(among: tasks) }
 
     var body: some View {
-        if let current {
-            Section {
-                CurrentPickCard(task: current.task, onOpen: { onSelectTask(current.task) })
-            } header: {
-                header
-            }
-        }
-
-        Section {
-            ForEach(listedIndices.map { resolvedPicks[$0] }) { item in
-                if let task = item.task {
-                    TaskRowView(task: task)
-                        .contentShape(Rectangle())
-                        .onTapGesture { onSelectTask(task) }
+        if focus.isConfirmed {
+            Section("Current") {
+                if let item = actionable.first, let task = item.task {
+                    CurrentPickCard(task: task, onOpen: { onSelectTask(task) })
+                        .accessibilityIdentifier("daily-focus-current-task")
+                } else if unfinished.isEmpty {
+                    Label("Daily Focus complete", systemImage: "checkmark.seal.fill")
+                        .foregroundStyle(.green)
                 } else {
-                    unavailableRow
+                    Text("Review the unavailable picks to continue.")
+                        .foregroundStyle(.secondary)
                 }
             }
-            .onMove { source, destination in
-                let indices = listedIndices
-                let fullDestination = destination < indices.count ? indices[destination] : (indices.last ?? -1) + 1
-                focus.move(fromOffsets: IndexSet(source.map { indices[$0] }), toOffset: fullDestination)
-                onChange()
-            }
-            .onDelete { offsets in
-                let indices = listedIndices
-                focus.remove(atOffsets: IndexSet(offsets.map { indices[$0] }))
-                onChange()
-            }
-
-            if focus.isFull {
-                leadingIconRow("checkmark.circle") {
-                    Text("Daily Focus is full")
-                        .font(.meta)
-                        .foregroundStyle(Palette.muted)
-                }
-            } else {
-                Button {
-                    showPicker = true
-                } label: {
-                    leadingIconRow("plus") {
-                        Text("Add a pick")
-                            .foregroundStyle(Palette.ink)
+            if actionable.count > 1 {
+                Section("Next") {
+                    ForEach(Array(actionable.dropFirst())) { item in
+                        if let task = item.task { taskRow(task) }
                     }
                 }
-                .accessibilityIdentifier("daily-focus-add-pick")
             }
-
-            if !focus.isConfirmed {
-                Button("Confirm") {
-                    focus.confirm()
+            if unfinished.contains(where: { $0.task == nil }) {
+                Section("Unavailable picks") {
+                    ForEach(unfinished.filter { $0.task == nil }) { item in unavailableRow(item) }
+                }
+            }
+        } else {
+            Section {
+                ForEach(resolved) { item in
+                    if let task = item.task { taskRow(task) } else { unavailableRow(item) }
+                }
+                .onMove { source, destination in
+                    focus.move(fromOffsets: source, toOffset: destination)
                     onChange()
                 }
-                .buttonStyle(.ink)
+                .onDelete { offsets in
+                    focus.remove(atOffsets: offsets)
+                    onChange()
+                }
+                if resolved.isEmpty {
+                    Text("Pick a few tasks for this day.")
+                        .foregroundStyle(.secondary)
+                }
+            } header: {
+                HStack {
+                    Text("Proposed Daily Focus")
+                    Spacer()
+                    if resolved.count > 1 { EditButton().buttonStyle(.borderless) }
+                }
+            }
+        }
+        Section {
+            if focus.isConfirmed {
+                Button("Edit picks", action: onEditPicks)
+                    .accessibilityIdentifier("daily-focus-edit-picks")
+            }
+            Button {
+                onAddPick()
+            } label: {
+                Label(focus.isFull ? "Add an urgent task" : "Add a pick", systemImage: "plus.circle")
+            }
+            .accessibilityIdentifier("daily-focus-add-pick")
+            if !focus.isConfirmed {
+                Button {
+                    focus.confirm()
+                    onChange()
+                } label: {
+                    Label("Confirm Daily Focus", systemImage: "checkmark.seal")
+                }
                 .disabled(focus.picks.isEmpty)
-                .padding(.top, 8)
-                .paperRow()
                 .accessibilityIdentifier("daily-focus-confirm")
             }
-        } header: {
-            if current == nil {
-                header
-            }
-        }
-        .sheet(isPresented: $showPicker) {
-            DailyFocusPickerView(focus: focus, onPick: onChange)
+        } footer: {
+            Text("\(focus.picks.count) of \(focus.focusLimit) picks · \(focus.isConfirmed ? "Confirmed" : "Awaiting confirmation")")
         }
     }
 
-    private var unavailableRow: some View {
-        HStack(spacing: 12) {
-            Circle()
-                .strokeBorder(Palette.hairline, style: StrokeStyle(lineWidth: 1.8, dash: [3, 3]))
-                .frame(width: 22, height: 22)
-                .frame(width: 44, height: 44)
-                .padding(.leading, -11)
-            Text("Task no longer available")
-                .italic()
-                .foregroundStyle(Palette.muted)
+    private func taskRow(_ task: TaskItem) -> some View {
+        TaskRowView(task: task)
+            .contentShape(Rectangle())
+            .onTapGesture { onSelectTask(task) }
+    }
+
+    private func unavailableRow(_ item: ResolvedDailyFocusPick) -> some View {
+        HStack {
+            Label("Task unavailable", systemImage: "questionmark.circle")
+                .foregroundStyle(.secondary)
             Spacer()
+            Button("Drop") {
+                focus.remove(item.pick)
+                onChange()
+            }
+            .buttonStyle(.borderless)
         }
-        .cardRow()
-        .compactRowInsets()
         .accessibilityIdentifier("daily-focus-unavailable-pick")
-    }
-
-    /// A row whose leading symbol sits in the same column as the task rings.
-    private func leadingIconRow<Content: View>(_ symbol: String, @ViewBuilder content: () -> Content) -> some View {
-        HStack(spacing: 12) {
-            Image(systemName: symbol)
-                .foregroundStyle(Palette.muted)
-                .frame(width: 44, height: 44)
-                .padding(.leading, -11)
-            content()
-            Spacer()
-        }
-        .contentShape(Rectangle())
-        .cardRow()
-        .compactRowInsets()
-    }
-
-    private var header: some View {
-        SectionLabel(title: "Daily Focus") {
-            HStack(spacing: 10) {
-                Text("\(focus.picks.count) of \(focus.focusLimit)")
-                if focus.isConfirmed {
-                    Text("Confirmed")
-                        .foregroundStyle(Palette.ink)
-                }
-                if focus.picks.count > 1 {
-                    EditButton()
-                        .font(.meta.weight(.semibold))
-                        .foregroundStyle(Palette.ink)
-                }
-            }
-        }
     }
 }
 
@@ -258,5 +219,39 @@ struct DailyFocusProgress: View {
                 .padding(.leading, 6)
         }
         .accessibilityElement(children: .combine)
+    }
+}
+
+struct DailyFocusEditorView: View {
+    let focus: DailyFocus
+    let onChange: () -> Void
+    @Query private var tasks: [TaskItem]
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        NavigationStack {
+            List {
+                ForEach(focus.resolvedPicks(among: tasks)) { item in
+                    Text(item.task?.title ?? "Task unavailable").cardRow()
+                }
+                .onMove { source, destination in
+                    focus.move(fromOffsets: source, toOffset: destination)
+                    onChange()
+                }
+                .onDelete { offsets in
+                    focus.remove(atOffsets: offsets)
+                    onChange()
+                }
+            }
+            .paperList()
+            .navigationTitle("Edit picks")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarLeading) { EditButton() }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Done") { dismiss() }
+                }
+            }
+        }
     }
 }

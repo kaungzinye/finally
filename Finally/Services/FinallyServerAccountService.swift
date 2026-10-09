@@ -81,9 +81,9 @@ final class FinallyServerAccountService {
         workspace.serverProjectID = project.id
 
         let sessions = try store.fetch(FetchDescriptor<UserSession>())
+        try credentials.saveToken(account.token, workspaceID: workspace.workspaceId)
         sessions.forEach { $0.isSelected = false }
         workspace.isSelected = true
-        try credentials.saveToken(account.token, workspaceID: workspace.workspaceId)
         store.insert(workspace)
         let localProject = ProjectItem(
             externalProjectID: String(project.id),
@@ -109,6 +109,10 @@ final class FinallyServerAccountService {
             $0.providerWorkspaceId == workspaceID
         }
         tasks.forEach(store.delete)
+        let focuses = try store.fetch(FetchDescriptor<DailyFocus>()).filter {
+            $0.storageWorkspaceID == workspaceID
+        }
+        focuses.forEach(store.delete)
         let projects = try store.fetch(FetchDescriptor<ProjectItem>()).filter {
             $0.providerWorkspaceId == workspaceID
         }

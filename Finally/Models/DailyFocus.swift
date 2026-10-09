@@ -8,8 +8,32 @@ struct DailyFocusPick: Codable, Hashable, Sendable {
     let externalTaskID: String
 }
 
-enum DailyFocusError: Error, Equatable {
+enum DailyFocusError: LocalizedError, Equatable {
     case full(limit: Int)
+    case pickMissing
+    case duplicatePick
+    case taskUnavailable
+    case needsSteps
+    case needsNextDay
+
+    var errorDescription: String? {
+        switch self {
+        case .full(let limit): "Choose a pick to replace. Daily Focus holds \(limit) picks."
+        case .pickMissing: "This pick has changed. Review Daily Focus and try again."
+        case .duplicatePick: "This task is already in Daily Focus."
+        case .taskUnavailable: "This task is unavailable. You can drop its focus pick."
+        case .needsSteps: "Add an unfinished step to this task, then finish breaking it down."
+        case .needsNextDay: "Choose Daily Focus for a later day."
+        }
+    }
+}
+
+enum DailyFocusReplanningDecision {
+    case keep
+    case breakDown
+    case schedule(Date)
+    case deferTask
+    case drop
 }
 
 /// The few tasks picked for one day, bounded by the focus limit.
@@ -19,14 +43,16 @@ final class DailyFocus {
     static let focusLimitRange = 1...5
 
     var day: Date
+    var storageWorkspaceID: String
     var focusLimit: Int
     var isConfirmed: Bool = false
     var picksJSON: String = "[]"
     /// A local change not yet stored on Finally Server. Notion mode never sets it.
     var isDirty: Bool = false
 
-    init(day: Date, focusLimit: Int = DailyFocus.defaultFocusLimit) {
+    init(day: Date, focusLimit: Int = DailyFocus.defaultFocusLimit, storageWorkspaceID: String = "") {
         self.day = day
+        self.storageWorkspaceID = storageWorkspaceID
         self.focusLimit = DailyFocus.clampedFocusLimit(focusLimit)
     }
 
@@ -72,6 +98,58 @@ final class DailyFocus {
         picks = picks.filter { $0 != pick }
     }
 
+    func replace(_ pick: DailyFocusPick, with replacement: DailyFocusPick) throws {
+        var current = picks
+        guard let index = current.firstIndex(of: pick) else { throw DailyFocusError.pickMissing }
+        guard pick != replacement else { return }
+        guard !current.contains(replacement) else { throw DailyFocusError.duplicatePick }
+        current[index] = replacement
+        picks = current
+    }
+
+    /// Applies one explicit decision. Validation finishes before either day's picks change.
+    func replan(
+        _ pick: DailyFocusPick,
+        decision: DailyFocusReplanningDecision,
+        task: TaskItem?,
+        nextFocus: DailyFocus? = nil,
+        displacing: DailyFocusPick? = nil
+    ) throws {
+        guard picks.contains(pick) else { throw DailyFocusError.pickMissing }
+        if case .drop = decision {
+            remove(pick)
+            return
+        }
+        guard let task, !task.isDeleted, task.dailyFocusPick == pick else {
+            throw DailyFocusError.taskUnavailable
+        }
+        switch decision {
+        case .keep:
+            guard let nextFocus, nextFocus.storageWorkspaceID == storageWorkspaceID, nextFocus.day > day else { throw DailyFocusError.needsNextDay }
+            if !nextFocus.picks.contains(pick) {
+                if let displacing {
+                    try nextFocus.replace(displacing, with: pick)
+                } else {
+                    try nextFocus.add(pick)
+                }
+            }
+            nextFocus.isConfirmed = false
+        case .breakDown:
+            guard task.nextActionableSubtask != nil else { throw DailyFocusError.needsSteps }
+        case .schedule(let date):
+            task.plannedDay = Calendar.current.startOfDay(for: date)
+            task.isDirty = true
+            SubtaskScheduler.distributeSubtaskDates(parent: task)
+        case .deferTask:
+            task.plannedDay = nil
+            task.isDirty = true
+            SubtaskScheduler.distributeSubtaskDates(parent: task)
+        case .drop:
+            break
+        }
+        remove(pick)
+    }
+
     func remove(atOffsets offsets: IndexSet) {
         picks = picks.enumerated().filter { !offsets.contains($0.offset) }.map(\.element)
     }
@@ -97,6 +175,16 @@ struct ResolvedDailyFocusPick: Identifiable {
 }
 
 extension DailyFocus {
+    func executionPicks(among tasks: [TaskItem]) -> [ResolvedDailyFocusPick] {
+        var shown: Set<DailyFocusPick> = []
+        return resolvedPicks(among: tasks).compactMap { item in
+            guard let task = item.task, task.status != .done else { return nil }
+            let action = task.nextActionableSubtask ?? task
+            guard shown.insert(action.dailyFocusPick).inserted else { return nil }
+            return ResolvedDailyFocusPick(pick: item.pick, task: action)
+        }
+    }
+
     func resolvedPicks(in store: ModelContext) throws -> [ResolvedDailyFocusPick] {
         resolvedPicks(among: try store.fetch(FetchDescriptor<TaskItem>()))
     }

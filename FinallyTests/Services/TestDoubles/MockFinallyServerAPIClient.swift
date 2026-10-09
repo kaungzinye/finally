@@ -13,6 +13,8 @@ final class MockFinallyServerAPIClient: FinallyServerAPIClient {
     private(set) var taskOperations: [String] = []
     var dailyFocus: [String: FinallyServerDailyFocus] = [:]
     private(set) var dailyFocusOperations: [String] = []
+    var dailyFocusReadHook: (@MainActor () async -> Void)?
+    var dailyFocusWriteHook: (@MainActor () async -> Void)?
 
     func login(username: String, password: String) async throws -> String {
         loginRequests += 1
@@ -100,7 +102,9 @@ final class MockFinallyServerAPIClient: FinallyServerAPIClient {
     func readDailyFocus(projectID: Int64, day: String) async throws -> FinallyServerDailyFocus? {
         dailyFocusOperations.append("read")
         if let error { throw error }
-        return dailyFocus[Self.dailyFocusKey(projectID: projectID, day: day)]
+        let record = dailyFocus[Self.dailyFocusKey(projectID: projectID, day: day)]
+        await dailyFocusReadHook?()
+        return record
     }
 
     func writeDailyFocus(
@@ -118,14 +122,17 @@ final class MockFinallyServerAPIClient: FinallyServerAPIClient {
             focusLimit: mutation.focusLimit
         )
         dailyFocus[Self.dailyFocusKey(projectID: projectID, day: day)] = record
+        await dailyFocusWriteHook?()
         return record
     }
 }
 
 final class InMemoryCredentialStore: FinallyServerCredentialStore {
     private(set) var credentials: [String: String] = [:]
+    var saveError: Error?
 
     func saveToken(_ token: String, workspaceID: String) throws {
+        if let saveError { throw saveError }
         credentials[workspaceID] = token
     }
 

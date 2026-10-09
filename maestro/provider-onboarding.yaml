@@ -1,0 +1,36 @@
+# The runner launches the app without demo arguments in a first-use simulator store.
+appId: com.kaungzinye.finally
+---
+- extendedWaitUntil:
+    visible: "Choose where your tasks live."
+    timeout: 10000
+- tapOn:
+    id: "connect-server-provider"
+- assertVisible: "Connect Server"
+- tapOn:
+    id: "server-address"
+- inputText: "https://127.0.0.1:9443"
+- tapOn:
+    id: "server-username"
+- inputText: "demo"
+- tapOn:
+    id: "server-password"
+- inputText: "demo"
+- tapOn: "Done"
+- tapOn:
+    id: "server-connect-action"
+- extendedWaitUntil:
+    visible:
+      id: "finally-server-connection-error"
+    timeout: 15000
+- assertVisible: "Find Workspaces"
+- tapOn:
+    id: "BackButton"
+- tapOn:
+    id: "connect-notion-provider"
+- assertVisible: "Connect Notion"
+- tapOn:
+    id: "notion-authorize"
+- tapOn: "Cancel"
+- assertVisible: "Connect to Notion"
+- assertNotVisible: "Connecting..."

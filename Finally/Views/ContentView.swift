@@ -82,7 +82,11 @@ struct ContentView: View {
         }
 
         if let message = dailyFocusService.lastError {
-            Callout(message: message, onDismiss: { dailyFocusService.clearError() })
+            Callout(
+                message: message,
+                onRetry: { Task { await dailyFocusService.retryPendingChanges(store: modelContext) } },
+                onDismiss: { dailyFocusService.clearError() }
+            )
         }
 
         if let message = taskProvider.lastWarning {
