@@ -16,13 +16,18 @@ struct DailyFocusPickerView: View {
     private var openTasks: [TaskItem]
     @Query private var sessions: [UserSession]
     @State private var searchText = ""
+    @State private var sourceWorkspaceID: String?
     @State private var replacementTask: TaskItem?
     @State private var errorMessage: String?
     @Query private var allTasks: [TaskItem]
 
+    private var sourceWorkspace: UserSession? {
+        sessions.first { $0.workspaceId == (sourceWorkspaceID ?? focus.storageWorkspaceID) }
+    }
+
     private var candidates: [TaskItem] {
         let picked = Set(focus.picks)
-        let workspace = sessions.selectedProviderWorkspace
+        let workspace = sourceWorkspace
         return openTasks.filter { task in
             task.nextActionableSubtask == nil
                 && task.belongs(to: workspace)
@@ -34,6 +39,19 @@ struct DailyFocusPickerView: View {
     var body: some View {
         NavigationStack {
             List {
+                Section {
+                    Picker("Task provider workspace", selection: Binding(
+                        get: { sourceWorkspaceID ?? focus.storageWorkspaceID },
+                        set: { sourceWorkspaceID = $0 }
+                    )) {
+                        ForEach(sessions, id: \.workspaceId) { workspace in
+                            Text(workspace.workspaceName).tag(workspace.workspaceId)
+                        }
+                    }
+                    .pickerStyle(.menu)
+                    .accessibilityIdentifier("daily-focus-source-workspace")
+                    .cardRow()
+                }
                 if let errorMessage {
                     Text(errorMessage).foregroundStyle(.red)
                 }
@@ -56,7 +74,7 @@ struct DailyFocusPickerView: View {
             }
             .paperList()
             .searchable(text: $searchText, prompt: "Search tasks")
-            .overlay {
+            .safeAreaInset(edge: .bottom) {
                 if candidates.isEmpty {
                     ContentUnavailableView(
                         "Nothing to pick",

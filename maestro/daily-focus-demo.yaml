@@ -66,3 +66,16 @@ appId: com.kaungzinye.finally
 - assertVisible: "Current"
 - assertVisible: "Review the contract"
 - assertVisible: "1 of 3 picks · Confirmed"
+
+- scrollUntilVisible:
+    element:
+      id: "daily-focus-add-pick"
+    direction: DOWN
+    centerElement: true
+- tapOn:
+    id: "daily-focus-add-pick"
+- tapOn: "Demo Notion"
+- tapOn: "Demo Server"
+- tapOn: "Ship the release notes"
+- assertVisible: "2 of 3 picks · Confirmed"
+- assertVisible: "Ship the release notes"

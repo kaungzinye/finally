@@ -22,11 +22,11 @@ When the user prompts the personal agent to propose tomorrow's Daily Focus, the 
 
 The personal agent uses the provider workspace identity configured for the phone's server connection. It preserves an existing confirmed record for the user's explicit review. Picks reference tasks; selecting and confirming them leaves task dates fixed. A proposal runs when the user prompts the personal agent. The record's calendar date comes from the user's local calendar.
 
-The phone confirms by writing the same project and day with `confirmed: true`. Reordering and editing preserve pick identity. A full Daily Focus accepts an urgent task through a replacement the user chooses, including a reference to an unavailable task. The focus limit remains one to five. Each day retains its limit; Settings supplies the limit for newly created days.
+The phone confirms by writing the same project and day with `confirmed: true`. Reordering and editing preserve pick identity. A full Daily Focus accepts an urgent task through a replacement the user chooses, including a reference to an unavailable task. The focus limit remains one to five. The task picker chooses a source provider workspace independently of the record's storage workspace. Each day retains its limit; Settings supplies the limit for newly created days.
 
 Replanning keeps each unfinished pick visible until the user decides. Keep places it in a later day's unconfirmed Daily Focus, with explicit displacement if that day is full. Break down requires an unfinished subtask and removes the parent pick after the user finishes that decision. Schedule sets a date-only planned day. Defer clears the planned day. Drop removes the focus pick and keeps the task and its dates. Task deadlines stay fixed through these decisions.
 
-The phone saves all changed Daily Focus days together before attempting server writes. Failed writes leave dirty edits on the phone; the Daily Focus error banner retries all dirty days. Schedule and Defer also enter the task provider's dirty-edit pipeline and refresh local reminders.
+The phone saves all changed Daily Focus days together before attempting server writes. Failed writes leave dirty edits on the phone; the Daily Focus error banner retries all dirty days in the selected storage workspace. Schedule and Defer also enter the task provider's dirty-edit pipeline and refresh local reminders.
 
 `DailyFocusTests` exercises displacement, all replanning decisions, and date preservation. `DailyFocusServiceTests` exercises prompted writes through a mock API, confirmation on the same record, and offline recovery across both days. `maestro/daily-focus-demo.yaml` exercises the seeded phone flow.
 
