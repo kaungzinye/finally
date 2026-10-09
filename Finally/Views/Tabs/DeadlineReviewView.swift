@@ -16,7 +16,7 @@ struct DeadlineReviewView: View {
     @State private var selectedTask: TaskItem?
     @State private var expandedSections: Set<String> = ["Today"]
     @State private var isSelectionMode = false
-    @State private var selectedTasks: Set<String> = []
+    @State private var selectedTasks: Set<PersistentIdentifier> = []
     @State private var showSearch = false
     @State private var showSortConfig = false
     @AppStorage("sortStack") private var sortStackJSON: String = SortStack.default.jsonString
@@ -129,6 +129,10 @@ struct DeadlineReviewView: View {
                 }
             }
         }
+        .onChange(of: selectedWorkspace?.workspaceId) { _, _ in
+            selectedTasks.removeAll()
+            isSelectionMode = false
+        }
         .sheet(item: $selectedTask) { task in
             TaskDetailView(task: task)
                 .presentationDetents([.fraction(0.8)])
@@ -151,17 +155,17 @@ struct DeadlineReviewView: View {
     private func taskRow(_ task: TaskItem) -> some View {
         TaskRowView(task: task)
         .listRowBackground(
-            isSelectionMode && selectedTasks.contains(task.externalTaskID)
+            isSelectionMode && selectedTasks.contains(task.persistentModelID)
                 ? Palette.selection
                 : Palette.card
         )
         .contentShape(Rectangle())
         .onTapGesture {
             if isSelectionMode {
-                if selectedTasks.contains(task.externalTaskID) {
-                    selectedTasks.remove(task.externalTaskID)
+                if selectedTasks.contains(task.persistentModelID) {
+                    selectedTasks.remove(task.persistentModelID)
                 } else {
-                    selectedTasks.insert(task.externalTaskID)
+                    selectedTasks.insert(task.persistentModelID)
                 }
             } else {
                 selectedTask = task
@@ -172,7 +176,7 @@ struct DeadlineReviewView: View {
             generator.impactOccurred()
             withAnimation {
                 isSelectionMode = true
-                selectedTasks.insert(task.externalTaskID)
+                selectedTasks.insert(task.persistentModelID)
             }
         }
     }
@@ -202,7 +206,7 @@ struct DeadlineReviewView: View {
     // MARK: - Bulk Actions
 
     private func bulkDeleteTasks() {
-        let tasksToDelete = nonDoneTasks.filter { selectedTasks.contains($0.externalTaskID) }
+        let tasksToDelete = deadlineTasks.filter { selectedTasks.contains($0.persistentModelID) }
         for task in tasksToDelete {
             task.isDeleted = true
             task.isDirty = true
@@ -215,7 +219,7 @@ struct DeadlineReviewView: View {
     }
 
     private func bulkCompleteTasks() {
-        let tasksToComplete = nonDoneTasks.filter { selectedTasks.contains($0.externalTaskID) }
+        let tasksToComplete = deadlineTasks.filter { selectedTasks.contains($0.persistentModelID) }
         for task in tasksToComplete {
             let recycled = task.complete()
             if recycled {
