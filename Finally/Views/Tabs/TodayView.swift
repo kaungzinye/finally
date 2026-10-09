@@ -12,6 +12,7 @@ struct TodayView: View {
     @AppStorage(AppConstants.focusLimitKey) private var focusLimit = DailyFocus.defaultFocusLimit
 
     @State private var day = Calendar.current.startOfDay(for: Date())
+    @State private var currentDay = Calendar.current.startOfDay(for: Date())
     @State private var dailyFocus: DailyFocus?
     @State private var selectedTask: TaskItem?
     @State private var replanningFocus: DailyFocus?
@@ -100,7 +101,12 @@ struct TodayView: View {
             .disabled(isSaving)
             .task(id: loadID) { await load() }
             .onChange(of: scenePhase) { _, phase in
-                if phase == .active && !isSaving { Task { await load() } }
+                if phase == .active && !isSaving {
+                    let today = Calendar.current.startOfDay(for: Date())
+                    if day == currentDay { day = today }
+                    currentDay = today
+                    Task { await load() }
+                }
             }
             .refreshable {
                 try? await taskProvider.synchronize(.launch, store: modelContext)

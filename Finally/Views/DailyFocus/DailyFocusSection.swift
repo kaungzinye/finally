@@ -8,6 +8,7 @@ struct DailyFocusSection: View {
 
     @Query private var tasks: [TaskItem]
     @State private var showPicker = false
+    @State private var showEditor = false
 
     private var resolved: [ResolvedDailyFocusPick] { focus.resolvedPicks(among: tasks) }
     private var unfinished: [ResolvedDailyFocusPick] { resolved.filter { $0.task?.status != .done } }
@@ -65,6 +66,10 @@ struct DailyFocusSection: View {
             }
         }
         Section {
+            if focus.isConfirmed {
+                Button("Edit picks") { showEditor = true }
+                    .accessibilityIdentifier("daily-focus-edit-picks")
+            }
             Button {
                 showPicker = true
             } label: {
@@ -83,6 +88,32 @@ struct DailyFocusSection: View {
             }
         } footer: {
             Text("\(focus.picks.count) of \(focus.focusLimit) picks · \(focus.isConfirmed ? "Confirmed" : "Awaiting confirmation")")
+        }
+        .sheet(isPresented: $showEditor) {
+            NavigationStack {
+                List {
+                    ForEach(resolved) { item in
+                        Text(item.task?.title ?? "Task unavailable").cardRow()
+                    }
+                    .onMove { source, destination in
+                        focus.move(fromOffsets: source, toOffset: destination)
+                        onChange()
+                    }
+                    .onDelete { offsets in
+                        focus.remove(atOffsets: offsets)
+                        onChange()
+                    }
+                }
+                .paperList()
+                .navigationTitle("Edit picks")
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbar {
+                    ToolbarItem(placement: .topBarLeading) { EditButton() }
+                    ToolbarItem(placement: .confirmationAction) {
+                        Button("Done") { showEditor = false }
+                    }
+                }
+            }
         }
         .sheet(isPresented: $showPicker) {
             DailyFocusPickerView(focus: focus, onPick: onChange)
