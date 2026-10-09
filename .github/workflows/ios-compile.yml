@@ -71,7 +71,14 @@ jobs:
         run: sudo xcode-select -s /Applications/Xcode_26.6.app
 
       - name: Install simulator runtime
-        run: xcodebuild -downloadPlatform iOS -buildVersion '${{ matrix.ios }}'
+        run: |
+          version='${{ matrix.ios }}'
+          runtime="com.apple.CoreSimulator.SimRuntime.iOS-${version//./-}"
+          if xcrun simctl list runtimes available --json | python3 -c 'import json, sys; sys.exit(0 if any(r["identifier"] == sys.argv[1] for r in json.load(sys.stdin)["runtimes"]) else 1)' "$runtime"; then
+            echo "iOS $version runtime is installed"
+          else
+            xcodebuild -downloadPlatform iOS -buildVersion "$version"
+          fi
 
       - name: Create fresh iPhone simulator
         run: |
