@@ -11,7 +11,7 @@ struct SchemaErrorView: View {
                     VStack(alignment: .leading, spacing: 8) {
                         Label("Schema Issues Found", systemImage: "exclamationmark.triangle.fill")
                             .font(.headline)
-                            .foregroundStyle(.orange)
+                            .foregroundStyle(Palette.high)
                         Text("Your Notion database is missing some required properties. Please add them in Notion and try again.")
                             .font(.subheadline)
                             .foregroundStyle(.secondary)
@@ -24,7 +24,7 @@ struct SchemaErrorView: View {
                         VStack(alignment: .leading, spacing: 6) {
                             HStack {
                                 Image(systemName: "xmark.circle.fill")
-                                    .foregroundStyle(.red)
+                                    .foregroundStyle(Palette.urgent)
                                 Text(issue.propertyName)
                                     .fontWeight(.semibold)
                                 Text("(\(issue.expectedType))")

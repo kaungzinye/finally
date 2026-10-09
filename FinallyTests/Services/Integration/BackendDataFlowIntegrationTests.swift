@@ -90,7 +90,6 @@ final class BackendDataFlowIntegrationTests: XCTestCase {
         let task = TaskItem(externalTaskID: UUID().uuidString, title: "Timed deadline")
         task.providerWorkspaceId = session.workspaceId
         task.plannedDay = Date(timeIntervalSince1970: 1_780_000_000)
-        task.plannedDayHasTime = false
         task.deadline = Date(timeIntervalSince1970: 1_780_086_400)
         task.deadlineHasTime = true
         task.isDirty = true

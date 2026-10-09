@@ -259,7 +259,7 @@ final class FinallyServerConnectionIntegrationTests: XCTestCase {
         context.insert(workspace)
         let task = TaskItem(externalTaskID: UUID().uuidString, title: "Plan tomorrow")
         task.providerWorkspaceId = workspace.workspaceId
-        task.plannedDay = Date(timeIntervalSince1970: 1_780_000_000)
+        task.plannedDay = Calendar.current.startOfDay(for: Date(timeIntervalSince1970: 1_780_000_000))
         task.deadline = Date(timeIntervalSince1970: 1_780_086_400)
         task.priority = .urgent
         task.isDirty = true

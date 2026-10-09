@@ -64,29 +64,27 @@ The app has not shipped. There are no released data contracts and no user vaults
 - Always wrap iOS 26 styling in `if #available(iOS 26, *)` with an iOS 17 fallback.
 - Follow Todoist patterns: inline task creation, chip-based fields, clean typography.
 - Priority colors: Urgent is red, High is orange, Medium is blue, Low is default.
+- The look is warm ink on paper. Take colors from `Palette` in `Finally/Shared/FinallyStyle.swift`, which the widget also compiles. Ink is the accent, so color only carries priority, deadlines, and warnings.
+- Chrome speaks in SF Pro Rounded (`.pageTitle`, `.eyebrow`, `.chip`, `.meta`) and task text stays in SF Pro.
+- Lists use `.paperList()` with `.cardRow()` rows, and every task row is one line at the shared 48-point height. `PaperChrome.swift` holds these, `InkButtonStyle`, `SectionLabel`, and the glass helper.
 
-## Working together in Enso
+## Architecture planning in Enso
 
-Invoke the `enso` skill for every review, planning task, and substantial code change. We dogfood Enso by working together on a Canvas as the shared artifact throughout the task. Use it to discuss the approach, guide implementation, and inspect the result with the user.
+Invoke the `enso` skill whenever architecture planning needs a picture. The point is dogfooding Enso, so reach for it instead of describing structure in prose.
 
 Triggers:
 
-- Reviewing code, a branch, a PR, a specification, or a design
-- Planning a change, comparing options, or scoping work
-- Implementing a feature, refactoring across components, changing a domain model or contract, or fixing a bug that requires investigation across components
-- Explaining, showing, mapping, or illustrating system structure
-
-Put the relevant context, options, review findings, evidence, open questions, and decisions in the Canvas and its linked notes. Ground findings in file references or verification results. Use chat to direct attention to the Canvas and ask focused questions. Update the shared artifact as the user responds, and record the agreed approach and outcome there.
-
-For substantial code changes, build the Canvas before implementation and use it for interactive checkpoints at meaningful decisions. Give the user room to steer the approach as we work. Keep the Canvas current with implementation progress, discoveries, and verification results. Continue authorized work between checkpoints, and ask for input when a decision needs the user's preference or changes the scope.
+- Presenting architecture change options for comparison
+- Scoping a large body of work that touches more than one subsystem
+- Any explain, show, map, or illustrate request about system structure
 
 Steps:
 
 1. Confirm the running Enso app was built in Xcode from `main` in `~/Documents/SWE/enso`. Rebuild from `main` if the running app came from another branch or a stale build.
 2. Ask the user whether they are on mobile. Ask every time, do not guess and do not carry the answer over from an earlier task.
-3. Select or create a Canvas for the task through the skill's normal Canvas pass. Continue on the same Canvas as we work through the task together.
+3. Build the Canvas through the skill's normal Canvas pass.
 4. Capture vision with `enso context --canvas current --vision --pretty` and read the image at `data.vision.image.path`.
-5. If the user is on mobile, crop the image down to the Canvas content, cutting empty margins and app chrome so the diagram is legible on a phone, then send it with `SendUserFile`. If the user is on desktop, name the Canvas so they can open it. Continue working together through that shared artifact.
+5. If the user is on mobile, crop the image down to the Canvas content, cutting empty margins and app chrome so the diagram is legible on a phone, then send it with `SendUserFile`. If the user is not on mobile, name the Canvas and stop. They will open the app themselves.
 
 Read the skill's `references/diagram-design.md` before choosing geometry, and `references/codebase-maps.md` when the Canvas maps a repository.
 

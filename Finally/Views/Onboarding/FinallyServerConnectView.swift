@@ -83,6 +83,7 @@ struct FinallyServerConnectView: View {
                 Text("Finally stores the server token in Keychain. Your password is used only to sign in.")
             }
         }
+        .paperList()
         .navigationTitle("Connect Server")
         .navigationBarTitleDisplayMode(.inline)
         .onDisappear {

@@ -54,7 +54,7 @@ struct DailyFocusPickerView: View {
                     }
                 }
             }
-            .listStyle(.plain)
+            .paperList()
             .searchable(text: $searchText, prompt: "Search tasks")
             .overlay {
                 if candidates.isEmpty {

@@ -1,20 +1,19 @@
 import SwiftUI
 import SwiftData
 
+/// One task on one line: the priority ring, the title, and a short trailing slot.
+/// Every row has the same height whether or not the task carries a deadline or subtasks.
 struct TaskRowView: View {
     @Bindable var task: TaskItem
     @Environment(\.modelContext) private var modelContext
     @Environment(TaskProviderCoordinator.self) private var taskProvider
 
     @State private var showDatePicker = false
-    @State private var showPriorityPicker = false
-    @State private var showTagPicker = false
-    @State private var showProjectPicker = false
-    @State private var showRecurrencePicker = false
-    @State private var showReminderPicker = false
 
-    private var formattedDeadline: String {
-        guard let deadline = task.deadline else { return "—" }
+    private var isDone: Bool { task.status == .done }
+
+    private var deadlineLabel: String? {
+        guard let deadline = task.deadline else { return nil }
 
         let calendar = Calendar.current
         let time = task.deadlineHasTime
@@ -26,184 +25,49 @@ struct TaskRowView: View {
             return "Tomorrow\(time)"
         } else if calendar.isDateInYesterday(deadline) {
             return "Yesterday\(time)"
-        } else {
-            let daysFromNow = calendar.dateComponents([.day], from: calendar.startOfDay(for: Date()), to: deadline).day ?? 0
-            if daysFromNow > 0 && daysFromNow <= 6 {
-                let formatter = DateFormatter()
-                formatter.dateFormat = "EEEE"
-                return formatter.string(from: deadline) + time
-            } else {
-                return deadline.formatted(.dateTime.month(.abbreviated).day()) + time
-            }
         }
+        let daysFromNow = calendar.dateComponents([.day], from: calendar.startOfDay(for: Date()), to: deadline).day ?? 0
+        if daysFromNow > 0 && daysFromNow <= 6 {
+            return deadline.formatted(.dateTime.weekday(.abbreviated)) + time
+        }
+        return deadline.formatted(.dateTime.month(.abbreviated).day()) + time
+    }
+
+    private var deadlineColor: Color {
+        if task.isOverdue { return Palette.urgent }
+        if task.isInActiveWindow { return Palette.high }
+        return Palette.muted
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            // Line 1: Checkbox + (optional breadcrumb) + Title
-            HStack(spacing: 8) {
-                // Checkbox — left side
-                Button {
-                    let generator = UIImpactFeedbackGenerator(style: .light)
-                    generator.impactOccurred()
-
-                    withAnimation(.snappy) {
-                        let recycled = task.complete()
-                        if recycled {
-                            NotificationService.shared.rescheduleAllReminders(modelContext: modelContext)
-                        } else {
-                            NotificationService.shared.cancelRemindersForTask(task)
-                        }
-                    }
-                    submitTaskMutation()
-                } label: {
-                    Image(systemName: task.status == .done ? "checkmark.circle.fill" : "circle")
-                        .font(.title3)
-                        .foregroundStyle(task.status == .done ? .green : .secondary)
-                }
-                .buttonStyle(.plain)
-
-                // Title
-                Text(task.title)
-                    .lineLimit(1)
-                    .truncationMode(.tail)
-                    .strikethrough(task.status == .done)
-                    .foregroundStyle(task.status == .done ? .secondary : .primary)
-                    .opacity(task.status == .done ? 0.6 : 1.0)
-
-                Spacer(minLength: 0)
-
-                // Inline breadcrumb for sub-tasks
-                if task.isSubtask, let parentTitle = task.parent?.title {
-                    HStack(spacing: 2) {
-                        Image(systemName: "arrow.turn.down.right")
-                        Text(parentTitle)
-                            .lineLimit(1)
-                            .truncationMode(.tail)
-                    }
-                    .font(.caption2)
-                    .foregroundStyle(.secondary)
-                    .frame(maxWidth: 80, alignment: .trailing)
-                }
+        HStack(spacing: 12) {
+            Button(action: complete) {
+                PriorityRing(color: task.priority?.color ?? Palette.low, isDone: isDone)
+                    .frame(width: 44, height: 44)
+                    .contentShape(Rectangle())
             }
+            .buttonStyle(.plain)
+            .padding(.leading, -11)
+            .accessibilityLabel(isDone ? "Completed" : "Complete")
 
-            // Line 2: Properties bar + project on the right
-            HStack(spacing: 6) {
-                // Deadline is orange in the active window and red when overdue.
-                Button { showDatePicker = true } label: {
-                    Text(formattedDeadline)
-                        .foregroundStyle(task.isOverdue ? .red : (task.isInActiveWindow ? .orange : .secondary))
-                        .font(.caption2)
-                        .lineLimit(1)
-                        .truncationMode(.tail)
-                }
-                .buttonStyle(.plain)
+            Text(task.title)
+                .lineLimit(1)
+                .truncationMode(.tail)
+                .strikethrough(isDone, color: Palette.hairline)
+                .foregroundStyle(isDone ? Palette.muted : Palette.ink)
+                .frame(maxWidth: .infinity, alignment: .leading)
 
-                // Priority
-                Button { showPriorityPicker = true } label: {
-                    Group {
-                        if let priority = task.priority {
-                            Image(systemName: priority.icon)
-                                .foregroundStyle(priority.color)
-                        } else {
-                            Image(systemName: "flag")
-                                .foregroundStyle(.tertiary)
-                        }
-                    }
-                    .font(.caption)
-                }
-                .buttonStyle(.plain)
-
-                // Reminders
-                Button { showReminderPicker = true } label: {
-                    if !task.taskReminders.isEmpty {
-                        Image(systemName: "bell.fill")
-                            .foregroundStyle(.orange)
-                    } else {
-                        Image(systemName: "bell")
-                            .foregroundStyle(.tertiary)
-                    }
-                }
-                .font(.caption)
-                .buttonStyle(.plain)
-
-                // Tags
-                if !task.tags.isEmpty {
-                    Button { showTagPicker = true } label: {
-                        HStack(spacing: 4) {
-                            ForEach(Array(task.tags.prefix(2).enumerated()), id: \.offset) { index, tag in
-                                let colorName = index < task.tagColors.count ? task.tagColors[index] : "default"
-                                let tagColor = TaskTagColor.swiftUIColor(for: colorName)
-                                Text(tag)
-                                    .padding(.horizontal, 4)
-                                    .padding(.vertical, 1)
-                                    .background(tagColor.opacity(0.15))
-                                    .clipShape(Capsule())
-                                    .foregroundStyle(tagColor)
-                                    .lineLimit(1)
-                                    .truncationMode(.tail)
-                            }
-                        }
-                        .font(.caption2)
-                        .lineLimit(1)
-                        .truncationMode(.tail)
-                    }
-                    .buttonStyle(.plain)
-                }
-
-                // Subtask progress
-                if task.hasSubtasks {
-                    let progress = task.subtaskProgress
-                    HStack(spacing: 2) {
-                        Image(systemName: "list.bullet")
-                            .font(.caption2)
-                        Text("\(progress.done)/\(progress.total)")
-                            .font(.caption2)
-                    }
-                    .foregroundStyle(progress.done == progress.total ? .green : .secondary)
-                }
-
-                Spacer(minLength: 0)
-
-                // Project — right aligned within properties row
-                Button { showProjectPicker = true } label: {
-                    HStack(spacing: 3) {
-                        if let emoji = task.project?.iconEmoji {
-                            Text(emoji)
-                                .font(.caption)
-                        }
-                        Text(task.project?.title ?? "Inbox")
-                            .font(.caption2)
-                            .foregroundStyle(.secondary)
-                            .lineLimit(1)
-                            .truncationMode(.tail)
-                    }
-                    .frame(maxWidth: 80, alignment: .trailing)
-                }
-                .buttonStyle(.plain)
-            }
+            trailing
         }
         .frame(minHeight: 44)
-        .padding(.vertical, 2)
-        .padding(.horizontal, 4)
         .contentShape(Rectangle())
+        .cardRow()
+        .compactRowInsets()
         .swipeActions(edge: .leading) {
-            Button {
-                let generator = UIImpactFeedbackGenerator(style: .light)
-                generator.impactOccurred()
-                withAnimation {
-                    let recycled = task.complete()
-                    if recycled {
-                        NotificationService.shared.rescheduleAllReminders(modelContext: modelContext)
-                    } else {
-                        NotificationService.shared.cancelRemindersForTask(task)
-                    }
-                }
-                submitTaskMutation()
-            } label: {
+            Button(action: complete) {
                 Label("Complete", systemImage: "checkmark")
             }
-            .tint(.green)
+            .tint(Palette.ink)
         }
         .swipeActions(edge: .trailing) {
             Button {
@@ -211,30 +75,48 @@ struct TaskRowView: View {
             } label: {
                 Label("Reschedule", systemImage: "calendar")
             }
-            .tint(.orange)
+            .tint(Palette.high)
         }
         .sheet(isPresented: $showDatePicker) {
             DatePickerSheet(selectedDate: deadlineBinding, hasTime: deadlineHasTimeBinding)
         }
-        .sheet(isPresented: $showPriorityPicker) {
-            PriorityPicker(selection: priorityBinding)
+    }
+
+    private var trailing: some View {
+        HStack(spacing: 8) {
+            if task.isSubtask, let parentTitle = task.parent?.title {
+                Label(parentTitle, systemImage: "arrow.turn.down.right")
+                    .labelStyle(.titleAndIcon)
+                    .lineLimit(1)
+                    .frame(maxWidth: 96, alignment: .trailing)
+            }
+            if task.hasSubtasks {
+                let progress = task.subtaskProgress
+                Label("\(progress.done)/\(progress.total)", systemImage: "checkmark")
+                    .labelStyle(.titleAndIcon)
+            }
+            if let deadlineLabel {
+                Text(deadlineLabel)
+                    .foregroundStyle(deadlineColor)
+            }
         }
-        .sheet(isPresented: $showTagPicker) {
-            TagPicker(selectedTags: tagsBinding)
+        .font(.meta)
+        .foregroundStyle(Palette.muted)
+        .lineLimit(1)
+        .fixedSize(horizontal: true, vertical: false)
+    }
+
+    private func complete() {
+        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+        withAnimation(.snappy) {
+            let recycled = task.complete()
+            if recycled {
+                NotificationService.shared.rescheduleAllReminders(modelContext: modelContext)
+            } else {
+                NotificationService.shared.cancelRemindersForTask(task)
+            }
         }
-        .sheet(isPresented: $showProjectPicker) {
-            ProjectPicker(selection: projectBinding)
-        }
-        .sheet(isPresented: $showRecurrencePicker) {
-            RecurrencePicker(
-                selection: recurrenceBinding,
-                customRule: customRecurrenceBinding,
-                contextDate: task.deadline
-            )
-        }
-        .sheet(isPresented: $showReminderPicker) {
-            ReminderListView(task: task)
-        }
+        submitTaskMutation()
     }
 
     // MARK: - Bindings that mark task dirty on change
@@ -246,45 +128,10 @@ struct TaskRowView: View {
         )
     }
 
-    private var priorityBinding: Binding<TaskPriority?> {
-        Binding(
-            get: { task.priority },
-            set: { task.priority = $0; task.isDirty = true; submitTaskMutation() }
-        )
-    }
-
     private var deadlineHasTimeBinding: Binding<Bool> {
         Binding(
             get: { task.deadlineHasTime },
             set: { task.deadlineHasTime = $0; task.isDirty = true; submitTaskMutation() }
-        )
-    }
-
-    private var tagsBinding: Binding<[String]> {
-        Binding(
-            get: { task.tags },
-            set: { task.tags = $0; task.isDirty = true; submitTaskMutation() }
-        )
-    }
-
-    private var projectBinding: Binding<ProjectItem?> {
-        Binding(
-            get: { task.project },
-            set: { task.project = $0; task.isDirty = true; submitTaskMutation() }
-        )
-    }
-
-    private var recurrenceBinding: Binding<Recurrence> {
-        Binding(
-            get: { task.recurrence },
-            set: { task.recurrence = $0; task.isDirty = true; submitTaskMutation() }
-        )
-    }
-
-    private var customRecurrenceBinding: Binding<RecurrenceRule?> {
-        Binding(
-            get: { task.customRecurrenceRule },
-            set: { task.customRecurrenceRule = $0; task.isDirty = true; submitTaskMutation() }
         )
     }
 

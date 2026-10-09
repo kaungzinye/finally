@@ -22,7 +22,7 @@ struct TodayView: View {
     private var unfinishedDays: [DailyFocus] {
         let today = Calendar.current.startOfDay(for: Date())
         return focuses.filter { focus in
-            focus.day < today && focus.resolvedPicks(among: tasks).contains {
+            focus.storageWorkspaceID == (workspace?.workspaceId ?? "") && focus.day < today && focus.resolvedPicks(among: tasks).contains {
                 $0.task == nil || $0.task?.status != .done
             }
         }.sorted { $0.day < $1.day }
@@ -81,9 +81,15 @@ struct TodayView: View {
                     .accessibilityIdentifier("daily-focus-deadlines")
                 }
             }
-            .listStyle(.insetGrouped)
+            .paperList()
             .navigationTitle("Daily Focus")
             .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    NavigationLink { SettingsView() } label: {
+                        Image(systemName: "gearshape")
+                    }
+                    .accessibilityLabel("Settings")
+                }
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("Tomorrow") {
                         day = Calendar.current.date(byAdding: .day, value: 1, to: Calendar.current.startOfDay(for: Date())) ?? Date()

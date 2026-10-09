@@ -19,14 +19,7 @@ struct WidgetTask: Codable, Identifiable {
 
     var id: String { "\(providerWorkspaceID):\(externalTaskID)" }
 
-    var priorityColor: Color {
-        switch priorityRaw {
-        case "Urgent": return .red
-        case "High": return .orange
-        case "Medium": return .yellow
-        default: return .clear
-        }
-    }
+    var priorityColor: Color { Palette.priority(named: priorityRaw) }
 }
 
 // MARK: - Timeline Entry
@@ -83,46 +76,78 @@ struct TaskTimelineProvider: TimelineProvider {
 
 // MARK: - Widget Views
 
-struct SmallWidgetView: View {
-    let entry: TaskEntry
+/// One task: the priority ring, the title, and the deadline when there is room for it.
+private struct WidgetTaskRow: View {
+    let task: WidgetTask
+    var showsDeadline = true
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text("Tasks")
-                .font(.caption.bold())
-                .foregroundStyle(.secondary)
+        HStack(spacing: 8) {
+            PriorityRing(color: task.priorityColor, isDone: task.isComplete, diameter: 14)
+            Text(task.title)
+                .font(.subheadline)
+                .foregroundStyle(task.isComplete ? Palette.muted : Palette.ink)
+                .lineLimit(1)
+            Spacer(minLength: 4)
+            if showsDeadline, let deadline = task.deadline {
+                Text(deadline.formatted(.dateTime.month(.abbreviated).day()))
+                    .font(.caption.weight(.medium))
+                    .fontDesign(.rounded)
+                    .foregroundStyle(Palette.muted)
+            }
+        }
+    }
+}
+
+/// The widget frame: an eyebrow, the rows, and the add button in the bottom-right corner.
+private struct WidgetTaskList: View {
+    let entry: TaskEntry
+    let limit: Int
+    var showsDeadline = true
+    let emptyMessage: String
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("TASKS")
+                .font(.caption2.weight(.semibold))
+                .fontDesign(.rounded)
+                .kerning(0.5)
+                .foregroundStyle(Palette.muted)
 
             if entry.tasks.isEmpty {
                 Spacer()
-                Text("No tasks")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                Text(emptyMessage)
+                    .font(.subheadline)
+                    .fontDesign(.rounded)
+                    .foregroundStyle(Palette.muted)
                     .frame(maxWidth: .infinity)
             } else {
-                ForEach(entry.tasks.prefix(3)) { task in
-                    HStack(spacing: 6) {
-                        Image(systemName: task.isComplete ? "checkmark.circle.fill" : "circle")
-                            .font(.caption)
-                            .foregroundStyle(task.isComplete ? .green : .secondary)
-                        Text(task.title)
-                            .font(.caption)
-                            .lineLimit(1)
-                    }
+                ForEach(entry.tasks.prefix(limit)) { task in
+                    WidgetTaskRow(task: task, showsDeadline: showsDeadline)
                 }
             }
 
-            Spacer()
+            Spacer(minLength: 0)
 
             HStack {
                 Spacer()
                 Link(destination: URL(string: "\(urlScheme)://tasks/new")!) {
-                    Image(systemName: "plus.circle.fill")
-                        .font(.title3)
-                        .foregroundStyle(.primary)
+                    Image(systemName: "plus")
+                        .font(.body.weight(.semibold))
+                        .foregroundStyle(Palette.onInk)
+                        .frame(width: 32, height: 32)
+                        .background(Palette.ink, in: Circle())
                 }
             }
         }
-        .padding()
+    }
+}
+
+struct SmallWidgetView: View {
+    let entry: TaskEntry
+
+    var body: some View {
+        WidgetTaskList(entry: entry, limit: 3, showsDeadline: false, emptyMessage: "No tasks")
     }
 }
 
@@ -130,48 +155,7 @@ struct MediumWidgetView: View {
     let entry: TaskEntry
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text("Tasks")
-                .font(.caption.bold())
-                .foregroundStyle(.secondary)
-
-            if entry.tasks.isEmpty {
-                Spacer()
-                Text("No upcoming deadlines")
-                    .font(.callout)
-                    .foregroundStyle(.secondary)
-                    .frame(maxWidth: .infinity)
-            } else {
-                ForEach(entry.tasks.prefix(5)) { task in
-                    HStack(spacing: 8) {
-                        Image(systemName: task.isComplete ? "checkmark.circle.fill" : "circle")
-                            .font(.caption)
-                            .foregroundStyle(task.isComplete ? .green : .secondary)
-                        Text(task.title)
-                            .font(.caption)
-                            .lineLimit(1)
-                        Spacer()
-                        if let deadline = task.deadline {
-                            Text(deadline.formatted(.dateTime.month(.abbreviated).day()))
-                                .font(.caption2)
-                                .foregroundStyle(.secondary)
-                        }
-                    }
-                }
-            }
-
-            Spacer()
-
-            HStack {
-                Spacer()
-                Link(destination: URL(string: "\(urlScheme)://tasks/new")!) {
-                    Image(systemName: "plus.circle.fill")
-                        .font(.title3)
-                        .foregroundStyle(.primary)
-                }
-            }
-        }
-        .padding()
+        WidgetTaskList(entry: entry, limit: 4, emptyMessage: "No upcoming deadlines")
     }
 }
 
@@ -179,63 +163,7 @@ struct LargeWidgetView: View {
     let entry: TaskEntry
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text("Tasks")
-                .font(.caption.bold())
-                .foregroundStyle(.secondary)
-
-            if entry.tasks.isEmpty {
-                Spacer()
-                VStack(spacing: 8) {
-                    Image(systemName: "checkmark.circle")
-                        .font(.title)
-                        .foregroundStyle(.secondary)
-                    Text("All caught up!")
-                        .font(.callout)
-                        .foregroundStyle(.secondary)
-                }
-                .frame(maxWidth: .infinity)
-                Spacer()
-            } else {
-                ForEach(entry.tasks.prefix(9)) { task in
-                    HStack(spacing: 8) {
-                        Image(systemName: task.isComplete ? "checkmark.circle.fill" : "circle")
-                            .font(.caption)
-                            .foregroundStyle(task.isComplete ? .green : .secondary)
-
-                        if task.priorityColor != .clear {
-                            Circle()
-                                .fill(task.priorityColor)
-                                .frame(width: 6, height: 6)
-                        }
-
-                        Text(task.title)
-                            .font(.caption)
-                            .lineLimit(1)
-
-                        Spacer()
-
-                        if let deadline = task.deadline {
-                            Text(deadline.formatted(.dateTime.month(.abbreviated).day()))
-                                .font(.caption2)
-                                .foregroundStyle(.secondary)
-                        }
-                    }
-                }
-            }
-
-            Spacer()
-
-            HStack {
-                Spacer()
-                Link(destination: URL(string: "\(urlScheme)://tasks/new")!) {
-                    Image(systemName: "plus.circle.fill")
-                        .font(.title3)
-                        .foregroundStyle(.primary)
-                }
-            }
-        }
-        .padding()
+        WidgetTaskList(entry: entry, limit: 9, emptyMessage: "All caught up")
     }
 }
 
@@ -248,7 +176,7 @@ struct TaskListWidget: Widget {
     var body: some WidgetConfiguration {
         StaticConfiguration(kind: kind, provider: TaskTimelineProvider()) { entry in
             WidgetEntryView(entry: entry)
-                .containerBackground(.fill.tertiary, for: .widget)
+                .containerBackground(Palette.paper, for: .widget)
         }
         .configurationDisplayName("Finally Tasks")
         .description("View and manage your tasks")

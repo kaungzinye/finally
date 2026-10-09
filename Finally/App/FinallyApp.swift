@@ -46,7 +46,7 @@ struct FinallyApp: App {
             .environment(dailyFocusService)
             .environment(networkService)
             .environment(authService)
-            .tint(Color(.label))
+            .tint(Palette.ink)
             .preferredColorScheme(colorScheme)
             .onOpenURL { url in
                 router.handleURL(url)

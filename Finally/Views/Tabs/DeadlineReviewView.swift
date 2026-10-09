@@ -25,45 +25,18 @@ struct DeadlineReviewView: View {
         get { SortStack.from(sortStackJSON) }
     }
 
-    /// Visible tasks: hide parents with active subtasks, include subtasks with actionable suggestedDate
-    private var visibleTasks: [TaskItem] {
-        nonDoneTasks.filter { task in
-            guard task.belongs(to: selectedWorkspace) else { return false }
-            // Hide parents that have incomplete subtasks (Trojan Horse)
-            if task.hasSubtasks && !task.allSubtasksComplete { return false }
-            return true
-        }
-    }
-
-    /// Subtasks from any parent whose suggestedDate is today or overdue
-    private var actionableSubtasks: [TaskItem] {
-        let calendar = Calendar.current
-        let endOfToday = calendar.startOfDay(for: Date().addingTimeInterval(86400))
-        return nonDoneTasks.filter { task in
-            guard task.belongs(to: selectedWorkspace) else { return false }
-            guard task.isSubtask, let suggested = task.suggestedDate else { return false }
-            return suggested < endOfToday
-        }
-    }
-
     private var selectedWorkspace: UserSession? { sessions.selectedProviderWorkspace }
 
+    private var deadlineTasks: [TaskItem] {
+        nonDoneTasks.filter { $0.belongs(to: selectedWorkspace) && $0.deadline != nil }
+    }
+
     private var overdueTasks: [TaskItem] {
-        let parentOverdue = sortStack.sorted(visibleTasks.filter { $0.isOverdue && !$0.isSubtask })
-        let subtaskOverdue = sortStack.sorted(actionableSubtasks.filter {
-            guard let suggested = $0.suggestedDate else { return false }
-            return suggested < Calendar.current.startOfDay(for: Date())
-        })
-        return parentOverdue + subtaskOverdue
+        sortStack.sorted(deadlineTasks.filter { $0.isOverdue })
     }
 
     private var todayTasks: [TaskItem] {
-        let parentToday = sortStack.sorted(visibleTasks.filter { $0.isDeadlineToday && !$0.isSubtask })
-        let subtaskToday = sortStack.sorted(actionableSubtasks.filter {
-            guard let suggested = $0.suggestedDate else { return false }
-            return Calendar.current.isDateInToday(suggested)
-        })
-        return parentToday + subtaskToday
+        sortStack.sorted(deadlineTasks.filter { $0.isDeadlineToday })
     }
 
     var body: some View {
@@ -179,8 +152,8 @@ struct DeadlineReviewView: View {
         TaskRowView(task: task)
         .listRowBackground(
             isSelectionMode && selectedTasks.contains(task.externalTaskID)
-                ? Color.blue.opacity(0.15)
-                : Color(.systemBackground)
+                ? Palette.selection
+                : Palette.card
         )
         .contentShape(Rectangle())
         .onTapGesture {

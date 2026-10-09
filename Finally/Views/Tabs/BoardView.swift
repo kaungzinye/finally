@@ -62,9 +62,9 @@ struct BoardView: View {
 
                         ScrollView(.horizontal, showsIndicators: false) {
                             HStack(alignment: .top, spacing: 12) {
-                                boardColumn("To Do", color: .blue, status: .notStarted, tasks: notStartedTasks, width: columnWidth, isLandscape: isLandscape)
-                                boardColumn("In Progress", color: .orange, status: .inProgress, tasks: inProgressTasks, width: columnWidth, isLandscape: isLandscape)
-                                boardColumn("Done", color: .green, status: .done, tasks: doneTasks, width: columnWidth, isLandscape: isLandscape)
+                                boardColumn("To Do", color: Palette.hairline, status: .notStarted, tasks: notStartedTasks, width: columnWidth, isLandscape: isLandscape)
+                                boardColumn("In Progress", color: Palette.muted, status: .inProgress, tasks: inProgressTasks, width: columnWidth, isLandscape: isLandscape)
+                                boardColumn("Done", color: Palette.ink, status: .done, tasks: doneTasks, width: columnWidth, isLandscape: isLandscape)
                             }
                             .padding(.horizontal, 16)
                             .padding(.bottom, 20)
@@ -72,10 +72,8 @@ struct BoardView: View {
                     }
                 }
             }
+            .background(Palette.paper)
             .navigationTitle("Board")
-            .refreshable {
-                try? await taskProvider.synchronize(.launch, store: modelContext)
-            }
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     HStack(spacing: 12) {
@@ -115,14 +113,14 @@ struct BoardView: View {
                     .fill(color)
                     .frame(width: 8, height: 8)
                 Text(title)
-                    .font(.subheadline.weight(.semibold))
+                    .font(.system(.subheadline, design: .rounded, weight: .semibold))
+                    .foregroundStyle(Palette.ink)
                 Text("\(tasks.count)")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .font(.meta)
+                    .foregroundStyle(Palette.muted)
                     .padding(.horizontal, 6)
                     .padding(.vertical, 2)
-                    .background(Color(.systemGray5))
-                    .clipShape(Capsule())
+                    .background(Palette.wash, in: Capsule())
                 Spacer()
             }
             .padding(.horizontal, 12)
@@ -138,8 +136,7 @@ struct BoardView: View {
                                 Text(task.title)
                                     .font(.caption)
                                     .padding(8)
-                                    .background(Color(.systemBackground))
-                                    .clipShape(RoundedRectangle(cornerRadius: 6))
+                                    .background(Palette.card, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
                                     .shadow(radius: 4)
                                     .onAppear {
                                         let generator = UIImpactFeedbackGenerator(style: .medium)
@@ -153,11 +150,12 @@ struct BoardView: View {
                 .padding(.horizontal, 8)
                 .padding(.bottom, 12)
             }
+            .refreshable {
+                try? await taskProvider.synchronize(.launch, store: modelContext)
+            }
         }
         .frame(width: width)
-        // Column background follows app background, adapting automatically to light/dark mode
-        .background(Color(.systemBackground))
-        .clipShape(RoundedRectangle(cornerRadius: 12))
+        .background(Palette.ink.opacity(0.04), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
         .dropDestination(for: String.self) { droppedIds, _ in
             guard let taskId = droppedIds.first,
                   let task = topLevelTasks.first(where: { $0.externalTaskID == taskId }) else { return false }
@@ -185,8 +183,8 @@ struct BoardView: View {
             Text(task.title)
                 .font(.subheadline)
                 .lineLimit(1)
-                .foregroundStyle(task.status == .done ? .secondary : .primary)
-                .strikethrough(task.status == .done)
+                .foregroundStyle(task.status == .done ? Palette.muted : Palette.ink)
+                .strikethrough(task.status == .done, color: Palette.hairline)
 
             HStack(spacing: 6) {
                 // Match the deadline order used in Today and Upcoming.
@@ -199,7 +197,7 @@ struct BoardView: View {
                             .lineLimit(1)
                             .truncationMode(.tail)
                     }
-                    .foregroundStyle(task.isOverdue ? .red : (task.isInActiveWindow ? .orange : .secondary))
+                    .foregroundStyle(task.isOverdue ? Palette.urgent : (task.isInActiveWindow ? Palette.high : Palette.muted))
                 }
 
                 // Priority
@@ -219,7 +217,7 @@ struct BoardView: View {
                     } else if let projectTitle = task.project?.title {
                         Text(projectTitle)
                             .font(.caption2)
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(Palette.muted)
                             .lineLimit(1)
                             .truncationMode(.tail)
                     }
@@ -232,7 +230,7 @@ struct BoardView: View {
                         } else if let projectTitle = task.project?.title {
                             Text(projectTitle)
                                 .font(.caption2)
-                                .foregroundStyle(.secondary)
+                                .foregroundStyle(Palette.muted)
                                 .lineLimit(1)
                                 .truncationMode(.tail)
                         }
@@ -251,12 +249,13 @@ struct BoardView: View {
                 }
             }
         }
-        .padding(8)
+        .padding(10)
         .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
-        // Use a single adaptive system background for task rows (matches list rows)
-        .background(Color(.secondarySystemBackground))
-        .clipShape(RoundedRectangle(cornerRadius: 8))
-        .shadow(color: .black.opacity(0.05), radius: 2, y: 1)
+        .background(Palette.card, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .strokeBorder(Palette.hairline, lineWidth: 1)
+        )
         .contentShape(Rectangle())
         .onTapGesture {
             selectedTask = task

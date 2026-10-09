@@ -12,7 +12,7 @@ struct ProviderConnectView: View {
                             .font(.system(size: 64))
                             .accessibilityHidden(true)
                         Text("Finally")
-                            .font(.largeTitle.bold())
+                            .font(.pageTitle)
                         Text("Make room for what matters.")
                             .font(.title2.weight(.medium))
                         Text("Choose where your tasks live.")
@@ -52,6 +52,7 @@ struct ProviderConnectView: View {
                 .frame(maxWidth: 560, alignment: .leading)
                 .frame(maxWidth: .infinity)
             }
+            .background(Palette.paper.ignoresSafeArea())
             .navigationTitle("Welcome")
             .navigationBarTitleDisplayMode(.inline)
         }
@@ -65,7 +66,7 @@ struct ProviderConnectView: View {
                 .accessibilityHidden(true)
             VStack(alignment: .leading, spacing: 6) {
                 Text(title)
-                    .font(.headline)
+                    .font(.chip)
                 Text(detail)
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
@@ -80,10 +81,10 @@ struct ProviderConnectView: View {
         .foregroundStyle(.primary)
         .padding(20)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 20))
+        .background(Palette.card, in: RoundedRectangle(cornerRadius: 20))
         .overlay {
             RoundedRectangle(cornerRadius: 20)
-                .strokeBorder(Color(.separator).opacity(0.35))
+                .strokeBorder(Palette.hairline)
         }
         .contentShape(Rectangle())
     }

@@ -175,6 +175,45 @@ final class DailyFocusServiceTests: XCTestCase {
         XCTAssertEqual(api.dailyFocus[MockFinallyServerAPIClient.dailyFocusKey(projectID: 42, day: target.dayKey)]?.picks.map(\.externalTaskID), ["17"])
     }
 
+    func testWorkspaceSwitchKeepsFocusRecordsAndRetriesSeparate() async throws {
+        let api = MockFinallyServerAPIClient()
+        let context = try makeInMemoryContext()
+        let server = makeServerWorkspace()
+        let notion = makeNotionWorkspace()
+        notion.isSelected = false
+        context.insert(server)
+        context.insert(notion)
+        let service = DailyFocusService(serverClient: { _ in api })
+        let serverFocus = try await service.dailyFocus(for: day, workspace: server, store: context)
+        let pick = DailyFocusPick(providerWorkspaceID: server.workspaceId, externalTaskID: "17")
+        try serverFocus.add(pick)
+        api.error = FinallyServerClientError.serverUnavailable
+        do {
+            try await service.save(serverFocus, workspace: server, store: context)
+            XCTFail("Expected a server failure")
+        } catch FinallyServerClientError.serverUnavailable {}
+
+        let phoneFocus = try await service.dailyFocus(for: day, workspace: notion, store: context)
+        XCTAssertTrue(phoneFocus.picks.isEmpty)
+        XCTAssertNotEqual(serverFocus.persistentModelID, phoneFocus.persistentModelID)
+        server.isSelected = false
+        let second = makeServerWorkspace()
+        second.workspaceId = "second-server-workspace"
+        second.serverProjectID = 99
+        context.insert(second)
+        api.error = nil
+        await service.retryPendingChanges(store: context)
+        XCTAssertTrue(serverFocus.isDirty)
+        XCTAssertNil(api.dailyFocus[MockFinallyServerAPIClient.dailyFocusKey(projectID: 99, day: serverFocus.dayKey)])
+
+        second.isSelected = false
+        server.isSelected = true
+        await service.retryPendingChanges(store: context)
+        XCTAssertFalse(serverFocus.isDirty)
+        XCTAssertEqual(api.dailyFocus[MockFinallyServerAPIClient.dailyFocusKey(projectID: 42, day: serverFocus.dayKey)]?.picks.map(\.externalTaskID), ["17"])
+        XCTAssertTrue(phoneFocus.picks.isEmpty)
+    }
+
     // MARK: - Helpers
 
     private func makeNotionWorkspace() -> UserSession {

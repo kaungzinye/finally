@@ -14,6 +14,7 @@ struct BrowseProjectsView: View {
     @State private var expandedSections: Set<String> = ["Inbox", "Projects"]
     @State private var showSearch = false
     @State private var showSortConfig = false
+    @State private var showSettings = false
     @State private var selectedTask: TaskItem?
     @AppStorage("sortStack") private var sortStackJSON: String = SortStack.default.jsonString
 
@@ -47,8 +48,9 @@ struct BrowseProjectsView: View {
                     if expandedSections.contains("Inbox") {
                         if inboxTasks.isEmpty {
                             Text("No unassigned tasks")
-                                .foregroundStyle(.secondary)
-                                .font(.caption)
+                                .foregroundStyle(Palette.muted)
+                                .font(.meta)
+                                .cardRow()
                         } else {
                             ForEach(inboxTasks, id: \.externalTaskID) { task in
                                 TaskRowView(task: task)
@@ -58,7 +60,7 @@ struct BrowseProjectsView: View {
                         }
                     }
                 } header: {
-                    collapsibleHeader("Inbox", icon: "tray")
+                    collapsibleHeader("Inbox")
                 }
 
                 // Backlog section — tasks without a deadline
@@ -66,8 +68,9 @@ struct BrowseProjectsView: View {
                     if expandedSections.contains("Backlog") {
                         if backlogTasks.isEmpty {
                             Text("No undated tasks")
-                                .foregroundStyle(.secondary)
-                                .font(.caption)
+                                .foregroundStyle(Palette.muted)
+                                .font(.meta)
+                                .cardRow()
                         } else {
                             ForEach(backlogTasks, id: \.externalTaskID) { task in
                                 TaskRowView(task: task)
@@ -77,7 +80,7 @@ struct BrowseProjectsView: View {
                         }
                     }
                 } header: {
-                    collapsibleHeader("Backlog", icon: "clock")
+                    collapsibleHeader("Backlog")
                 }
 
                 // Projects section — collapsible list of projects
@@ -85,8 +88,9 @@ struct BrowseProjectsView: View {
                     if expandedSections.contains("Projects") {
                         if selectedProjects.isEmpty {
                             Text("No projects")
-                                .foregroundStyle(.secondary)
-                                .font(.caption)
+                                .foregroundStyle(Palette.muted)
+                                .font(.meta)
+                                .cardRow()
                         } else {
                             ForEach(selectedProjects, id: \.externalProjectID) { project in
                                 NavigationLink(value: project.externalProjectID) {
@@ -96,27 +100,36 @@ struct BrowseProjectsView: View {
                                                 .font(.body)
                                         } else {
                                             Image(systemName: "folder")
-                                                .foregroundStyle(.secondary)
+                                                .foregroundStyle(Palette.muted)
                                         }
                                         Text(project.title)
+                                            .foregroundStyle(Palette.ink)
                                         Spacer()
                                         Text("\(project.tasks.count)")
-                                            .foregroundStyle(.secondary)
+                                            .font(.meta)
+                                            .foregroundStyle(Palette.muted)
                                     }
                                 }
+                                .cardRow()
                             }
                         }
                     }
                 } header: {
-                    collapsibleHeader("Projects", icon: "folder")
+                    collapsibleHeader("Projects")
                 }
             }
-            .listStyle(.plain)
+            .paperList()
             .navigationTitle("Browse")
             .navigationDestination(for: String.self) { projectId in
                 ProjectDetailView(projectId: projectId)
             }
             .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    Button { showSettings = true } label: {
+                        Image(systemName: "gearshape")
+                    }
+                    .accessibilityLabel("Settings")
+                }
                 ToolbarItem(placement: .topBarTrailing) {
                     HStack(spacing: 12) {
                         Button { showSortConfig = true } label: {
@@ -131,6 +144,9 @@ struct BrowseProjectsView: View {
             }
             .refreshable {
                 try? await taskProvider.synchronize(.launch, store: modelContext)
+            }
+            .sheet(isPresented: $showSettings) {
+                SettingsView()
             }
             .sheet(item: $selectedTask) { task in
                 TaskDetailView(task: task)
@@ -149,7 +165,7 @@ struct BrowseProjectsView: View {
         }
     }
 
-    private func collapsibleHeader(_ title: String, icon: String) -> some View {
+    private func collapsibleHeader(_ title: String) -> some View {
         Button {
             withAnimation {
                 if expandedSections.contains(title) {
@@ -159,14 +175,10 @@ struct BrowseProjectsView: View {
                 }
             }
         } label: {
-            HStack {
-                Image(systemName: expandedSections.contains(title) ? "chevron.down" : "chevron.right")
-                    .font(.caption)
-                Image(systemName: icon)
-                    .font(.caption)
-                Text(title)
+            SectionLabel(title: title) {
+                Image(systemName: "chevron.right")
+                    .rotationEffect(.degrees(expandedSections.contains(title) ? 90 : 0))
             }
-            .foregroundStyle(.primary)
         }
         .buttonStyle(.plain)
     }
@@ -181,10 +193,10 @@ struct ProjectDetailView: View {
     @Query private var allProjects: [ProjectItem]
     @Query private var sessions: [UserSession]
     @Environment(TaskProviderCoordinator.self) private var taskProvider
+    @Environment(NavigationRouter.self) private var router
     @Environment(\.modelContext) private var modelContext
 
     @State private var selectedTask: TaskItem?
-    @State private var showCreator = false
 
     private var project: ProjectItem? {
         allProjects.scoped(to: sessions.selectedProviderWorkspace).first { $0.externalProjectID == projectId }
@@ -204,8 +216,10 @@ struct ProjectDetailView: View {
                     .onTapGesture { selectedTask = task }
             }
         }
-        .listStyle(.plain)
+        .paperList()
         .navigationTitle(project?.title ?? "Project")
+        .onAppear { router.creatorProject = project }
+        .onDisappear { router.creatorProject = nil }
         .refreshable {
             try? await taskProvider.synchronize(.launch, store: modelContext)
         }
@@ -218,31 +232,9 @@ struct ProjectDetailView: View {
                 )
             }
         }
-        .safeAreaInset(edge: .bottom) {
-            if showCreator {
-                InlineTaskCreator(presetProject: project)
-                    .transition(.move(edge: .bottom).combined(with: .opacity))
-            }
-        }
-        .overlay(alignment: .bottomTrailing) {
-            if !showCreator {
-                Button {
-                    withAnimation(.easeInOut(duration: 0.25)) {
-                        showCreator = true
-                    }
-                } label: {
-                    Image(systemName: "plus")
-                        .font(.title2.weight(.semibold))
-                        .foregroundStyle(Color(.systemBackground))
-                        .frame(width: 52, height: 52)
-                        .background(Color.primary)
-                        .clipShape(Circle())
-                }
-                .padding(20)
-            }
-        }
         .sheet(item: $selectedTask) { task in
             TaskDetailView(task: task)
+                .presentationDetents([.fraction(0.8)])
         }
     }
 }

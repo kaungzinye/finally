@@ -30,11 +30,9 @@ final class FinallyServerTaskProviderAdapter: TaskProviderAdapter {
         ),
         .labels: .unsupported(reason: "Finally Server does not expose labels."),
         .priority: .lossless,
-        .estimate: .unsupported(reason: "Finally Server does not expose estimates."),
         .subtasks: .unsupported(reason: "Finally Server does not expose parent relationships."),
         .recurrence: .unsupported(reason: "Finally Server does not expose recurrence."),
         .reminders: .unsupported(reason: "Finally Server does not expose reminders."),
-        .externalReferences: .unsupported(reason: "Finally Server does not expose external references."),
     ]
     let fieldSupport = canonicalFieldSupport
 
@@ -177,13 +175,11 @@ final class FinallyServerTaskProviderAdapter: TaskProviderAdapter {
     ) throws {
         task.title = remote.title
         task.status = canonicalStatus(remoteIsCompleted: remote.isCompleted, local: task.status)
-        // Finally Server carries every date as a timestamp, so a payload cannot say whether the
-        // user meant a whole day or a moment. Keep the local reading while the instant is
+        // A planned day is date-only, so the server's timestamp reads as its calendar day.
+        task.plannedDay = remote.plannedDay.map { Calendar.current.startOfDay(for: $0) }
+        // Finally Server carries every deadline as a timestamp, so a payload cannot say whether
+        // the user meant a whole day or a moment. Keep the local reading while the instant is
         // unchanged, and read a genuinely new instant as timed.
-        if !isSameInstant(task.plannedDay, remote.plannedDay) {
-            task.plannedDay = remote.plannedDay
-            task.plannedDayHasTime = remote.plannedDay != nil
-        }
         if !isSameInstant(task.deadline, remote.deadline) {
             task.deadline = remote.deadline
             task.deadlineHasTime = remote.deadline != nil

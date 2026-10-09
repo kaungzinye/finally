@@ -4,6 +4,7 @@ import SwiftData
 struct SettingsView: View {
     @Query private var sessions: [UserSession]
     @Environment(\.modelContext) private var modelContext
+    @Environment(\.dismiss) private var dismiss
     @Environment(TaskProviderCoordinator.self) private var taskProvider
     @Environment(NotionAuthService.self) private var authService
     @AppStorage(AppConstants.focusLimitKey) private var focusLimit = DailyFocus.defaultFocusLimit
@@ -134,7 +135,13 @@ struct SettingsView: View {
                     }
                 }
             }
+            .paperList()
             .navigationTitle("Settings")
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Done") { dismiss() }
+                }
+            }
         }
     }
 

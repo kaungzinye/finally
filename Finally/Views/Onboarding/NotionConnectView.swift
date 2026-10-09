@@ -8,68 +8,61 @@ struct NotionConnectView: View {
     @Environment(NotionAuthService.self) private var authService
 
     var body: some View {
-        VStack(spacing: 32) {
-            Spacer()
+        VStack(alignment: .leading, spacing: 0) {
+            Text("F")
+                .font(.system(size: 30, weight: .bold, design: .rounded))
+                .foregroundStyle(Palette.onInk)
+                .frame(width: 56, height: 56)
+                .background(Palette.ink, in: RoundedRectangle(cornerRadius: 15, style: .continuous))
+                .rotationEffect(.degrees(-4))
+                .padding(.top, 48)
 
-            Image(systemName: "checkmark.circle.fill")
-                .font(.system(size: 80))
-                .foregroundStyle(.primary)
+            Text("Finally")
+                .font(.pageTitle)
+                .foregroundStyle(Palette.ink)
+                .padding(.top, 28)
 
-            Text("Connect Notion")
-                .font(.largeTitle.bold())
-
-            Text("Authorize your Notion workspace, then choose the database that holds your tasks.")
-                .font(.body)
-                .foregroundStyle(.secondary)
-                .multilineTextAlignment(.center)
-                .padding(.horizontal, 40)
+            Text("Connect any Notion workspace where you're a member. Your tasks stay in Notion.")
+                .font(.system(.body, design: .rounded))
+                .foregroundStyle(Palette.muted)
+                .padding(.top, 10)
 
             if let errorMessage = authService.errorMessage {
-                Text(errorMessage)
-                    .font(.callout)
-                    .foregroundStyle(.red)
-                    .multilineTextAlignment(.center)
-                    .padding(.horizontal, 40)
+                Callout(message: errorMessage)
+                    .padding(.top, 20)
             }
-
-            connectButton
-            .disabled(authService.isAuthenticating)
-            .accessibilityIdentifier("notion-authorize")
-            .padding(.horizontal, 40)
 
             Spacer()
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(Color(.systemBackground).ignoresSafeArea())
-        .navigationTitle("Notion")
-        .navigationBarTitleDisplayMode(.inline)
-    }
 
-    @ViewBuilder
-    private var connectButton: some View {
-        if #available(iOS 26, *) {
-            Button(action: connect) { connectLabel }
-                .buttonStyle(.glassProminent)
-        } else {
-            Button(action: connect) { connectLabel }
-                .buttonStyle(.borderedProminent)
-        }
-    }
-
-    private var connectLabel: some View {
-        HStack {
-            if authService.isAuthenticating { ProgressView() }
-            Text(authService.isAuthenticating ? "Connecting…" : "Connect to Notion")
-        }
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, 8)
-    }
-
-    private func connect() {
-        Task {
-            if await authService.startOAuthFlow(modelContext: modelContext) {
-                onConnected()
+            Button {
+                Task {
+                    let success = await authService.startOAuthFlow(modelContext: modelContext)
+                    if success {
+                        onConnected()
+                    }
+                }
+            } label: {
+                HStack(spacing: 8) {
+                    if authService.isAuthenticating {
+                        ProgressView()
+                            .tint(Palette.onInk)
+                    }
+                    Text(authService.isAuthenticating ? "Connecting..." : "Connect to Notion")
+                }
             }
+            .buttonStyle(.ink)
+            .disabled(authService.isAuthenticating)
+            .accessibilityIdentifier("notion-authorize")
+
+            Text("You'll sign in on notion.so")
+                .font(.meta)
+                .foregroundStyle(Palette.muted)
+                .frame(maxWidth: .infinity)
+                .padding(.top, 14)
+                .padding(.bottom, 12)
         }
+        .padding(.horizontal, 24)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .background(Palette.paper.ignoresSafeArea())
     }
 }

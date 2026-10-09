@@ -43,14 +43,16 @@ final class DailyFocus {
     static let focusLimitRange = 1...5
 
     var day: Date
+    var storageWorkspaceID: String
     var focusLimit: Int
     var isConfirmed: Bool = false
     var picksJSON: String = "[]"
     /// A local change not yet stored on Finally Server. Notion mode never sets it.
     var isDirty: Bool = false
 
-    init(day: Date, focusLimit: Int = DailyFocus.defaultFocusLimit) {
+    init(day: Date, focusLimit: Int = DailyFocus.defaultFocusLimit, storageWorkspaceID: String = "") {
         self.day = day
+        self.storageWorkspaceID = storageWorkspaceID
         self.focusLimit = DailyFocus.clampedFocusLimit(focusLimit)
     }
 
@@ -136,11 +138,9 @@ final class DailyFocus {
             guard task.nextActionableSubtask != nil else { throw DailyFocusError.needsSteps }
         case .schedule(let date):
             task.plannedDay = Calendar.current.startOfDay(for: date)
-            task.plannedDayHasTime = false
             task.isDirty = true
         case .deferTask:
             task.plannedDay = nil
-            task.plannedDayHasTime = false
             task.isDirty = true
         case .drop:
             break

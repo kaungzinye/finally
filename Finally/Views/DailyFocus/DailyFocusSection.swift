@@ -17,7 +17,7 @@ struct DailyFocusSection: View {
         if focus.isConfirmed {
             Section("Current") {
                 if let item = actionable.first, let task = item.task {
-                    taskRow(task.nextActionableSubtask ?? task)
+                    CurrentPickCard(task: task.nextActionableSubtask ?? task, onOpen: { onSelectTask(task.nextActionableSubtask ?? task) })
                         .accessibilityIdentifier("daily-focus-current-task")
                 } else if unfinished.isEmpty {
                     Label("Daily Focus complete", systemImage: "checkmark.seal.fill")
@@ -107,5 +107,115 @@ struct DailyFocusSection: View {
             .buttonStyle(.borderless)
         }
         .accessibilityIdentifier("daily-focus-unavailable-pick")
+    }
+}
+
+/// The pick to work on now, drawn larger than the rest with an ink edge.
+private struct CurrentPickCard: View {
+    @Bindable var task: TaskItem
+    let onOpen: () -> Void
+
+    @Environment(\.modelContext) private var modelContext
+    @Environment(TaskProviderCoordinator.self) private var taskProvider
+
+    private var details: [String] {
+        var parts: [String] = []
+        if let deadline = task.deadline {
+            parts.append("Due \(deadline.formatted(.dateTime.weekday(.abbreviated).day().month(.abbreviated)))")
+        }
+        if let project = task.project?.title {
+            parts.append(project)
+        }
+        if task.hasSubtasks {
+            let progress = task.subtaskProgress
+            parts.append("\(progress.done) of \(progress.total) subtasks")
+        }
+        return parts
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                Text("NOW")
+                    .font(.eyebrow)
+                    .tracking(0.5)
+                    .foregroundStyle(Palette.muted)
+                Spacer()
+                if let priority = task.priority {
+                    Label(priority.rawValue, systemImage: priority.icon)
+                        .font(.meta)
+                        .foregroundStyle(priority.color)
+                }
+            }
+
+            Text(task.title)
+                .font(.cardTitle)
+                .foregroundStyle(Palette.ink)
+                .lineLimit(3)
+
+            if !details.isEmpty {
+                Text(details.joined(separator: " · "))
+                    .font(.meta)
+                    .foregroundStyle(task.isOverdue ? Palette.urgent : Palette.muted)
+            }
+
+            Button(action: complete) {
+                Label("Done", systemImage: "checkmark")
+            }
+            .buttonStyle(.ink)
+            .padding(.top, 6)
+        }
+        .padding(.vertical, 14)
+        .contentShape(Rectangle())
+        .onTapGesture(perform: onOpen)
+        .listRowBackground(
+            ContainerRelativeShape()
+                .fill(Palette.card)
+                .strokeBorder(Palette.ink.opacity(0.55), lineWidth: 1.5)
+        )
+    }
+
+    private func complete() {
+        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+        withAnimation(.snappy) {
+            let recycled = task.complete()
+            if recycled {
+                NotificationService.shared.rescheduleAllReminders(modelContext: modelContext)
+            } else {
+                NotificationService.shared.cancelRemindersForTask(task)
+            }
+        }
+        Task {
+            await taskProvider.submitPendingChangesReportingFailure(for: [task], store: modelContext)
+        }
+    }
+}
+
+/// One small stamp per pick, filled once its task is done.
+struct DailyFocusProgress: View {
+    let focus: DailyFocus
+
+    @Query private var tasks: [TaskItem]
+
+    private var doneFlags: [Bool] {
+        focus.resolvedPicks(among: tasks).map { $0.task?.status == .done }
+    }
+
+    var body: some View {
+        let flags = doneFlags
+        HStack(spacing: 6) {
+            ForEach(Array(flags.enumerated()), id: \.offset) { _, isDone in
+                RoundedRectangle(cornerRadius: 3.5, style: .continuous)
+                    .fill(isDone ? Palette.ink : Color.clear)
+                    .strokeBorder(isDone ? Palette.ink : Palette.hairline, lineWidth: 1.5)
+                    .frame(width: 12, height: 12)
+                    .rotationEffect(.degrees(-4))
+            }
+            Text("\(flags.filter { $0 }.count) of \(flags.count) done")
+                .font(.meta)
+                .foregroundStyle(Palette.muted)
+                .padding(.leading, 6)
+        }
+        .accessibilityElement(children: .combine)
     }
 }

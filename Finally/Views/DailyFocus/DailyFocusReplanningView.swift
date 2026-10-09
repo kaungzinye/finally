@@ -58,6 +58,7 @@ struct DailyFocusReplanningView: View {
                     }
                 }
             }
+            .paperList()
             .navigationTitle("Review the day")
             .navigationBarTitleDisplayMode(.inline)
             .disabled(isSaving)

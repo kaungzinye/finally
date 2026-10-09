@@ -47,7 +47,7 @@ enum DailyFocusDemoFixture {
             context.insert(task)
         }
 
-        let focus = DailyFocus(day: today, focusLimit: 3)
+        let focus = DailyFocus(day: today, focusLimit: 3, storageWorkspaceID: notionWorkspaceID)
         focus.picks = [
             brief.dailyFocusPick,
             release.dailyFocusPick,

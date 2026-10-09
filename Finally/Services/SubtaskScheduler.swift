@@ -11,7 +11,7 @@ struct SubtaskScheduler {
         guard !sorted.isEmpty else { return }
 
         guard let planningWindowEnd = parent.plannedDay ?? parent.deadline else {
-            for subtask in parent.activeSubtasks where subtask.suggestedDateOverride == nil {
+            for subtask in parent.activeSubtasks {
                 subtask.suggestedDate = nil
             }
             return
@@ -21,7 +21,7 @@ struct SubtaskScheduler {
         let end = planningWindowEnd
 
         guard end > start else {
-            for subtask in sorted where subtask.suggestedDateOverride == nil {
+            for subtask in sorted {
                 subtask.suggestedDate = start
             }
             return
@@ -31,7 +31,6 @@ struct SubtaskScheduler {
         let count = sorted.count
 
         for (index, subtask) in sorted.enumerated() {
-            guard subtask.suggestedDateOverride == nil else { continue }
             let fraction = Double(index) / Double(max(count, 1))
             subtask.suggestedDate = start.addingTimeInterval(totalInterval * fraction)
         }
@@ -51,8 +50,7 @@ struct SubtaskScheduler {
             .sorted { $0.sortIndex < $1.sortIndex }
 
         for subtask in remaining {
-            guard subtask.suggestedDateOverride == nil,
-                  let date = subtask.suggestedDate else { continue }
+            guard let date = subtask.suggestedDate else { continue }
             let shifted = date.addingTimeInterval(slip)
             subtask.suggestedDate = min(shifted, planningWindowEnd)
         }

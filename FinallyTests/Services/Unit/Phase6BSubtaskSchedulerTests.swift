@@ -32,20 +32,4 @@ final class Phase6BSubtaskSchedulerTests: XCTestCase {
             XCTAssertLessThanOrEqual(d2, parent.plannedDay!)
         }
     }
-
-    func testDistributeSubtaskDates_RespectsSuggestedDateOverride() {
-        let parent = TaskItem(externalTaskID: "parent", title: "Parent")
-        parent.deadline = calendar.date(byAdding: .day, value: 14, to: Date())!
-
-        let sub = TaskItem(externalTaskID: "sub-1", title: "Locked")
-        sub.parentId = parent.externalTaskID
-        sub.sortIndex = 0
-        let override = calendar.date(byAdding: .day, value: 3, to: Date())!
-        sub.suggestedDateOverride = override
-        parent.subtasks = [sub]
-
-        SubtaskScheduler.distributeSubtaskDates(parent: parent)
-
-        XCTAssertEqual(sub.effectiveSuggestedDate, override)
-    }
 }

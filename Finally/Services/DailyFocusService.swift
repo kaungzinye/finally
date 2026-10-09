@@ -39,10 +39,10 @@ final class DailyFocusService {
     ) async throws -> DailyFocus {
         let dayStart = Calendar.current.startOfDay(for: day)
         let focus: DailyFocus
-        if let existing = try localDailyFocus(for: dayStart, store: store) {
+        if let existing = try localDailyFocus(for: dayStart, workspaceID: workspace?.workspaceId ?? "", store: store) {
             focus = existing
         } else {
-            focus = DailyFocus(day: dayStart, focusLimit: focusLimit)
+            focus = DailyFocus(day: dayStart, focusLimit: focusLimit, storageWorkspaceID: workspace?.workspaceId ?? "")
             store.insert(focus)
             try store.save()
         }
@@ -70,7 +70,12 @@ final class DailyFocusService {
     @MainActor
     func save(_ focuses: [DailyFocus], workspace: UserSession?, store: ModelContext) async throws {
         let usesServer = workspace?.providerIdentity == .finallyServer
-        for focus in focuses { focus.isDirty = usesServer }
+        for focus in focuses {
+            guard focus.storageWorkspaceID == (workspace?.workspaceId ?? "") else {
+                throw FinallyServerClientError.invalidConfiguration
+            }
+            focus.isDirty = usesServer
+        }
         try store.save()
         guard usesServer, let workspace else { return }
         var firstError: Error?
@@ -91,8 +96,9 @@ final class DailyFocusService {
     func retryPendingChanges(store: ModelContext) async {
         do {
             let workspace = try store.fetch(FetchDescriptor<UserSession>()).selectedProviderWorkspace
-            guard workspace?.providerIdentity == .finallyServer else { return }
-            let dirty = try store.fetch(FetchDescriptor<DailyFocus>(predicate: #Predicate { $0.isDirty }))
+            guard let workspace, workspace.providerIdentity == .finallyServer else { return }
+            let workspaceID = workspace.workspaceId
+            let dirty = try store.fetch(FetchDescriptor<DailyFocus>(predicate: #Predicate { $0.isDirty && $0.storageWorkspaceID == workspaceID }))
             try await save(dirty, workspace: workspace, store: store)
             lastError = nil
         } catch {
@@ -159,7 +165,7 @@ final class DailyFocusService {
         return (api, projectID)
     }
 
-    private func localDailyFocus(for dayStart: Date, store: ModelContext) throws -> DailyFocus? {
-        try store.fetch(FetchDescriptor<DailyFocus>(predicate: #Predicate { $0.day == dayStart })).first
+    private func localDailyFocus(for dayStart: Date, workspaceID: String, store: ModelContext) throws -> DailyFocus? {
+        try store.fetch(FetchDescriptor<DailyFocus>(predicate: #Predicate { $0.day == dayStart && $0.storageWorkspaceID == workspaceID })).first
     }
 }

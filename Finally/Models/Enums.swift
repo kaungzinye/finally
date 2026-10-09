@@ -16,14 +16,7 @@ enum TaskPriority: String, Codable, CaseIterable {
     case medium = "Medium"
     case low = "Low"
 
-    var color: Color {
-        switch self {
-        case .urgent: return .red
-        case .high: return .orange
-        case .medium: return .yellow
-        case .low: return .green
-        }
-    }
+    var color: Color { Palette.priority(named: rawValue) }
 
     var icon: String {
         switch self {

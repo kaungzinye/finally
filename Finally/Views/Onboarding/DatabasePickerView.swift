@@ -124,6 +124,7 @@ struct DatabasePickerView: View {
                     }
                 }
             }
+            .paperList()
             .navigationTitle("Select Databases")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
