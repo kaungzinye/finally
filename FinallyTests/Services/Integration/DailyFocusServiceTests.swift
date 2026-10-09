@@ -214,6 +214,56 @@ final class DailyFocusServiceTests: XCTestCase {
         XCTAssertTrue(phoneFocus.picks.isEmpty)
     }
 
+    func testServerReadPreservesADecisionMadeDuringTheRequest() async throws {
+        let api = MockFinallyServerAPIClient()
+        let context = try makeInMemoryContext()
+        let server = makeServerWorkspace()
+        context.insert(server)
+        let service = DailyFocusService(serverClient: { _ in api })
+        let focus = try await service.dailyFocus(for: day, workspace: server, store: context)
+        let pick = DailyFocusPick(providerWorkspaceID: server.workspaceId, externalTaskID: "17")
+        try focus.add(pick)
+        try await service.save(focus, workspace: server, store: context)
+        api.dailyFocusReadHook = {
+            focus.remove(pick)
+            focus.isDirty = true
+            try? context.save()
+        }
+
+        _ = try await service.dailyFocus(for: day, workspace: server, store: context)
+
+        XCTAssertTrue(focus.picks.isEmpty)
+        XCTAssertTrue(focus.isDirty)
+        api.dailyFocusReadHook = nil
+        await service.retryPendingChanges(store: context)
+        XCTAssertEqual(api.dailyFocus[MockFinallyServerAPIClient.dailyFocusKey(projectID: 42, day: focus.dayKey)]?.picks, [])
+    }
+
+    func testServerWriteKeepsEditsMadeDuringTheRequestDirty() async throws {
+        let api = MockFinallyServerAPIClient()
+        let context = try makeInMemoryContext()
+        let server = makeServerWorkspace()
+        context.insert(server)
+        let service = DailyFocusService(serverClient: { _ in api })
+        let focus = try await service.dailyFocus(for: day, workspace: server, store: context)
+        let pick = DailyFocusPick(providerWorkspaceID: server.workspaceId, externalTaskID: "17")
+        try focus.add(pick)
+        api.dailyFocusWriteHook = {
+            focus.remove(pick)
+            focus.isDirty = true
+            try? context.save()
+        }
+
+        try await service.save(focus, workspace: server, store: context)
+
+        XCTAssertTrue(focus.picks.isEmpty)
+        XCTAssertTrue(focus.isDirty)
+        api.dailyFocusWriteHook = nil
+        await service.retryPendingChanges(store: context)
+        XCTAssertFalse(focus.isDirty)
+        XCTAssertEqual(api.dailyFocus[MockFinallyServerAPIClient.dailyFocusKey(projectID: 42, day: focus.dayKey)]?.picks, [])
+    }
+
     // MARK: - Helpers
 
     private func makeNotionWorkspace() -> UserSession {

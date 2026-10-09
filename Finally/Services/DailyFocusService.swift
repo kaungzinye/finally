@@ -111,8 +111,14 @@ final class DailyFocusService {
     @MainActor
     private func pull(into focus: DailyFocus, workspace: UserSession, store: ModelContext) async throws {
         let (api, projectID) = try client(for: workspace)
+        let initialPicks = focus.picks
+        let initialConfirmation = focus.isConfirmed
+        let initialLimit = focus.focusLimit
         do {
-            guard let record = try await api.readDailyFocus(projectID: projectID, day: focus.dayKey) else {
+            let record = try await api.readDailyFocus(projectID: projectID, day: focus.dayKey)
+            guard !focus.isDirty, focus.picks == initialPicks,
+                  focus.isConfirmed == initialConfirmation, focus.focusLimit == initialLimit else { return }
+            guard let record else {
                 try await push(focus, workspace: workspace, store: store)
                 return
             }
@@ -137,8 +143,9 @@ final class DailyFocusService {
             try store.fetch(FetchDescriptor<UserSession>()).map { ($0.workspaceId, $0.providerIdentity.rawValue) },
             uniquingKeysWith: { first, _ in first }
         )
+        let submittedPicks = focus.picks
         let mutation = FinallyServerDailyFocusMutation(
-            picks: focus.picks.map {
+            picks: submittedPicks.map {
                 FinallyServerDailyFocusPick(
                     provider: providers[$0.providerWorkspaceID] ?? "unknown",
                     workspaceID: $0.providerWorkspaceID,
@@ -150,7 +157,9 @@ final class DailyFocusService {
         )
         do {
             _ = try await api.writeDailyFocus(projectID: projectID, day: focus.dayKey, mutation: mutation)
-            focus.isDirty = false
+            focus.isDirty = focus.picks != submittedPicks
+                || focus.isConfirmed != mutation.isConfirmed
+                || focus.focusLimit != mutation.focusLimit
             try store.save()
             lastError = nil
         } catch {
