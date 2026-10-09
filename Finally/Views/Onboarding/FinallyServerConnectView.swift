@@ -5,7 +5,6 @@ struct FinallyServerConnectView: View {
     var onConnected: () -> Void = {}
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var modelContext
-    @Environment(TaskProviderCoordinator.self) private var taskProvider
 
     @FocusState private var passwordIsFocused: Bool
     @State private var name = "Finally Server"
@@ -17,7 +16,6 @@ struct FinallyServerConnectView: View {
     @State private var isWorking = false
     @State private var errorMessage: String?
     @State private var connectionTask: Task<Void, Never>?
-    @State private var connectedWorkspace: UserSession?
 
     var body: some View {
         Form {
@@ -25,7 +23,7 @@ struct FinallyServerConnectView: View {
                 TextField("Workspace name", text: $name)
                     .textContentType(.organizationName)
                     .accessibilityIdentifier("server-workspace-name")
-                    .disabled(isWorking || connectedWorkspace != nil)
+                    .disabled(isWorking)
                 TextField("https://tasks.example.com", text: $address)
                     .textContentType(.URL)
                     .textInputAutocapitalization(.never)
@@ -41,7 +39,7 @@ struct FinallyServerConnectView: View {
                             Text(project.title).tag(Optional(project))
                         }
                     }
-                    .disabled(isWorking || connectedWorkspace != nil)
+                    .disabled(isWorking)
                     .accessibilityIdentifier("server-workspace-picker")
                 }
             }
@@ -61,11 +59,10 @@ struct FinallyServerConnectView: View {
                     .onSubmit { passwordIsFocused = false }
                     .disabled(isWorking || authenticatedAccount != nil)
 
-                if authenticatedAccount != nil && connectedWorkspace == nil {
+                if authenticatedAccount != nil {
                     Button("Use a different account") {
                         authenticatedAccount = nil
                         selectedProject = nil
-                        connectedWorkspace = nil
                         password = ""
                         errorMessage = nil
                     }
@@ -125,11 +122,11 @@ struct FinallyServerConnectView: View {
         if isWorking {
             HStack {
                 ProgressView()
-                Text(authenticatedAccount == nil ? "Finding workspaces…" : "Syncing tasks…")
+                Text(authenticatedAccount == nil ? "Finding workspaces…" : "Connecting…")
             }
             .frame(maxWidth: .infinity)
         } else {
-            Text(connectedWorkspace != nil ? "Retry Sync" : authenticatedAccount == nil ? "Find Workspaces" : "Connect")
+            Text(authenticatedAccount == nil ? "Find Workspaces" : "Connect")
                 .frame(maxWidth: .infinity)
         }
     }
@@ -198,35 +195,17 @@ struct FinallyServerConnectView: View {
               let selectedProject else { return }
         isWorking = true
         errorMessage = nil
-        connectionTask?.cancel()
         do {
-            let workspace: UserSession
-            if let connectedWorkspace {
-                workspace = connectedWorkspace
-            } else {
-                workspace = try accountService(for: url).connect(
-                    name: name.trimmingCharacters(in: .whitespacesAndNewlines),
-                    baseURL: url,
-                    project: selectedProject,
-                    account: account,
-                    store: modelContext
-                )
-                connectedWorkspace = workspace
-            }
-            connectionTask = Task {
-                do {
-                    try await taskProvider.synchronize(.launch, workspace: workspace, store: modelContext)
-                    guard !Task.isCancelled else { return }
-                    isWorking = false
-                    onConnected()
-                    dismiss()
-                } catch is CancellationError {
-                    isWorking = false
-                } catch {
-                    errorMessage = error.localizedDescription
-                    isWorking = false
-                }
-            }
+            _ = try accountService(for: url).connect(
+                name: name.trimmingCharacters(in: .whitespacesAndNewlines),
+                baseURL: url,
+                project: selectedProject,
+                account: account,
+                store: modelContext
+            )
+            isWorking = false
+            onConnected()
+            dismiss()
         } catch {
             errorMessage = error.localizedDescription
             isWorking = false
