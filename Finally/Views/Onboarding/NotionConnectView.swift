@@ -17,7 +17,7 @@ struct NotionConnectView: View {
                 .rotationEffect(.degrees(-4))
                 .padding(.top, 48)
 
-            Text("Finally")
+            Text("Connect Notion")
                 .font(.pageTitle)
                 .foregroundStyle(Palette.ink)
                 .padding(.top, 28)
