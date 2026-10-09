@@ -5,10 +5,10 @@ struct DailyFocusSection: View {
     let focus: DailyFocus
     let onChange: () -> Void
     let onSelectTask: (TaskItem) -> Void
+    let onAddPick: () -> Void
+    let onEditPicks: () -> Void
 
     @Query private var tasks: [TaskItem]
-    @State private var showPicker = false
-    @State private var showEditor = false
 
     private var resolved: [ResolvedDailyFocusPick] { focus.resolvedPicks(among: tasks) }
     private var unfinished: [ResolvedDailyFocusPick] { resolved.filter { $0.task?.status != .done } }
@@ -67,11 +67,11 @@ struct DailyFocusSection: View {
         }
         Section {
             if focus.isConfirmed {
-                Button("Edit picks") { showEditor = true }
+                Button("Edit picks", action: onEditPicks)
                     .accessibilityIdentifier("daily-focus-edit-picks")
             }
             Button {
-                showPicker = true
+                onAddPick()
             } label: {
                 Label(focus.isFull ? "Add an urgent task" : "Add a pick", systemImage: "plus.circle")
             }
@@ -88,35 +88,6 @@ struct DailyFocusSection: View {
             }
         } footer: {
             Text("\(focus.picks.count) of \(focus.focusLimit) picks · \(focus.isConfirmed ? "Confirmed" : "Awaiting confirmation")")
-        }
-        .sheet(isPresented: $showEditor) {
-            NavigationStack {
-                List {
-                    ForEach(resolved) { item in
-                        Text(item.task?.title ?? "Task unavailable").cardRow()
-                    }
-                    .onMove { source, destination in
-                        focus.move(fromOffsets: source, toOffset: destination)
-                        onChange()
-                    }
-                    .onDelete { offsets in
-                        focus.remove(atOffsets: offsets)
-                        onChange()
-                    }
-                }
-                .paperList()
-                .navigationTitle("Edit picks")
-                .navigationBarTitleDisplayMode(.inline)
-                .toolbar {
-                    ToolbarItem(placement: .topBarLeading) { EditButton() }
-                    ToolbarItem(placement: .confirmationAction) {
-                        Button("Done") { showEditor = false }
-                    }
-                }
-            }
-        }
-        .sheet(isPresented: $showPicker) {
-            DailyFocusPickerView(focus: focus, onPick: onChange)
         }
     }
 
@@ -248,5 +219,39 @@ struct DailyFocusProgress: View {
                 .padding(.leading, 6)
         }
         .accessibilityElement(children: .combine)
+    }
+}
+
+struct DailyFocusEditorView: View {
+    let focus: DailyFocus
+    let onChange: () -> Void
+    @Query private var tasks: [TaskItem]
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        NavigationStack {
+            List {
+                ForEach(focus.resolvedPicks(among: tasks)) { item in
+                    Text(item.task?.title ?? "Task unavailable").cardRow()
+                }
+                .onMove { source, destination in
+                    focus.move(fromOffsets: source, toOffset: destination)
+                    onChange()
+                }
+                .onDelete { offsets in
+                    focus.remove(atOffsets: offsets)
+                    onChange()
+                }
+            }
+            .paperList()
+            .navigationTitle("Edit picks")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarLeading) { EditButton() }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Done") { dismiss() }
+                }
+            }
+        }
     }
 }

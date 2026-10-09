@@ -17,6 +17,8 @@ struct TodayView: View {
     @State private var selectedTask: TaskItem?
     @State private var replanningFocus: DailyFocus?
     @State private var isSaving = false
+    @State private var showPicker = false
+    @State private var showEditor = false
 
     private var workspace: UserSession? { sessions.selectedProviderWorkspace }
     private var loadID: String { "\(workspace?.workspaceId ?? "")/\(DailyFocus.dayKey(for: day))" }
@@ -57,7 +59,9 @@ struct TodayView: View {
                     DailyFocusSection(
                         focus: dailyFocus,
                         onChange: { save(dailyFocus) },
-                        onSelectTask: { selectedTask = $0 }
+                        onSelectTask: { selectedTask = $0 },
+                        onAddPick: { showPicker = true },
+                        onEditPicks: { showEditor = true }
                     )
                     .disabled(isSaving)
                     if Calendar.current.isDateInToday(day), !dailyFocus.picks.isEmpty {
@@ -113,6 +117,16 @@ struct TodayView: View {
                 await load()
             }
         }
+        .sheet(isPresented: $showPicker) {
+            if let dailyFocus {
+                DailyFocusPickerView(focus: dailyFocus, onPick: { save(dailyFocus) })
+            }
+        }
+        .sheet(isPresented: $showEditor) {
+            if let dailyFocus {
+                DailyFocusEditorView(focus: dailyFocus, onChange: { save(dailyFocus) })
+            }
+        }
         .sheet(item: $selectedTask) { task in
             TaskDetailView(task: task)
         }
@@ -123,7 +137,6 @@ struct TodayView: View {
 
     private func load() async {
         let requestedID = loadID
-        dailyFocus = nil
         do {
             let loaded = try await dailyFocusService.dailyFocus(
                 for: day, workspace: workspace, store: modelContext, focusLimit: focusLimit
