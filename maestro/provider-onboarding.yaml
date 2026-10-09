@@ -16,7 +16,7 @@ appId: com.kaungzinye.finally
 - tapOn:
     id: "server-password"
 - inputText: "demo"
-- hideKeyboard
+- tapOn: "Done"
 - tapOn:
     id: "server-connect-action"
 - extendedWaitUntil:
@@ -32,4 +32,4 @@ appId: com.kaungzinye.finally
     id: "notion-authorize"
 - tapOn: "Cancel"
 - assertVisible: "Connect to Notion"
-- assertNotVisible: "Connecting…"
+- assertNotVisible: "Connecting..."

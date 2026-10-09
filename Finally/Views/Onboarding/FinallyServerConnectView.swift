@@ -7,6 +7,7 @@ struct FinallyServerConnectView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(TaskProviderCoordinator.self) private var taskProvider
 
+    @FocusState private var passwordIsFocused: Bool
     @State private var name = "Finally Server"
     @State private var address = ""
     @State private var username = ""
@@ -55,6 +56,9 @@ struct FinallyServerConnectView: View {
                 SecureField("Password", text: $password)
                     .textContentType(.password)
                     .accessibilityIdentifier("server-password")
+                    .focused($passwordIsFocused)
+                    .submitLabel(.done)
+                    .onSubmit { passwordIsFocused = false }
                     .disabled(isWorking || authenticatedAccount != nil)
 
                 if authenticatedAccount != nil && connectedWorkspace == nil {

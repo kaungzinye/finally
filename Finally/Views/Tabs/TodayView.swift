@@ -105,9 +105,9 @@ struct TodayView: View {
             .disabled(isSaving)
             .task(id: loadID) { await load() }
             .onChange(of: scenePhase) { _, phase in
-                if phase == .active && !isSaving {
+                if phase == .active && !isSaving && replanningFocus == nil && !showPicker && !showEditor {
                     let today = Calendar.current.startOfDay(for: Date())
-                    if day == currentDay { day = today }
+                    if day < today || day == currentDay { day = today }
                     currentDay = today
                     Task { await load() }
                 }

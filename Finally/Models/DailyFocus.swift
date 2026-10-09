@@ -139,9 +139,11 @@ final class DailyFocus {
         case .schedule(let date):
             task.plannedDay = Calendar.current.startOfDay(for: date)
             task.isDirty = true
+            SubtaskScheduler.distributeSubtaskDates(parent: task)
         case .deferTask:
             task.plannedDay = nil
             task.isDirty = true
+            SubtaskScheduler.distributeSubtaskDates(parent: task)
         case .drop:
             break
         }

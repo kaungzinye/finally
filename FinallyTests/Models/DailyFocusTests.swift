@@ -192,6 +192,26 @@ final class DailyFocusTests: XCTestCase {
         XCTAssertTrue(focus.picks.isEmpty)
     }
 
+    func testReplanningRedistributesSuggestedStepDates() throws {
+        let task = TaskItem(externalTaskID: "parent", title: "Prepare the brief")
+        task.providerWorkspaceId = "notion-workspace"
+        let step = TaskItem(externalTaskID: "step", title: "Write the outline")
+        let staleDate = Date().addingTimeInterval(-86_400 * 10)
+        step.suggestedDate = staleDate
+        task.subtasks = [step]
+        let focus = DailyFocus(day: Date())
+        try focus.add(task.dailyFocusPick)
+
+        try focus.replan(task.dailyFocusPick, decision: .schedule(Date().addingTimeInterval(86_400 * 3)), task: task)
+        XCTAssertNotEqual(step.suggestedDate, staleDate)
+        XCTAssertNotNil(step.suggestedDate)
+
+        try focus.add(task.dailyFocusPick)
+        try focus.replan(task.dailyFocusPick, decision: .deferTask, task: task)
+        XCTAssertNil(step.suggestedDate)
+        XCTAssertNil(task.deadline)
+    }
+
     func testBreakDownRequiresAnUnfinishedStep() throws {
         let task = TaskItem(externalTaskID: "unfinished", title: "Draft the brief")
         task.providerWorkspaceId = "notion-workspace"
