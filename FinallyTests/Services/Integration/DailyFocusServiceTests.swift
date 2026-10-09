@@ -264,6 +264,35 @@ final class DailyFocusServiceTests: XCTestCase {
         XCTAssertEqual(api.dailyFocus[MockFinallyServerAPIClient.dailyFocusKey(projectID: 42, day: focus.dayKey)]?.picks, [])
     }
 
+    func testRetryRepeatsFailedServerReadsUntilTheySucceed() async throws {
+        let api = MockFinallyServerAPIClient()
+        let context = try makeInMemoryContext()
+        let server = makeServerWorkspace()
+        context.insert(server)
+        let dayKey = DailyFocus.dayKey(for: day)
+        api.dailyFocus[MockFinallyServerAPIClient.dailyFocusKey(projectID: 42, day: dayKey)] = FinallyServerDailyFocus(
+            projectID: 42, day: dayKey,
+            picks: [FinallyServerDailyFocusPick(provider: "finally-server", workspaceID: server.workspaceId, externalTaskID: "17")],
+            isConfirmed: true, focusLimit: 3
+        )
+        api.error = FinallyServerClientError.serverUnavailable
+        let service = DailyFocusService(serverClient: { _ in api })
+        let focus = try await service.dailyFocus(for: day, workspace: server, store: context)
+        XCTAssertTrue(focus.picks.isEmpty)
+        XCTAssertFalse(focus.isDirty)
+
+        await service.retryPendingChanges(store: context)
+        XCTAssertNotNil(service.lastError)
+        XCTAssertEqual(api.dailyFocusOperations, ["read", "read"])
+
+        api.error = nil
+        await service.retryPendingChanges(store: context)
+        XCTAssertNil(service.lastError)
+        XCTAssertEqual(focus.picks.map(\.externalTaskID), ["17"])
+        XCTAssertTrue(focus.isConfirmed)
+        XCTAssertEqual(api.dailyFocusOperations, ["read", "read", "read"])
+    }
+
     // MARK: - Helpers
 
     private func makeNotionWorkspace() -> UserSession {

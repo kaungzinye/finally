@@ -11,6 +11,7 @@ final class DailyFocusService {
     typealias ServerClientFactory = (UserSession) -> FinallyServerAPIClient?
 
     private let serverClient: ServerClientFactory
+    private var failedReads: Set<PersistentIdentifier> = []
     var lastError: String?
 
     func clearError() {
@@ -53,9 +54,11 @@ final class DailyFocusService {
             } else {
                 try await pull(into: focus, workspace: workspace, store: store)
             }
+            failedReads.remove(focus.persistentModelID)
         } catch is CancellationError {
             throw CancellationError()
         } catch {
+            if !focus.isDirty { failedReads.insert(focus.persistentModelID) }
             lastError = error.localizedDescription
         }
         return focus
@@ -100,6 +103,13 @@ final class DailyFocusService {
             let workspaceID = workspace.workspaceId
             let dirty = try store.fetch(FetchDescriptor<DailyFocus>(predicate: #Predicate { $0.isDirty && $0.storageWorkspaceID == workspaceID }))
             try await save(dirty, workspace: workspace, store: store)
+            let pendingReads = try store.fetch(FetchDescriptor<DailyFocus>()).filter {
+                $0.storageWorkspaceID == workspaceID && failedReads.contains($0.persistentModelID)
+            }
+            for focus in pendingReads where !focus.isDirty {
+                try await pull(into: focus, workspace: workspace, store: store)
+                failedReads.remove(focus.persistentModelID)
+            }
             lastError = nil
         } catch {
             lastError = error.localizedDescription
