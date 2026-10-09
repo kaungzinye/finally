@@ -20,7 +20,7 @@ When the user prompts the personal agent to propose tomorrow's Daily Focus, the 
 }
 ```
 
-the personal agent uses the provider workspace identity configured for the phone's server connection. It preserves an existing confirmed record for the user's explicit review. Picks reference tasks; selecting and confirming them leaves task dates fixed. A proposal runs when the user prompts the personal agent. The record's calendar date comes from the user's local calendar.
+The personal agent uses the provider workspace identity configured for the phone's server connection. It preserves an existing confirmed record for the user's explicit review. Picks reference tasks; selecting and confirming them leaves task dates fixed. A proposal runs when the user prompts the personal agent. The record's calendar date comes from the user's local calendar.
 
 The phone confirms by writing the same project and day with `confirmed: true`. Reordering and editing preserve pick identity. A full Daily Focus accepts an urgent task through a replacement the user chooses, including a reference to an unavailable task. The focus limit remains one to five. Each day retains its limit; Settings supplies the limit for newly created days.
 
@@ -30,4 +30,4 @@ The phone saves all changed Daily Focus days together before attempting server w
 
 `DailyFocusTests` exercises displacement, all replanning decisions, and date preservation. `DailyFocusServiceTests` exercises prompted writes through a mock API, confirmation on the same record, and offline recovery across both days. `maestro/daily-focus-demo.yaml` exercises the seeded phone flow.
 
-The server route is in the server repository's `feat/ux-daily-focus` branch, commit `7867f8851`. Deployment of that route, the personal agent account configuration, and the phone-priority concurrent edit contract in issue #15 are integration dependencies. The automated prompted-write test uses a mock API; a live the personal agent conversation requires verification against the deployed server.
+The server route is in the server repository's `feat/ux-daily-focus` branch, commit `7867f8851`. Deployment of that route, the personal agent account configuration, and the phone-priority concurrent edit contract in issue #15 are integration dependencies. The automated prompted-write test uses a mock API; a live conversation with the personal agent requires verification against the deployed server.

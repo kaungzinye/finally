@@ -24,7 +24,8 @@ appId: com.kaungzinye.finally
       id: "finally-server-connection-error"
     timeout: 15000
 - assertVisible: "Find Workspaces"
-- back
+- tapOn:
+    id: "BackButton"
 - tapOn:
     id: "connect-notion-provider"
 - assertVisible: "Connect Notion"
