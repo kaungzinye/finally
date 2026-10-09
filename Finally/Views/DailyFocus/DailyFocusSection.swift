@@ -12,13 +12,13 @@ struct DailyFocusSection: View {
 
     private var resolved: [ResolvedDailyFocusPick] { focus.resolvedPicks(among: tasks) }
     private var unfinished: [ResolvedDailyFocusPick] { resolved.filter { $0.task?.status != .done } }
-    private var actionable: [ResolvedDailyFocusPick] { unfinished.filter { $0.task != nil } }
+    private var actionable: [ResolvedDailyFocusPick] { focus.executionPicks(among: tasks) }
 
     var body: some View {
         if focus.isConfirmed {
             Section("Current") {
                 if let item = actionable.first, let task = item.task {
-                    CurrentPickCard(task: task.nextActionableSubtask ?? task, onOpen: { onSelectTask(task.nextActionableSubtask ?? task) })
+                    CurrentPickCard(task: task, onOpen: { onSelectTask(task) })
                         .accessibilityIdentifier("daily-focus-current-task")
                 } else if unfinished.isEmpty {
                     Label("Daily Focus complete", systemImage: "checkmark.seal.fill")
@@ -31,7 +31,7 @@ struct DailyFocusSection: View {
             if actionable.count > 1 {
                 Section("Next") {
                     ForEach(Array(actionable.dropFirst())) { item in
-                        if let task = item.task { taskRow(task.nextActionableSubtask ?? task) }
+                        if let task = item.task { taskRow(task) }
                     }
                 }
             }

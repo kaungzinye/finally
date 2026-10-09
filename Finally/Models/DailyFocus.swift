@@ -175,6 +175,16 @@ struct ResolvedDailyFocusPick: Identifiable {
 }
 
 extension DailyFocus {
+    func executionPicks(among tasks: [TaskItem]) -> [ResolvedDailyFocusPick] {
+        var shown: Set<DailyFocusPick> = []
+        return resolvedPicks(among: tasks).compactMap { item in
+            guard let task = item.task, task.status != .done else { return nil }
+            let action = task.nextActionableSubtask ?? task
+            guard shown.insert(action.dailyFocusPick).inserted else { return nil }
+            return ResolvedDailyFocusPick(pick: item.pick, task: action)
+        }
+    }
+
     func resolvedPicks(in store: ModelContext) throws -> [ResolvedDailyFocusPick] {
         resolvedPicks(among: try store.fetch(FetchDescriptor<TaskItem>()))
     }

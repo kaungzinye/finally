@@ -36,7 +36,8 @@ final class DailyFocusService {
         for day: Date,
         workspace: UserSession?,
         store: ModelContext,
-        focusLimit: Int = DailyFocus.defaultFocusLimit
+        focusLimit: Int = DailyFocus.defaultFocusLimit,
+        requireServerLoad: Bool = false
     ) async throws -> DailyFocus {
         let dayStart = Calendar.current.startOfDay(for: day)
         let focus: DailyFocus
@@ -60,6 +61,7 @@ final class DailyFocusService {
         } catch {
             if !focus.isDirty { failedReads.insert(focus.persistentModelID) }
             lastError = error.localizedDescription
+            if requireServerLoad { throw error }
         }
         return focus
     }

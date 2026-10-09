@@ -138,7 +138,7 @@ struct DailyFocusReplanningView: View {
         Task {
             defer { isSaving = false }
             do {
-                let next = try await service.dailyFocus(for: nextDay, workspace: workspace, store: store, focusLimit: focusLimit)
+                let next = try await service.dailyFocus(for: nextDay, workspace: workspace, store: store, focusLimit: focusLimit, requireServerLoad: true)
                 nextFocus = next
                 if next.isFull && !next.picks.contains(pick) {
                     keepPick = pick

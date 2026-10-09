@@ -1,7 +1,15 @@
 import SwiftUI
+import SwiftData
 
 struct ProviderConnectView: View {
     var onConnected: () -> Void
+    @Query private var sessions: [UserSession]
+    @Environment(\.modelContext) private var modelContext
+    @State private var errorMessage: String?
+
+    private var savedWorkspaces: [UserSession] {
+        sessions.filter { ProviderSessionRoute.resolve(selectedWorkspace: $0) == .tasks }
+    }
 
     var body: some View {
         NavigationStack {
@@ -17,6 +25,32 @@ struct ProviderConnectView: View {
                             .font(.title2.weight(.medium))
                         Text("Choose where your tasks live.")
                             .foregroundStyle(.secondary)
+                    }
+
+                    if let errorMessage { Callout(message: errorMessage) }
+                    if !savedWorkspaces.isEmpty {
+                        VStack(alignment: .leading, spacing: 16) {
+                            Text("Connected provider workspaces").font(.eyebrow)
+                            ForEach(savedWorkspaces, id: \.id) { workspace in
+                                Button {
+                                    do {
+                                        sessions.forEach { $0.isSelected = $0.id == workspace.id }
+                                        try modelContext.save()
+                                        onConnected()
+                                    } catch {
+                                        errorMessage = error.localizedDescription
+                                    }
+                                } label: {
+                                    providerLabel(
+                                        workspace.workspaceName,
+                                        detail: "Open this provider workspace.",
+                                        symbol: workspace.providerIdentity == .finallyServer ? "server.rack" : "building.2"
+                                    )
+                                }
+                                .accessibilityIdentifier("open-saved-provider-workspace")
+                            }
+                        }
+                        .buttonStyle(.plain)
                     }
 
                     VStack(spacing: 16) {

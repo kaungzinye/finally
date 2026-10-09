@@ -105,6 +105,23 @@ final class DailyFocusTests: XCTestCase {
         XCTAssertFalse(task.isDirty)
     }
 
+    func testExecutionShowsAStepOnceWhenParentAndChildArePicked() throws {
+        let parent = TaskItem(externalTaskID: "parent", title: "Prepare the brief")
+        parent.providerWorkspaceId = "notion-workspace"
+        let step = TaskItem(externalTaskID: "step", title: "Write the outline")
+        step.providerWorkspaceId = "notion-workspace"
+        parent.subtasks = [step]
+        let focus = DailyFocus(day: day)
+        try focus.add(parent.dailyFocusPick)
+        try focus.add(step.dailyFocusPick)
+        focus.confirm()
+
+        let execution = focus.executionPicks(among: [parent, step])
+        XCTAssertEqual(execution.map { $0.task?.dailyFocusPick }, [step.dailyFocusPick])
+        XCTAssertEqual(execution.map(\.pick), [parent.dailyFocusPick])
+        XCTAssertEqual(focus.picks, [parent.dailyFocusPick, step.dailyFocusPick])
+    }
+
     func testDisplacementReplacesTheChosenPositionAndKeepsTheLimit() throws {
         let focus = DailyFocus(day: day, focusLimit: 2)
         try focus.add(pick("first"))

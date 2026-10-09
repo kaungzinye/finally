@@ -27,11 +27,13 @@ struct DailyFocusPickerView: View {
 
     private var candidates: [TaskItem] {
         let picked = Set(focus.picks)
+        let representedSteps = Set(focus.executionPicks(among: allTasks).compactMap { $0.task?.dailyFocusPick })
         let workspace = sourceWorkspace
         return openTasks.filter { task in
             task.nextActionableSubtask == nil
                 && task.belongs(to: workspace)
                 && !picked.contains(task.dailyFocusPick)
+                && !representedSteps.contains(task.dailyFocusPick)
                 && (searchText.isEmpty || task.title.localizedCaseInsensitiveContains(searchText))
         }
     }
