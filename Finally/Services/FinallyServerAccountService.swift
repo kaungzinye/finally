@@ -109,6 +109,10 @@ final class FinallyServerAccountService {
             $0.providerWorkspaceId == workspaceID
         }
         tasks.forEach(store.delete)
+        let focuses = try store.fetch(FetchDescriptor<DailyFocus>()).filter {
+            $0.storageWorkspaceID == workspaceID
+        }
+        focuses.forEach(store.delete)
         let projects = try store.fetch(FetchDescriptor<ProjectItem>()).filter {
             $0.providerWorkspaceId == workspaceID
         }

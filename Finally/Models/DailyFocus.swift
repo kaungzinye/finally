@@ -125,7 +125,7 @@ final class DailyFocus {
         }
         switch decision {
         case .keep:
-            guard let nextFocus, nextFocus.day > day else { throw DailyFocusError.needsNextDay }
+            guard let nextFocus, nextFocus.storageWorkspaceID == storageWorkspaceID, nextFocus.day > day else { throw DailyFocusError.needsNextDay }
             if !nextFocus.picks.contains(pick) {
                 if let displacing {
                     try nextFocus.replace(displacing, with: pick)

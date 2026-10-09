@@ -169,6 +169,10 @@ struct SettingsView: View {
             let projects = try modelContext.fetch(FetchDescriptor<ProjectItem>()).filter {
                 $0.providerWorkspaceId == workspaceID
             }
+            let focuses = try modelContext.fetch(FetchDescriptor<DailyFocus>()).filter {
+                $0.storageWorkspaceID == workspaceID
+            }
+            focuses.forEach(modelContext.delete)
             tasks.forEach(modelContext.delete)
             projects.forEach(modelContext.delete)
             modelContext.delete(session)

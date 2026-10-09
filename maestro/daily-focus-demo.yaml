@@ -8,6 +8,10 @@ appId: com.kaungzinye.finally
 - assertVisible: "Draft the brief"
 - assertVisible: "Ship the release notes"
 - assertVisible: "Task unavailable"
+- scrollUntilVisible:
+    element:
+      id: "daily-focus-add-pick"
+    direction: DOWN
 - tapOn:
     id: "daily-focus-add-pick"
 - tapOn: "Call the bank"
@@ -23,6 +27,10 @@ appId: com.kaungzinye.finally
 - assertVisible: "Current"
 - assertVisible: "Next"
 - assertVisible: "3 of 3 picks · Confirmed"
+- scrollUntilVisible:
+    element:
+      id: "daily-focus-review-day"
+    direction: DOWN
 - tapOn:
     id: "daily-focus-review-day"
 - tapOn:
@@ -30,6 +38,10 @@ appId: com.kaungzinye.finally
     index: 0
 - tapOn: "Done"
 - assertVisible: "2 of 3 picks · Confirmed"
+- scrollUntilVisible:
+    element:
+      id: "daily-focus-add-pick"
+    direction: DOWN
 - tapOn:
     id: "daily-focus-add-pick"
 - assertVisible: "Draft the brief"
@@ -38,6 +50,10 @@ appId: com.kaungzinye.finally
     id: "daily-focus-tomorrow"
 - assertVisible: "Proposed Daily Focus"
 - assertVisible: "0 of 3 picks · Awaiting confirmation"
+- scrollUntilVisible:
+    element:
+      id: "daily-focus-add-pick"
+    direction: DOWN
 - tapOn:
     id: "daily-focus-add-pick"
 - tapOn: "Review the contract"
