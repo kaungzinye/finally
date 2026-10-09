@@ -98,6 +98,8 @@ final class FinallyServerConnectionIntegrationTests: XCTestCase {
         context.insert(serverTask)
         context.insert(notionProject)
         context.insert(serverProject)
+        context.insert(DailyFocus(day: Date(), storageWorkspaceID: server.workspaceId))
+        context.insert(DailyFocus(day: Date(), storageWorkspaceID: notion.workspaceId))
         try context.save()
 
         try accounts.remove(server, store: context)
@@ -108,6 +110,7 @@ final class FinallyServerConnectionIntegrationTests: XCTestCase {
         XCTAssertNil(credentials.token(workspaceID: server.workspaceId))
         XCTAssertEqual(try context.fetch(FetchDescriptor<TaskItem>()).map(\.title), ["Shared task"])
         XCTAssertEqual(try context.fetch(FetchDescriptor<ProjectItem>()).map(\.title), ["Shared project"])
+        XCTAssertEqual(try context.fetch(FetchDescriptor<DailyFocus>()).map(\.storageWorkspaceID), [notion.workspaceId])
     }
 
     func testFailedConnectionDoesNotPersistAccountOrCredential() async throws {

@@ -12,6 +12,7 @@ appId: com.kaungzinye.finally
     element:
       id: "daily-focus-add-pick"
     direction: DOWN
+    centerElement: true
 - tapOn:
     id: "daily-focus-add-pick"
 - tapOn: "Call the bank"
@@ -31,6 +32,7 @@ appId: com.kaungzinye.finally
     element:
       id: "daily-focus-review-day"
     direction: DOWN
+    centerElement: true
 - tapOn:
     id: "daily-focus-review-day"
 - tapOn:
@@ -42,6 +44,7 @@ appId: com.kaungzinye.finally
     element:
       id: "daily-focus-add-pick"
     direction: DOWN
+    centerElement: true
 - tapOn:
     id: "daily-focus-add-pick"
 - assertVisible: "Draft the brief"
@@ -54,6 +57,7 @@ appId: com.kaungzinye.finally
     element:
       id: "daily-focus-add-pick"
     direction: DOWN
+    centerElement: true
 - tapOn:
     id: "daily-focus-add-pick"
 - tapOn: "Review the contract"

@@ -125,6 +125,7 @@ struct TodayView: View {
         .sheet(isPresented: $showEditor) {
             if let dailyFocus {
                 DailyFocusEditorView(focus: dailyFocus, onChange: { save(dailyFocus) })
+                    .disabled(isSaving)
             }
         }
         .sheet(item: $selectedTask) { task in
@@ -137,6 +138,9 @@ struct TodayView: View {
 
     private func load() async {
         let requestedID = loadID
+        if dailyFocus?.storageWorkspaceID != (workspace?.workspaceId ?? "") || dailyFocus?.dayKey != DailyFocus.dayKey(for: day) {
+            dailyFocus = nil
+        }
         do {
             let loaded = try await dailyFocusService.dailyFocus(
                 for: day, workspace: workspace, store: modelContext, focusLimit: focusLimit
