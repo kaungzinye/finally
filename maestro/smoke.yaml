@@ -2,4 +2,10 @@ appId: com.kaungzinye.finally
 ---
 - launchApp:
     clearState: true
-- assertVisible: "Connect to Notion"
+- extendedWaitUntil:
+    visible: "Choose where your tasks live."
+    timeout: 15000
+- assertVisible:
+    id: "connect-notion-provider"
+- assertVisible:
+    id: "connect-server-provider"

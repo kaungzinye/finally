@@ -28,7 +28,7 @@ extension View {
             .listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 0, trailing: 16))
     }
 
-    /// Floating chrome: liquid glass on iOS 26, a thin material with a hairline before it.
+    /// Floating chrome uses Liquid Glass on iOS 26+ and thin material on iOS 17–18.
     @ViewBuilder
     func glassSurface<S: Shape>(in shape: S) -> some View {
         if #available(iOS 26, *) {

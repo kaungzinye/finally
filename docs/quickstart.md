@@ -2,7 +2,7 @@
 
 ## Prerequisites
 
-1. **Xcode 15+** (for iOS 17 / SwiftUI support)
+1. **Xcode 26.6+** to compile the iOS 26 Liquid Glass APIs
 2. **Apple Developer account** (Team ID: GN4UMU6766)
 3. **Notion account** with a public integration created at https://www.notion.so/my-integrations
 4. **Vercel account** (free tier) for the OAuth token exchange serverless function
@@ -128,7 +128,26 @@ Finally/
 
 ## Running the Project
 
-1. Open `Finally.xcodeproj` in Xcode 15+
+1. Open `Finally.xcodeproj` in Xcode 26.6+
 2. Set the scheme to the main app target
 3. Build and run on iPhone simulator (iOS 17+) or device
-4. On first launch, tap "Connect to Notion" to begin the OAuth flow
+4. On first launch, choose Notion or Finally Server as your task provider
+
+## Supported iOS versions
+
+The app, widget, and test targets support iOS 17.0 and later. iOS 17–18 use
+material surfaces and bordered primary buttons. iOS 26+ use Liquid Glass.
+The deployment target stays at iOS 17 when building with a newer SDK.
+
+`FinallyUITests/LaunchTests.swift` verifies first-use onboarding, all four tabs,
+and inline task creation. Run it on a fresh simulator with each runtime:
+
+```bash
+xcodebuild test -project Finally.xcodeproj -scheme Finally \
+  -destination 'platform=iOS Simulator,id=<simulator-uuid>' \
+  -only-testing:FinallyUITests CODE_SIGNING_ALLOWED=NO
+```
+
+For a physical iPhone, pair it with the Mac, enable Developer Mode in Settings
+under Privacy & Security, and confirm Enable after the phone restarts. Use an
+Xcode version with device support for the phone's iOS version.

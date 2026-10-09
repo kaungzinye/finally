@@ -110,6 +110,7 @@ private extension View {
                         .foregroundStyle(Palette.ink)
                         .frame(width: 56, height: 56)
                         .glassSurface(in: Circle())
+                        .contentShape(Circle())
                 }
                 .buttonStyle(.plain)
                 .padding(16)
