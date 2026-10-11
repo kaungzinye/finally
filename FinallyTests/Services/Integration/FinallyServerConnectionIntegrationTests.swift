@@ -504,16 +504,16 @@ final class FinallyServerConnectionIntegrationTests: XCTestCase {
                 body = #"[{"id":42,"title":"Personal"}]"#
                 status = 200
             case ("POST", "/api/v2/finally/projects/42/tasks"):
-                body = #"{"id":1,"project_id":42,"title":"Plan tomorrow","revision":0,"done":false}"#
+                body = #"{"id":1,"project_id":42,"title":"Plan tomorrow","revision":0,"deadline_has_time":false,"reminder_rules":[],"done":false}"#
                 status = 201
             case ("GET", "/api/v2/finally/tasks/1"):
-                body = #"{"id":1,"project_id":42,"title":"Plan tomorrow","revision":0,"done":false}"#
+                body = #"{"id":1,"project_id":42,"title":"Plan tomorrow","revision":0,"deadline_has_time":false,"reminder_rules":[],"done":false}"#
                 status = 200
             case ("PUT", "/api/v2/finally/tasks/1"):
-                body = #"{"id":1,"project_id":42,"title":"Plan focused tomorrow","revision":0,"done":false}"#
+                body = #"{"id":1,"project_id":42,"title":"Plan focused tomorrow","revision":0,"deadline_has_time":false,"reminder_rules":[],"done":false}"#
                 status = 200
             case ("POST", "/api/v2/finally/tasks/1/complete"):
-                body = #"{"id":1,"project_id":42,"title":"Plan focused tomorrow","revision":0,"done":true}"#
+                body = #"{"id":1,"project_id":42,"title":"Plan focused tomorrow","revision":0,"deadline_has_time":false,"reminder_rules":[],"done":true}"#
                 status = 200
             case ("DELETE", "/api/v2/finally/tasks/1"):
                 body = ""
@@ -567,9 +567,9 @@ final class FinallyServerConnectionIntegrationTests: XCTestCase {
             requestedPages.append(page)
             let body: String
             if page == "1" {
-                body = #"{"items":[{"id":1,"project_id":42,"title":"First","revision":0,"done":false}],"total":2,"page":1,"per_page":1,"total_pages":2}"#
+                body = #"{"items":[{"id":1,"project_id":42,"title":"First","revision":0,"deadline_has_time":false,"reminder_rules":[],"done":false}],"total":2,"page":1,"per_page":1,"total_pages":2}"#
             } else {
-                body = #"{"items":[{"id":2,"project_id":42,"title":"Second","revision":0,"done":true}],"total":2,"page":2,"per_page":1,"total_pages":2}"#
+                body = #"{"items":[{"id":2,"project_id":42,"title":"Second","revision":0,"deadline_has_time":false,"reminder_rules":[],"done":true}],"total":2,"page":2,"per_page":1,"total_pages":2}"#
             }
             return (
                 HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: nil, headerFields: nil)!,

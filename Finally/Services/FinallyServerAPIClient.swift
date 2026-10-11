@@ -2,6 +2,8 @@ import Foundation
 
 struct FinallyServerTask: Equatable, Sendable {
     let revision: Int64
+    let deadlineHasTime: Bool
+    let reminders: [TaskReminder]
     let id: String
     let projectID: Int64
     let title: String
@@ -18,8 +20,12 @@ struct FinallyServerTask: Equatable, Sendable {
         plannedDay: Date? = nil,
         deadline: Date? = nil,
         priority: TaskPriority? = nil,
-        revision: Int64 = 0
+        revision: Int64 = 0,
+        deadlineHasTime: Bool? = nil,
+        reminders: [TaskReminder] = []
     ) {
+        self.deadlineHasTime = deadlineHasTime ?? (deadline != nil)
+        self.reminders = reminders
         self.revision = revision
         self.id = id
         self.projectID = projectID
@@ -34,6 +40,8 @@ struct FinallyServerTask: Equatable, Sendable {
 struct FinallyServerTaskMutation: Codable, Equatable, Sendable {
     var baseRevision: Int64 = 0
     var changedFields: Set<String>?
+    let deadlineHasTime: Bool
+    let reminders: [TaskReminder]
     let title: String
     let isCompleted: Bool
     let plannedDay: Date?
@@ -45,8 +53,12 @@ struct FinallyServerTaskMutation: Codable, Equatable, Sendable {
         isCompleted: Bool = false,
         plannedDay: Date? = nil,
         deadline: Date? = nil,
-        priority: TaskPriority? = nil
+        priority: TaskPriority? = nil,
+        deadlineHasTime: Bool = false,
+        reminders: [TaskReminder] = []
     ) {
+        self.deadlineHasTime = deadlineHasTime
+        self.reminders = reminders
         self.title = title
         self.isCompleted = isCompleted
         self.plannedDay = plannedDay
@@ -180,12 +192,16 @@ final class URLSessionFinallyServerAPIClient: FinallyServerAPIClient {
         let title: String
         let done: Bool
         let revision: Int64
+        let deadlineHasTime: Bool
+        let reminderRules: [FinallyServerReminderRule]
         let startDate: String?
         let deadline: String?
         let priority: Int64?
 
         enum CodingKeys: String, CodingKey {
             case id, title, done, revision
+            case deadlineHasTime = "deadline_has_time"
+            case reminderRules = "reminder_rules"
             case projectID = "project_id"
             case startDate = "start_date"
             case deadline = "due_date"
@@ -193,22 +209,27 @@ final class URLSessionFinallyServerAPIClient: FinallyServerAPIClient {
         }
 
         var task: FinallyServerTask {
-            FinallyServerTask(
-                id: String(id),
-                projectID: projectID,
-                title: title,
-                isCompleted: done,
-                plannedDay: Self.parseDate(startDate),
-                deadline: Self.parseDate(deadline),
-                priority: Self.taskPriority(priority ?? 0),
-                revision: revision
-            )
+            get throws {
+                let reminders = try reminderRules.map { try $0.reminder() }
+                return FinallyServerTask(
+                    id: String(id),
+                    projectID: projectID,
+                    title: title,
+                    isCompleted: done,
+                    plannedDay: Self.parseDate(startDate),
+                    deadline: Self.parseDate(deadline),
+                    priority: Self.taskPriority(priority ?? 0),
+                    revision: revision,
+                    deadlineHasTime: deadlineHasTime,
+                    reminders: reminders
+                )
+                }
         }
 
         private static func parseDate(_ value: String?) -> Date? {
             guard let value,
                   !value.hasPrefix("0001-01-01"),
-                  let date = ISO8601DateFormatter().date(from: value) else { return nil }
+                  let date = FinallyServerTimestamp.date(from: value) else { return nil }
             return date
         }
 
@@ -264,7 +285,7 @@ final class URLSessionFinallyServerAPIClient: FinallyServerAPIClient {
             guard response.page == page, (0...10_000).contains(response.totalPages) else {
                 throw FinallyServerClientError.invalidResponse
             }
-            tasks.append(contentsOf: response.items.map(\.task))
+            tasks.append(contentsOf: try response.items.map { try $0.task })
             page += 1
             if page > response.totalPages { break }
         } while true
@@ -277,12 +298,12 @@ final class URLSessionFinallyServerAPIClient: FinallyServerAPIClient {
             method: "POST",
             body: taskBody(mutation)
         )
-        return response.task
+        return try response.task
     }
 
     func readTask(id: String) async throws -> FinallyServerTask {
         let response: RemoteTask = try await send(path: "tasks/\(id)", method: "GET")
-        return response.task
+        return try response.task
     }
 
     func updateTask(id: String, mutation: FinallyServerTaskMutation) async throws -> FinallyServerTask {
@@ -291,12 +312,12 @@ final class URLSessionFinallyServerAPIClient: FinallyServerAPIClient {
             method: "PUT",
             body: ["base_revision": mutation.baseRevision, "client": "phone", "fields": EncodableDictionary(taskBody(mutation).filter { mutation.changedFields?.contains($0.key) ?? true })]
         )
-        return response.task
+        return try response.task
     }
 
     func completeTask(id: String, revision: Int64) async throws -> FinallyServerTask {
         let response: RemoteTask = try await send(path: "tasks/\(id)/complete", method: "POST", queryItems: [URLQueryItem(name: "base_revision", value: String(revision)), URLQueryItem(name: "client", value: "phone")])
-        return response.task
+        return try response.task
     }
 
     func deleteTask(id: String, revision: Int64) async throws {
@@ -328,13 +349,14 @@ final class URLSessionFinallyServerAPIClient: FinallyServerAPIClient {
     }
 
     private func taskBody(_ mutation: FinallyServerTaskMutation) -> [String: any Encodable] {
-        let formatter = ISO8601DateFormatter()
         return [
             "title": mutation.title,
             "done": mutation.isCompleted,
-            "start_date": mutation.plannedDay.map { formatter.string(from: $0) } as String?,
-            "due_date": mutation.deadline.map { formatter.string(from: $0) } as String?,
+            "start_date": mutation.plannedDay.map { FinallyServerTimestamp.string(from: $0) } as String?,
+            "due_date": mutation.deadline.map { FinallyServerTimestamp.string(from: $0) } as String?,
             "priority": providerPriority(mutation.priority),
+            "deadline_has_time": mutation.deadlineHasTime,
+            "reminder_rules": mutation.reminders.map(FinallyServerReminderRule.init),
         ]
     }
 
@@ -404,7 +426,7 @@ final class URLSessionFinallyServerAPIClient: FinallyServerAPIClient {
         case 404: throw FinallyServerClientError.notFound
         case 409:
             guard let conflict = try? decoder.decode(ConflictResponse.self, from: data) else { throw FinallyServerClientError.invalidResponse }
-            throw FinallyServerClientError.conflict(current: conflict.current.task, fields: conflict.conflicting_fields)
+            throw FinallyServerClientError.conflict(current: try conflict.current.task, fields: conflict.conflicting_fields)
         default: throw FinallyServerClientError.serverUnavailable
         }
     }

@@ -19,9 +19,7 @@ final class FinallyServerTaskProviderAdapter: TaskProviderAdapter {
         .plannedDay: .lossy(
             reason: "Finally Server carries planned days as timestamps, so a remotely edited planned day arrives timed."
         ),
-        .deadline: .lossy(
-            reason: "Finally Server carries deadlines as timestamps, so a remotely edited deadline arrives timed."
-        ),
+        .deadline: .lossless,
         .state: .lossy(
             reason: "Finally Server records completion only, so In progress stays on this device."
         ),
@@ -32,7 +30,7 @@ final class FinallyServerTaskProviderAdapter: TaskProviderAdapter {
         .priority: .lossless,
         .subtasks: .unsupported(reason: "Finally Server does not expose parent relationships."),
         .recurrence: .unsupported(reason: "Finally Server does not expose recurrence."),
-        .reminders: .unsupported(reason: "Finally Server does not expose reminders."),
+        .reminders: .lossless,
     ]
     let fieldSupport = canonicalFieldSupport
 
@@ -211,13 +209,9 @@ final class FinallyServerTaskProviderAdapter: TaskProviderAdapter {
         task.status = canonicalStatus(remoteIsCompleted: remote.isCompleted, local: task.status)
         // A planned day is date-only, so the server's timestamp reads as its calendar day.
         task.plannedDay = remote.plannedDay.map { Calendar.current.startOfDay(for: $0) }
-        // Finally Server carries every deadline as a timestamp, so a payload cannot say whether
-        // the user meant a whole day or a moment. Keep the local reading while the instant is
-        // unchanged, and read a genuinely new instant as timed.
-        if !isSameInstant(task.deadline, remote.deadline) {
-            task.deadline = remote.deadline
-            task.deadlineHasTime = remote.deadline != nil
-        }
+        task.deadline = remote.deadline
+        task.deadlineHasTime = remote.deadlineHasTime
+        task.taskReminders = remote.reminders
         task.priority = remote.priority
         task.serverRevision = remote.revision
         task.serverSnapshotJSON = task.serverMutation.json
@@ -237,16 +231,4 @@ final class FinallyServerTaskProviderAdapter: TaskProviderAdapter {
         return local == .done ? .notStarted : local
     }
 
-    /// The wire format carries whole seconds, so a value that survived a round trip can come
-    /// back with its fractional part trimmed.
-    private func isSameInstant(_ local: Date?, _ remote: Date?) -> Bool {
-        switch (local, remote) {
-        case (nil, nil):
-            return true
-        case let (local?, remote?):
-            return abs(local.timeIntervalSince(remote)) < 1
-        default:
-            return false
-        }
-    }
 }

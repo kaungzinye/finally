@@ -184,7 +184,7 @@ private struct CurrentPickCard: View {
             if recycled {
                 NotificationService.shared.rescheduleAllReminders(modelContext: modelContext)
             } else {
-                NotificationService.shared.cancelRemindersForTask(task)
+                NotificationService.shared.cancelRemindersForTask(task, modelContext: modelContext)
             }
         }
         Task {

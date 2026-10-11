@@ -74,6 +74,9 @@ struct FinallyApp: App {
                 guard let code else { return }
                 Task { await handleOAuthCallback(code: code) }
             }
+            .onReceive(NotificationCenter.default.publisher(for: .NSSystemTimeZoneDidChange)) { _ in
+                NotificationService.shared.rescheduleAllReminders(modelContext: ModelContext(appContainer))
+            }
             .onReceive(NotificationCenter.default.publisher(for: .notionSessionExpired)) { _ in
                 handleSessionExpired()
             }
@@ -130,6 +133,7 @@ struct FinallyApp: App {
         let token = KeychainHelper.readNotionToken()
         let serverCredentials = KeychainFinallyServerCredentialStore()
         let context = ModelContext(appContainer)
+        NotificationService.shared.rescheduleAllReminders(modelContext: context)
         let sessions = (try? context.fetch(FetchDescriptor<UserSession>())) ?? []
         let usableSessions = sessions.filter { session in
             switch session.providerIdentity {
@@ -179,8 +183,9 @@ struct FinallyApp: App {
     }
 
     private func runIncrementalSyncIfPossible() async {
-        guard sessionRoute == .tasks else { return }
         let context = ModelContext(appContainer)
+        NotificationService.shared.rescheduleAllReminders(modelContext: context)
+        guard sessionRoute == .tasks else { return }
         guard let session = try? context.selectedProviderWorkspace() else { return }
         try? await taskProvider.synchronize(.incremental, workspace: session, store: context)
     }

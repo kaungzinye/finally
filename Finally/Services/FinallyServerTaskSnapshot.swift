@@ -2,7 +2,7 @@ import Foundation
 
 extension FinallyServerTask {
     var mutation: FinallyServerTaskMutation {
-        FinallyServerTaskMutation(title: title, isCompleted: isCompleted, plannedDay: plannedDay.map { Calendar.current.startOfDay(for: $0) }, deadline: deadline, priority: priority)
+        FinallyServerTaskMutation(title: title, isCompleted: isCompleted, plannedDay: plannedDay.map { Calendar.current.startOfDay(for: $0) }, deadline: deadline, priority: priority, deadlineHasTime: deadlineHasTime, reminders: reminders)
     }
 }
 
@@ -23,6 +23,8 @@ extension FinallyServerTaskMutation {
         if isCompleted != other.isCompleted { fields.insert("done") }
         if !sameInstant(plannedDay, other.plannedDay) { fields.insert("start_date") }
         if !sameInstant(deadline, other.deadline) { fields.insert("due_date") }
+        if deadlineHasTime != other.deadlineHasTime { fields.formUnion(["due_date", "deadline_has_time"]) }
+        if reminders != other.reminders { fields.insert("reminder_rules") }
         if priority != other.priority { fields.insert("priority") }
         return fields
     }
@@ -38,7 +40,7 @@ extension FinallyServerTaskMutation {
 
 extension TaskItem {
     var serverMutation: FinallyServerTaskMutation {
-        FinallyServerTaskMutation(title: title, isCompleted: status == .done, plannedDay: plannedDay, deadline: deadline, priority: priority)
+        FinallyServerTaskMutation(title: title, isCompleted: status == .done, plannedDay: plannedDay, deadline: deadline, priority: priority, deadlineHasTime: deadlineHasTime, reminders: taskReminders)
     }
 
     var acceptedServerMutation: FinallyServerTaskMutation? { .decode(serverSnapshotJSON) }
@@ -49,6 +51,8 @@ extension TaskItem {
         if fields.contains("done") { status = mutation.isCompleted ? .done : .notStarted }
         if fields.contains("start_date") { plannedDay = mutation.plannedDay }
         if fields.contains("due_date") { deadline = mutation.deadline }
+        if fields.contains("deadline_has_time") { deadlineHasTime = mutation.deadlineHasTime }
+        if fields.contains("reminder_rules") { taskReminders = mutation.reminders }
         if fields.contains("priority") { priority = mutation.priority }
     }
 
@@ -69,7 +73,7 @@ extension TaskItem {
         let localStatus = status
         let local = serverMutation
         let fields = local.differences(from: acceptedServerMutation ?? current)
-        applyServerMutation(current, fields: ["title", "done", "start_date", "due_date", "priority"])
+        applyServerMutation(current, fields: ["title", "done", "start_date", "due_date", "priority", "deadline_has_time", "reminder_rules"])
         if keepingPhoneEdits {
             applyServerMutation(local, fields: fields)
             if status != .done && localStatus == .inProgress { status = .inProgress }
