@@ -12,7 +12,7 @@ Issue #15 defines phone-priority task writes. Finally Server task reads and list
 }
 ```
 
-The supported fields are `title`, `done`, `start_date`, `due_date`, and `priority`. Omitted fields retain accepted values. Null clears a date. Title, completion, and priority require values. Priority ranges from zero to four.
+The supported fields are `title`, `done`, `start_date`, `due_date`, `priority`, `deadline_has_time`, and `reminder_rules`. [Task reminder rules](task-reminders.md) defines deadline precision and reminder payloads. Omitted fields retain accepted values. Null clears a date. Title, completion, and priority require values. Priority ranges from zero to four.
 
 An API write whose submitted field changed after its base revision receives HTTP 409 with `current` and `conflicting_fields`. Unrelated fields merge. An explicit phone edit wins a same-field API change; a concurrent phone edit requires review. The server claims each revision and applies its fields in one transaction.
 
