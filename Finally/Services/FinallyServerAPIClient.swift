@@ -1,6 +1,7 @@
 import Foundation
 
 struct FinallyServerTask: Equatable, Sendable {
+    let revision: Int64
     let id: String
     let projectID: Int64
     let title: String
@@ -16,8 +17,10 @@ struct FinallyServerTask: Equatable, Sendable {
         isCompleted: Bool,
         plannedDay: Date? = nil,
         deadline: Date? = nil,
-        priority: TaskPriority? = nil
+        priority: TaskPriority? = nil,
+        revision: Int64 = 0
     ) {
+        self.revision = revision
         self.id = id
         self.projectID = projectID
         self.title = title
@@ -28,7 +31,9 @@ struct FinallyServerTask: Equatable, Sendable {
     }
 }
 
-struct FinallyServerTaskMutation: Equatable, Sendable {
+struct FinallyServerTaskMutation: Codable, Equatable, Sendable {
+    var baseRevision: Int64 = 0
+    var changedFields: Set<String>?
     let title: String
     let isCompleted: Bool
     let plannedDay: Date?
@@ -97,6 +102,7 @@ enum FinallyServerClientError: Error, LocalizedError {
     case forbidden
     case notFound
     case duplicateLocalTaskIdentity(String)
+    case conflict(current: FinallyServerTask, fields: [String])
     case serverUnavailable
 
     var errorDescription: String? {
@@ -112,9 +118,11 @@ enum FinallyServerClientError: Error, LocalizedError {
         case .forbidden:
             return "This account cannot edit the selected Finally Server project."
         case .notFound:
-            return "This task is no longer available from Finally Server."
+            return "This server task is unavailable. Review your saved phone edit."
         case let .duplicateLocalTaskIdentity(taskID):
             return "Finally found multiple local tasks for server task \(taskID). Remove the duplicate and sync again."
+        case .conflict:
+            return "Review the task conflict. Your phone edits remain saved."
         case .serverUnavailable:
             return "Finally Server is unavailable. Your changes remain on this device."
         }
@@ -128,8 +136,8 @@ protocol FinallyServerAPIClient: AnyObject {
     func createTask(projectID: Int64, mutation: FinallyServerTaskMutation) async throws -> FinallyServerTask
     func readTask(id: String) async throws -> FinallyServerTask
     func updateTask(id: String, mutation: FinallyServerTaskMutation) async throws -> FinallyServerTask
-    func completeTask(id: String) async throws -> FinallyServerTask
-    func deleteTask(id: String) async throws
+    func completeTask(id: String, revision: Int64) async throws -> FinallyServerTask
+    func deleteTask(id: String, revision: Int64) async throws
     /// The Daily Focus stored for one project and day, or nil when the server holds none.
     func readDailyFocus(projectID: Int64, day: String) async throws -> FinallyServerDailyFocus?
     func writeDailyFocus(
@@ -144,12 +152,13 @@ extension FinallyServerAPIClient {
         try await createTask(projectID: projectID, mutation: FinallyServerTaskMutation(title: title))
     }
 
-    func updateTask(id: String, title: String, isCompleted: Bool) async throws -> FinallyServerTask {
-        try await updateTask(
-            id: id,
-            mutation: FinallyServerTaskMutation(title: title, isCompleted: isCompleted)
-        )
+    func updateTask(id: String, title: String, isCompleted: Bool, revision: Int64) async throws -> FinallyServerTask {
+        var mutation = FinallyServerTaskMutation(title: title, isCompleted: isCompleted)
+        mutation.baseRevision = revision
+        mutation.changedFields = ["title", "done"]
+        return try await updateTask(id: id, mutation: mutation)
     }
+
 }
 
 final class URLSessionFinallyServerAPIClient: FinallyServerAPIClient {
@@ -170,12 +179,13 @@ final class URLSessionFinallyServerAPIClient: FinallyServerAPIClient {
         let projectID: Int64
         let title: String
         let done: Bool
+        let revision: Int64
         let startDate: String?
         let deadline: String?
         let priority: Int64?
 
         enum CodingKeys: String, CodingKey {
-            case id, title, done
+            case id, title, done, revision
             case projectID = "project_id"
             case startDate = "start_date"
             case deadline = "due_date"
@@ -190,7 +200,8 @@ final class URLSessionFinallyServerAPIClient: FinallyServerAPIClient {
                 isCompleted: done,
                 plannedDay: Self.parseDate(startDate),
                 deadline: Self.parseDate(deadline),
-                priority: Self.taskPriority(priority ?? 0)
+                priority: Self.taskPriority(priority ?? 0),
+                revision: revision
             )
         }
 
@@ -278,18 +289,18 @@ final class URLSessionFinallyServerAPIClient: FinallyServerAPIClient {
         let response: RemoteTask = try await send(
             path: "tasks/\(id)",
             method: "PUT",
-            body: taskBody(mutation)
+            body: ["base_revision": mutation.baseRevision, "client": "phone", "fields": EncodableDictionary(taskBody(mutation).filter { mutation.changedFields?.contains($0.key) ?? true })]
         )
         return response.task
     }
 
-    func completeTask(id: String) async throws -> FinallyServerTask {
-        let response: RemoteTask = try await send(path: "tasks/\(id)/complete", method: "POST")
+    func completeTask(id: String, revision: Int64) async throws -> FinallyServerTask {
+        let response: RemoteTask = try await send(path: "tasks/\(id)/complete", method: "POST", queryItems: [URLQueryItem(name: "base_revision", value: String(revision)), URLQueryItem(name: "client", value: "phone")])
         return response.task
     }
 
-    func deleteTask(id: String) async throws {
-        let _: EmptyResponse = try await send(path: "tasks/\(id)", method: "DELETE")
+    func deleteTask(id: String, revision: Int64) async throws {
+        let _: EmptyResponse = try await send(path: "tasks/\(id)", method: "DELETE", queryItems: [URLQueryItem(name: "base_revision", value: String(revision)), URLQueryItem(name: "client", value: "phone")])
     }
 
     func readDailyFocus(projectID: Int64, day: String) async throws -> FinallyServerDailyFocus? {
@@ -338,6 +349,7 @@ final class URLSessionFinallyServerAPIClient: FinallyServerAPIClient {
     }
 
     private struct EmptyResponse: Decodable {}
+    private struct ConflictResponse: Decodable { let current: RemoteTask; let conflicting_fields: [String] }
 
     private func send<Response: Decodable>(
         path: String,
@@ -390,6 +402,9 @@ final class URLSessionFinallyServerAPIClient: FinallyServerAPIClient {
         case 403 where !authenticated: throw FinallyServerClientError.invalidCredentials
         case 403: throw FinallyServerClientError.forbidden
         case 404: throw FinallyServerClientError.notFound
+        case 409:
+            guard let conflict = try? decoder.decode(ConflictResponse.self, from: data) else { throw FinallyServerClientError.invalidResponse }
+            throw FinallyServerClientError.conflict(current: conflict.current.task, fields: conflict.conflicting_fields)
         default: throw FinallyServerClientError.serverUnavailable
         }
     }

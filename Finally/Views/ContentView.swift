@@ -1,4 +1,5 @@
 import SwiftUI
+import SwiftData
 
 struct ContentView: View {
     @Environment(NavigationRouter.self) private var router
@@ -7,6 +8,9 @@ struct ContentView: View {
     @Environment(DailyFocusService.self) private var dailyFocusService
     @Environment(\.modelContext) private var modelContext
 
+    @Query private var tasks: [TaskItem]
+    @Query private var sessions: [UserSession]
+    @State private var conflictTask: TaskItem?
     @State private var showCreator = false
 
     var body: some View {
@@ -57,6 +61,7 @@ struct ContentView: View {
                     .transition(.move(edge: .bottom).combined(with: .opacity))
             }
         }
+        .sheet(item: $conflictTask) { TaskConflictReviewView(task: $0) }
         .onChange(of: router.showNewTaskSheet) { _, show in
             guard show else { return }
             openCreator()
@@ -69,6 +74,11 @@ struct ContentView: View {
         if !networkService.isOnline {
             Callout(icon: "wifi.slash", message: "You're offline. Changes will sync when connection returns.")
                 .transition(.move(edge: .top).combined(with: .opacity))
+        }
+
+        if let conflict = tasks.first(where: { $0.providerWorkspaceId == sessions.selectedProviderWorkspace?.workspaceId && ($0.serverConflictJSON != nil || $0.serverTaskMissing) }) {
+            Button("Review conflict: \(conflict.title)") { conflictTask = conflict }
+                .buttonStyle(InkButtonStyle())
         }
 
         if let message = taskProvider.lastError {

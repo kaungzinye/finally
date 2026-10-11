@@ -49,6 +49,7 @@
 		5BFF0F024F1538934C7D9EFC /* SyncServiceNotionMappingIntegrationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 42B3711F01223345C22AC39D /* SyncServiceNotionMappingIntegrationTests.swift */; };
 		5D38206DAB3C2F743DAF14E9 /* MockFinallyServerAPIClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 92CF91D6E32CC4A8D97E20CC /* MockFinallyServerAPIClient.swift */; };
 		5E0CDA7D321610870C57B80D /* Phase6BSubtaskSchedulerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 51287207D87EE2EEC6133185 /* Phase6BSubtaskSchedulerTests.swift */; };
+		67ECB5F631E2F9E7C215AA6A /* TaskConflictReviewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A8FABBAD51C4FA108750E5D /* TaskConflictReviewView.swift */; };
 		68989CD7315513B128C2F221 /* NotificationServiceUnitTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3C603D9DD83AEBE3EBCFE5F8 /* NotificationServiceUnitTests.swift */; };
 		6AC06A56A17FF5DD2EF16120 /* FinallyServerAPIClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4411D70BC941BFFC9D0B540D /* FinallyServerAPIClient.swift */; };
 		6B3F6A15D72DE7B329EEAFBE /* TaskRowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EAD355905598E97021A8F3AB /* TaskRowView.swift */; };
@@ -75,6 +76,7 @@
 		A44B70C6027FB5BFC252B8CA /* NavigationRouter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 33A9FE20A98C304B52360113 /* NavigationRouter.swift */; };
 		A59E2BE759B908F6E72C69D3 /* TaskPresentationSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0DC87C0E85822FBBDBF2B9E3 /* TaskPresentationSnapshot.swift */; };
 		A7CE644462848F5D9AAED54E /* ProviderSessionRoute.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9F18B2E716471669AEAC8FE4 /* ProviderSessionRoute.swift */; };
+		A85B8C6B56396453AD68F782 /* FinallyServerTaskSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = D6309FEABF2B53C34BE78097 /* FinallyServerTaskSnapshot.swift */; };
 		A8B9D08ACCC5488F01A66707 /* NotionOnboardingIntegrationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A7A914B5B39AAD90D8A646CF /* NotionOnboardingIntegrationTests.swift */; };
 		A9060BC5E46C493F61E105DD /* DatePickerSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8AFC4C0D33FEEB196CFC5B9E /* DatePickerSheet.swift */; };
 		AA82CDE694D91D5E61C9CBDE /* RecurrenceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BDF3A5C0B718FB3F9D18C039 /* RecurrenceTests.swift */; };
@@ -98,6 +100,7 @@
 		DCA78CA7E0DC752FFBA0F504 /* E2EConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8875DF7703CDE08E6E96792D /* E2EConfig.swift */; };
 		EE23D4C64F30E93498271399 /* MockNotionAPIClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 17927D5217F64C91979B6708 /* MockNotionAPIClient.swift */; };
 		EEB9D6E96677AD8EAB1DC409 /* Enums.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5DF9E28C5C320BE1EE73448A /* Enums.swift */; };
+		F3ACAD85A390E0059627C8CB /* PhonePriorityConflictTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 32E0D92C672C8159DFD1EBEE /* PhonePriorityConflictTests.swift */; };
 		F6B3FF871A5A1CF311AE3AB5 /* FinallyServerAccountService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F9EF412B0991CDB2D31BB700 /* FinallyServerAccountService.swift */; };
 		F7E273C1E9278F742980DFFE /* DatabasePickerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0B13C11F80B93B61065C6CAD /* DatabasePickerView.swift */; };
 		F95D4E81DBCE8109F5CB43CC /* DailyFocusSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB3FBFAEF9F852010C48CD27 /* DailyFocusSection.swift */; };
@@ -149,8 +152,10 @@
 		17927D5217F64C91979B6708 /* MockNotionAPIClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MockNotionAPIClient.swift; sourceTree = "<group>"; };
 		194B2A1A615910ADA6920C26 /* DailyFocusPickerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DailyFocusPickerView.swift; sourceTree = "<group>"; };
 		19D6396C60EC66DD7C32ED4D /* KeychainHelper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeychainHelper.swift; sourceTree = "<group>"; };
+		1A8FABBAD51C4FA108750E5D /* TaskConflictReviewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskConflictReviewView.swift; sourceTree = "<group>"; };
 		20F4BC274C5EABE7503A6A36 /* SearchFilterView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchFilterView.swift; sourceTree = "<group>"; };
 		2BB0C1AC47E9326D0A6E9F36 /* PriorityPicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PriorityPicker.swift; sourceTree = "<group>"; };
+		32E0D92C672C8159DFD1EBEE /* PhonePriorityConflictTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhonePriorityConflictTests.swift; sourceTree = "<group>"; };
 		33A9FE20A98C304B52360113 /* NavigationRouter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NavigationRouter.swift; sourceTree = "<group>"; };
 		3ABC777961172CED511BBF03 /* Phase6BTaskReminderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Phase6BTaskReminderTests.swift; sourceTree = "<group>"; };
 		3AF8954557BC6A8854C1F5D7 /* Phase6BTaskItemTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Phase6BTaskItemTests.swift; sourceTree = "<group>"; };
@@ -221,6 +226,7 @@
 		CCE5F29F716D6CB80D87B657 /* ParentTaskPicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ParentTaskPicker.swift; sourceTree = "<group>"; };
 		D0D27B0A70BF946EBDF00B56 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		D3442B96662ADFB087A822D4 /* DatabaseSetupGuideView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DatabaseSetupGuideView.swift; sourceTree = "<group>"; };
+		D6309FEABF2B53C34BE78097 /* FinallyServerTaskSnapshot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FinallyServerTaskSnapshot.swift; sourceTree = "<group>"; };
 		DFAA764278E2B2298E8B7404 /* ProjectItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProjectItem.swift; sourceTree = "<group>"; };
 		E210597AFF8D4995D1175AA3 /* InlineReminderPicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InlineReminderPicker.swift; sourceTree = "<group>"; };
 		E23557EFB66C7C96C459D609 /* TaskReminder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskReminder.swift; sourceTree = "<group>"; };
@@ -344,6 +350,7 @@
 			children = (
 				837D45B286A6CB5EEF5A4D27 /* InlineTaskCreator.swift */,
 				A9D29A2B7B51E63416C26971 /* ReminderListView.swift */,
+				1A8FABBAD51C4FA108750E5D /* TaskConflictReviewView.swift */,
 				44FC30A47CA1D9B4F15234D2 /* TaskDetailView.swift */,
 				EAD355905598E97021A8F3AB /* TaskRowView.swift */,
 			);
@@ -357,6 +364,7 @@
 				F9EF412B0991CDB2D31BB700 /* FinallyServerAccountService.swift */,
 				4411D70BC941BFFC9D0B540D /* FinallyServerAPIClient.swift */,
 				B04AEEE09B1DFE7213BE2100 /* FinallyServerTaskProviderAdapter.swift */,
+				D6309FEABF2B53C34BE78097 /* FinallyServerTaskSnapshot.swift */,
 				44DC53FF019C668FF0D59C8D /* FinallyServerWorkspaceConfiguration.swift */,
 				19D6396C60EC66DD7C32ED4D /* KeychainHelper.swift */,
 				C9438CA4430DF5A84E08C34F /* NetworkService.swift */,
@@ -424,6 +432,7 @@
 				4DBCF7ABA6666B3B50A24B37 /* DailyFocusServiceTests.swift */,
 				432E1F70246CCDDAE110402D /* FinallyServerConnectionIntegrationTests.swift */,
 				A7A914B5B39AAD90D8A646CF /* NotionOnboardingIntegrationTests.swift */,
+				32E0D92C672C8159DFD1EBEE /* PhonePriorityConflictTests.swift */,
 				42B3711F01223345C22AC39D /* SyncServiceNotionMappingIntegrationTests.swift */,
 				62E26D76ABE69007EDD2D951 /* TaskProviderContractTests.swift */,
 			);
@@ -637,6 +646,7 @@
 				5E0CDA7D321610870C57B80D /* Phase6BSubtaskSchedulerTests.swift in Sources */,
 				ADEA4999510EE5FB567BDFEE /* Phase6BTaskItemTests.swift in Sources */,
 				7F28CFF83DE1D846D59CA0F7 /* Phase6BTaskReminderTests.swift in Sources */,
+				F3ACAD85A390E0059627C8CB /* PhonePriorityConflictTests.swift in Sources */,
 				8FF945EA57E63C06DCC6AFE8 /* PropertyRoundtripE2ETests.swift in Sources */,
 				AA82CDE694D91D5E61C9CBDE /* RecurrenceTests.swift in Sources */,
 				B2F654397FD23CCA177DA1AE /* SchemaValidatorUnitTests.swift in Sources */,
@@ -683,6 +693,7 @@
 				F6B3FF871A5A1CF311AE3AB5 /* FinallyServerAccountService.swift in Sources */,
 				CD625AC099CD511563797F3A /* FinallyServerConnectView.swift in Sources */,
 				27BF1D534BBE6EB6981C137C /* FinallyServerTaskProviderAdapter.swift in Sources */,
+				A85B8C6B56396453AD68F782 /* FinallyServerTaskSnapshot.swift in Sources */,
 				3C2153D7726A70A8C8FA36D9 /* FinallyServerWorkspaceConfiguration.swift in Sources */,
 				77E5A5E02CC2F6EF149C682F /* FinallyStyle.swift in Sources */,
 				2BA18E36246E875B2071B500 /* InboxView.swift in Sources */,
@@ -716,6 +727,7 @@
 				75C247FB0B0194F59F0C4E73 /* SubtaskScheduler.swift in Sources */,
 				CAAB2900354A6287A3F6EE19 /* SyncService.swift in Sources */,
 				57CE613AD4B410992C4696B8 /* TagPicker.swift in Sources */,
+				67ECB5F631E2F9E7C215AA6A /* TaskConflictReviewView.swift in Sources */,
 				74C65A22FA4C6AEEF8B6E9EB /* TaskDetailView.swift in Sources */,
 				1462F1EB97E6FA5647BE0E69 /* TaskItem.swift in Sources */,
 				A59E2BE759B908F6E72C69D3 /* TaskPresentationSnapshot.swift in Sources */,

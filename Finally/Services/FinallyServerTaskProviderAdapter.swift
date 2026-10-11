@@ -76,51 +76,85 @@ final class FinallyServerTaskProviderAdapter: TaskProviderAdapter {
         let tasks = try store.fetch(FetchDescriptor<TaskItem>()).filter {
             $0.providerWorkspaceId == workspaceID && $0.isDirty
         }
-
         for task in tasks {
+            if task.serverTaskMissing { throw FinallyServerClientError.notFound }
+            if task.serverConflictJSON != nil {
+                do {
+                    let current = try await api.readTask(id: task.externalTaskID)
+                    storeConflict(current, fields: task.serverConflictFields, task: task)
+                    try store.save()
+                    throw FinallyServerClientError.conflict(current: current, fields: task.serverConflictFields)
+                } catch FinallyServerClientError.notFound {
+                    task.serverTaskMissing = true
+                    try store.save()
+                    throw FinallyServerClientError.notFound
+                }
+            }
             if task.isDeleted {
                 if task.lastSyncedAt != nil {
-                    try await api.deleteTask(id: task.externalTaskID)
+                    do { try await api.deleteTask(id: task.externalTaskID, revision: task.serverRevision) }
+                    catch FinallyServerClientError.notFound {
+                        store.delete(task)
+                        try store.save()
+                        continue
+                    }
+                    catch FinallyServerClientError.conflict(let current, let fields) {
+                        storeConflict(current, fields: fields, task: task)
+                        try store.save()
+                        throw FinallyServerClientError.conflict(current: current, fields: fields)
+                    }
                 }
                 store.delete(task)
                 try store.save()
                 continue
             }
-
-            let remote: FinallyServerTask
-            let mutation = FinallyServerTaskMutation(
-                title: task.title,
-                isCompleted: false,
-                plannedDay: task.plannedDay,
-                deadline: task.deadline,
-                priority: task.priority
-            )
-            if task.lastSyncedAt == nil {
-                let created = try await api.createTask(projectID: projectID, mutation: mutation)
-                task.externalTaskID = created.id
+            let outgoingStatus = task.status
+            let outgoing = task.serverMutation
+            var mutation = outgoing
+            mutation.baseRevision = task.serverRevision
+            if let baseline = task.acceptedServerMutation {
+                mutation.changedFields = outgoing.differences(from: baseline)
+            } else if task.lastSyncedAt != nil {
+                throw FinallyServerClientError.invalidResponse
+            }
+            if mutation.changedFields?.isEmpty == true {
+                task.isDirty = false
+                try store.save()
+                continue
+            }
+            do {
+                let remote: FinallyServerTask
+                if task.lastSyncedAt == nil {
+                    remote = try await api.createTask(projectID: projectID, mutation: mutation)
+                    task.externalTaskID = remote.id
+                } else {
+                    remote = try await api.updateTask(id: task.externalTaskID, mutation: mutation)
+                }
+                let editsDuringPush = task.serverMutation
+                let statusDuringPush = task.status
+                try apply(remote, to: task, workspaceID: workspaceID, store: store)
+                let acknowledged = task.serverMutation
+                task.applyServerMutation(editsDuringPush, fields: editsDuringPush.differences(from: outgoing))
+                if statusDuringPush != outgoingStatus { task.status = statusDuringPush }
+                task.isDirty = !task.serverMutation.differences(from: acknowledged).isEmpty || task.isDeleted
                 task.lastSyncedAt = Date()
                 try store.save()
-                if task.status == .done {
-                    remote = try await api.completeTask(id: created.id)
-                } else {
-                    remote = created
-                }
-            } else if task.status == .done {
-                _ = try await api.updateTask(id: task.externalTaskID, mutation: mutation)
-                remote = try await api.completeTask(id: task.externalTaskID)
-            } else {
-                remote = try await api.updateTask(id: task.externalTaskID, mutation: mutation)
+            } catch FinallyServerClientError.notFound {
+                task.serverTaskMissing = true
+                try store.save()
+                throw FinallyServerClientError.notFound
+            } catch FinallyServerClientError.conflict(let current, let fields) {
+                storeConflict(current, fields: fields, task: task)
+                try store.save()
+                throw FinallyServerClientError.conflict(current: current, fields: fields)
             }
-            try apply(
-                remote,
-                to: task,
-                workspaceID: workspaceID,
-                store: store
-            )
-            task.isDirty = false
-            task.lastSyncedAt = Date()
-            try store.save()
         }
+    }
+
+    private func storeConflict(_ current: FinallyServerTask, fields: [String], task: TaskItem) {
+        task.serverConflictJSON = current.mutation.json
+        task.serverConflictFields = fields
+        task.serverRevision = current.revision
     }
 
     private func pullTasks(workspaceID: String, projectID: Int64, store: ModelContext) async throws {
@@ -185,6 +219,10 @@ final class FinallyServerTaskProviderAdapter: TaskProviderAdapter {
             task.deadlineHasTime = remote.deadline != nil
         }
         task.priority = remote.priority
+        task.serverRevision = remote.revision
+        task.serverSnapshotJSON = task.serverMutation.json
+        task.serverConflictJSON = nil
+        task.serverConflictFields = []
         let remoteProjectID = String(remote.projectID)
         let descriptor = FetchDescriptor<ProjectItem>(predicate: #Predicate<ProjectItem> { project in
             project.externalProjectID == remoteProjectID && project.providerWorkspaceId == workspaceID
