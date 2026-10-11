@@ -17,6 +17,11 @@ final class TaskItem {
     var remindersJSON: String?
     var lastEditedTime: Date?
     var lastSyncedAt: Date?
+    var serverRevision: Int64 = 0
+    var serverSnapshotJSON: String?
+    var serverTaskMissing: Bool = false
+    var serverConflictJSON: String?
+    var serverConflictFields: [String] = []
     var isDirty: Bool = false
     var isDeleted: Bool = false
     var providerWorkspaceId: String?

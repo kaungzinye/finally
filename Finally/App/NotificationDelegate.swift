@@ -17,6 +17,7 @@ final class NotificationDelegate: NSObject, UNUserNotificationCenterDelegate {
         let userInfo = response.notification.request.content.userInfo
         if let taskId = userInfo["taskId"] as? String {
             Task { @MainActor in
+                router.deepLinkWorkspaceId = userInfo["workspaceId"] as? String
                 router.deepLinkTaskId = taskId
             }
         }

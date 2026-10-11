@@ -5,6 +5,7 @@ import UserNotifications
 struct ReminderSectionContent: View {
     @Bindable var task: TaskItem
     @Environment(\.modelContext) private var modelContext
+    @Environment(TaskProviderCoordinator.self) private var taskProvider
     @State private var showAddReminder = false
 
     var body: some View {
@@ -33,11 +34,12 @@ struct ReminderSectionContent: View {
                 .onDelete { indexSet in
                     var reminders = task.taskReminders
                     for index in indexSet.sorted(by: >) {
-                        UNUserNotificationCenter.current()
-                            .removePendingNotificationRequests(withIdentifiers: [reminders[index].notificationId])
                         reminders.remove(at: index)
                     }
                     task.taskReminders = reminders
+                    task.isDirty = true
+                    try? modelContext.save()
+                    Task { await taskProvider.submitPendingChangesReportingFailure(for: [task], store: modelContext) }
                     NotificationService.shared.rescheduleAllReminders(modelContext: modelContext)
                 }
             }
@@ -47,7 +49,6 @@ struct ReminderSectionContent: View {
             } label: {
                 Label("Add Reminder", systemImage: "plus.circle")
             }
-            .disabled(!task.hasValidAnchoredReminderAnchor && task.deadline == nil && task.plannedDay == nil)
         } header: {
             SectionLabel("Reminders")
         }
@@ -75,6 +76,7 @@ struct ReminderListView: View {
 struct ReminderAddSheet: View {
     @Bindable var task: TaskItem
     @Environment(\.modelContext) private var modelContext
+    @Environment(TaskProviderCoordinator.self) private var taskProvider
     @Environment(\.dismiss) private var dismiss
 
     @State private var selectedTab = 0
@@ -244,8 +246,10 @@ struct ReminderAddSheet: View {
         var reminders = task.taskReminders
         reminders.append(reminder)
         task.taskReminders = reminders
+        task.isDirty = true
+        try? modelContext.save()
+        Task { await taskProvider.submitPendingChangesReportingFailure(for: [task], store: modelContext) }
 
-        NotificationService.shared.scheduleReminder(for: task, reminder: reminder)
         NotificationService.shared.rescheduleAllReminders(modelContext: modelContext)
     }
 }
@@ -253,6 +257,7 @@ struct ReminderAddSheet: View {
 struct SubtaskReminderSheet: View {
     @Bindable var subtask: TaskItem
     @Environment(\.modelContext) private var modelContext
+    @Environment(TaskProviderCoordinator.self) private var taskProvider
     @Environment(\.dismiss) private var dismiss
 
     @State private var intervalValue = 30
@@ -284,11 +289,12 @@ struct SubtaskReminderSheet: View {
                         .onDelete { indexSet in
                             var reminders = subtask.taskReminders
                             for index in indexSet.sorted(by: >) {
-                                UNUserNotificationCenter.current()
-                                    .removePendingNotificationRequests(withIdentifiers: [reminders[index].notificationId])
                                 reminders.remove(at: index)
                             }
                             subtask.taskReminders = reminders
+                            subtask.isDirty = true
+                            try? modelContext.save()
+                            Task { await taskProvider.submitPendingChangesReportingFailure(for: [subtask], store: modelContext) }
                             NotificationService.shared.rescheduleAllReminders(modelContext: modelContext)
                         }
                     }
@@ -345,7 +351,9 @@ struct SubtaskReminderSheet: View {
         var reminders = subtask.taskReminders
         reminders.append(draftReminder)
         subtask.taskReminders = reminders
-        NotificationService.shared.scheduleReminder(for: subtask, reminder: draftReminder)
+        subtask.isDirty = true
+        try? modelContext.save()
+        Task { await taskProvider.submitPendingChangesReportingFailure(for: [subtask], store: modelContext) }
         NotificationService.shared.rescheduleAllReminders(modelContext: modelContext)
     }
 }
