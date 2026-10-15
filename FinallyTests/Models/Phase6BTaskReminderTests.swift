@@ -21,9 +21,9 @@ final class Phase6BTaskReminderTests: XCTestCase {
         task.scheduledDay = scheduledDay
         task.deadline = deadline
 
-        XCTAssertEqual(ReminderAnchor.plannedDay.rawValue, "plannedDay")
+        XCTAssertEqual(ReminderAnchor.scheduledDay.rawValue, "scheduledDay")
         XCTAssertEqual(ReminderAnchor.deadline.rawValue, "deadline")
-        XCTAssertEqual(task.anchorDate(for: .plannedDay), scheduledDay)
+        XCTAssertEqual(task.anchorDate(for: .scheduledDay), scheduledDay)
         XCTAssertEqual(task.anchorDate(for: .deadline), deadline)
     }
 
@@ -53,13 +53,13 @@ final class Phase6BTaskReminderTests: XCTestCase {
         XCTAssertEqual(fire, makeDate(year: 2026, month: 6, day: 16, hour: 17))
     }
 
-    func testAnchoredReminder_UsesPlannedDayAnchorWhenPresent() {
+    func testAnchoredReminder_UsesScheduledDayAnchorWhenPresent() {
         let task = TaskItem(externalTaskID: "t-3", title: "Task")
         task.scheduledDay = makeDate(year: 2026, month: 6, day: 10)
         task.deadline = makeDate(year: 2026, month: 6, day: 20)
 
         let reminder = TaskReminder.anchored(
-            AnchoredReminder(anchor: .plannedDay, value: 1, unit: .weeks, direction: .before)
+            AnchoredReminder(anchor: .scheduledDay, value: 1, unit: .weeks, direction: .before)
         )
 
         let fire = reminder.fireDate(for: task, defaultReminderMinutes: 540)
@@ -69,6 +69,12 @@ final class Phase6BTaskReminderTests: XCTestCase {
             defaultReminderMinutes: 540
         ))
         XCTAssertEqual(fire, expected)
+    }
+
+    func testWeekBeforePreset_ReadsAsScheduledDayReminderWhenTaskIsScheduled() {
+        let reminder = ReminderOffset.oneWeek.toTaskReminder(hasScheduledDay: true)
+
+        XCTAssertEqual(reminder.displayLabel, "1 week before scheduled day")
     }
 
     func testAnchoredReminder_ReturnsNilWhenAnchorDateMissing() {
@@ -92,7 +98,7 @@ final class Phase6BTaskReminderTests: XCTestCase {
 
     func testTaskReminderCodec_RoundTripsAnchoredAndExplicitReminders() {
         let reminders: [TaskReminder] = [
-            .anchored(AnchoredReminder(anchor: .plannedDay, value: 3, unit: .days, direction: .before)),
+            .anchored(AnchoredReminder(anchor: .scheduledDay, value: 3, unit: .days, direction: .before)),
             .explicitDate(ExplicitDateReminder(dateTime: makeDate(year: 2026, month: 5, day: 1, hour: 10))),
         ]
 

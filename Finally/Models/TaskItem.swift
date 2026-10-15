@@ -126,14 +126,14 @@ final class TaskItem {
     func anchorDate(for anchor: ReminderAnchor) -> Date? {
         switch anchor {
         case .deadline: return deadline
-        case .plannedDay: return scheduledDay
+        case .scheduledDay: return scheduledDay
         }
     }
 
     func hasTimeForAnchor(_ anchor: ReminderAnchor) -> Bool {
         switch anchor {
         case .deadline: return deadlineHasTime
-        case .plannedDay: return false
+        case .scheduledDay: return false
         }
     }
 
@@ -236,7 +236,7 @@ enum DeadlineDemoFixture {
         task.scheduledDay = calendar.date(byAdding: .day, value: 9, to: referenceDate)
         task.deadline = calendar.date(byAdding: .day, value: 20, to: referenceDate)
         task.taskReminders = [
-            .anchored(AnchoredReminder(anchor: .plannedDay, value: 1, unit: .days)),
+            .anchored(AnchoredReminder(anchor: .scheduledDay, value: 1, unit: .days)),
             .anchored(AnchoredReminder(anchor: .deadline, value: 2, unit: .hours)),
         ]
 

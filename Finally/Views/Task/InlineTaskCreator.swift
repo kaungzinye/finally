@@ -311,7 +311,7 @@ struct InlineTaskCreator: View {
             SubtaskScheduler.distributeSubtaskDates(parent: parent)
         }
 
-        task.taskReminders = reminderChoices.map { $0.toTaskReminder(hasPlannedDay: plannedDay != nil) }
+        task.taskReminders = reminderChoices.map { $0.toTaskReminder(hasScheduledDay: plannedDay != nil) }
 
         if !task.taskReminders.isEmpty {
             NotificationService.shared.rescheduleAllReminders(modelContext: modelContext)
