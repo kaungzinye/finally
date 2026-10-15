@@ -10,7 +10,7 @@ Active technologies: Swift 5.9+, SwiftUI, SwiftData, WidgetKit, AppIntents, User
 
 ## Language and decisions
 
-- **Read `CONTEXT.md` first. It is the glossary of this project.** Use its names in UI, docs, comments, tests, and APIs. Task, task provider, planned day, deadline, work session, and Daily Focus all mean something specific here.
+- **Read `GLOSSARY.md` first.** Use its names in UI, docs, comments, tests, and APIs. Task, task provider, scheduled day, deadline, work session, personal agent, and Daily Focus all mean something specific here.
 - `docs/agents/domain.md` and `docs/agents/issue-tracker.md` describe how to use the domain model and the tracker.
 - `docs/` holds the specifications. `spec.md` is the index, `product-interface.md` and `notion-provider.md` are the two contracts, and `docs/contracts/` pins request shapes, deep links, and widget behavior.
 - The Finally Server and Daily Focus work has no spec file. Issue #5 is its PRD, and the child issues carry the detail.
@@ -80,7 +80,7 @@ Triggers:
 
 Steps:
 
-1. Confirm the running Enso app was built in Xcode from `main` in `~/Documents/SWE/enso`. Rebuild from `main` if the running app came from another branch or a stale build.
+1. Use the installed Enso app as it is.
 2. Ask the user whether they are on mobile. Ask every time, do not guess and do not carry the answer over from an earlier task.
 3. Build the Canvas through the skill's normal Canvas pass.
 4. Capture vision with `enso context --canvas current --vision --pretty` and read the image at `data.vision.image.path`.

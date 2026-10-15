@@ -35,7 +35,7 @@ The Notion provider authenticates through OAuth, lets the user select task and p
 
 - Notion tasks remain in a separate workspace and never synchronize automatically into Finally Server tasks.
 - The adapter maps Notion title, status, date, select, multi-select, and relation properties to canonical Finally fields.
-- `plannedDay` maps to a dedicated Notion date property. `deadline` maps to a separate Notion date property.
+- `scheduledDay` maps to a dedicated Notion date property. `deadline` maps to a separate Notion date property.
 - Priority maps to a select property, labels map to a multi-select property, projects map to the Projects database relation, and subtasks map to a native parent-child relation.
 - Provider recurrence properties encode the recurrence rule while Finally applies the canonical recurrence behavior.
 - Reminder rules synchronize through Finally's device-support layer because Notion does not provide the required anchored-reminder model.
@@ -57,7 +57,7 @@ The Notion provider authenticates through OAuth, lets the user select task and p
 ## Out of Scope
 
 - Automatic copying between Notion mode workspaces and Finally Server
-- Hermes holding Notion mode credentials or ranking Notion mode tasks
+- The personal agent holding Notion mode credentials or ranking Notion mode tasks
 - Creating a user's Notion databases automatically
 - Treating a Notion mode workspace as the store for work sessions or the Daily Focus
 - The Notion surface, which belongs to Finally Server and syncs server tasks into a dedicated Notion database

@@ -1,33 +1,25 @@
 # Contract: Widget Interface
 
-**Date**: 2026-03-13
+Every widget reads the same Today definition as the Today tab. See `docs/model/Today.md`.
 
 ## Widget Families
 
-| Family | Layout | Content |
-|--------|--------|---------|
-| `.systemSmall` | Compact list | 3-4 nearest tasks with checkboxes. "+" button bottom-right. Single tap area for whole widget opens app. |
-| `.systemMedium` | Wide list | 4-6 tasks with checkbox, task name, deadline. "+" button bottom-right via `Link`. |
-| `.systemLarge` | Extended list | 8-10 tasks with checkbox, task name, deadline, priority color indicator. "+" button bottom-right via `Link`. |
+| Family | Name | Content |
+|--------|------|---------|
+| `.systemMedium` | Focus widget | Headed "3 things to do" with the configured focus count. Lists the open Daily Focus picks with priority rings. A finished pick drops off. Tapping a ring completes the task. |
+| `.systemSmall` | Now widget | The first open Daily Focus pick, large, with its deadline, "2 of 3", and a Done button. |
+| `.systemLarge` | Today widget | All of Today, ordered like the Today tab. When room remains, the next seven days follow under "Coming up". When Today overflows, the list ends with "+N more". |
+| `.accessoryCircular` | Lock screen ring | One ring split into one section per task in Today. Daily Focus sections draw in ink and the rest in a second color. A section fills when its task is done. The center shows done out of total. |
+| `.accessoryRectangular` | Lock screen now | The first open Daily Focus pick and its deadline. |
 
 ## Interactive Elements
 
-### Task Checkbox (Toggle)
-
-- **Mechanism**: `Toggle(isOn:intent:)` with `ToggleTaskCompleteIntent` (AppIntent)
-- **Behavior**: Optimistic UI flip → `perform()` updates shared SwiftData store → timeline auto-reloads
-- **For recurring obligations**: Advances the deadline and begins the next cycle
-
-### "+" Add Button
-
-- **Mechanism**: `Link(destination: URL(string: "finally://tasks/new")!)`
-- **Position**: Bottom-right corner of all widget sizes
-- **Behavior**: Opens main app → task creation flow
+- **Complete**: A `Button(intent:)` runs an AppIntent in the widget process. It appends the task's provider workspace and external ID to a pending-completion list in app-group storage, updates the snapshot so the task shows done, and reloads timelines. On launch and on foreground the app applies pending completions as dirty edits, reschedules reminders, and clears the list.
+- **Open task**: Tapping a row opens `finally://task/<id>`.
+- **Add**: `finally://tasks/new` opens capture.
 
 ## Data Source
 
 - **Shared container**: App Group `group.com.kaungzinye.finally`
-- **Storage**: SwiftData `ModelContainer` at shared container path
-- **Widget reads only**: Writes via AppIntents (run in main app process)
-- **Refresh trigger**: `WidgetCenter.shared.reloadTimelines(ofKind: "TaskListWidget")` on every data change
-- **Timeline policy**: `.atEnd` with entries at each upcoming task deadline
+- **Storage**: a JSON presentation snapshot in app-group `UserDefaults`, written by the app after every local change and sync. It carries each open task's title, priority, status, scheduled day, deadline, and Daily Focus position for the selected workspace.
+- **Refresh**: the app calls `WidgetCenter.shared.reloadAllTimelines()` after writing the snapshot. The timeline adds an entry at the next midnight so Today rolls over.
