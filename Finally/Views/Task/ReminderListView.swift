@@ -47,7 +47,7 @@ struct ReminderSectionContent: View {
             } label: {
                 Label("Add Reminder", systemImage: "plus.circle")
             }
-            .disabled(!task.hasValidAnchoredReminderAnchor && task.deadline == nil && task.plannedDay == nil)
+            .disabled(!task.hasValidAnchoredReminderAnchor && task.deadline == nil && task.scheduledDay == nil)
         } header: {
             SectionLabel("Reminders")
         }
@@ -87,7 +87,7 @@ struct ReminderAddSheet: View {
     private var availableAnchors: [ReminderAnchor] {
         var anchors: [ReminderAnchor] = []
         if task.deadline != nil { anchors.append(.deadline) }
-        if task.plannedDay != nil { anchors.append(.plannedDay) }
+        if task.scheduledDay != nil { anchors.append(.plannedDay) }
         return anchors
     }
 
@@ -352,6 +352,6 @@ struct SubtaskReminderSheet: View {
 
 private extension TaskItem {
     var hasValidAnchoredReminderAnchor: Bool {
-        deadline != nil || plannedDay != nil
+        deadline != nil || scheduledDay != nil
     }
 }

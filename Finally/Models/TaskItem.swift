@@ -8,7 +8,7 @@ final class TaskItem {
     var statusRaw: String = TaskStatus.notStarted.rawValue
     var deadline: Date?
     var deadlineHasTime: Bool = false
-    var plannedDay: Date?
+    var scheduledDay: Date?
     var priorityRaw: String?
     var tags: [String] = []
     var tagColors: [String] = []
@@ -68,9 +68,9 @@ final class TaskItem {
     }
 
     var isInActiveWindow: Bool {
-        guard let plannedDay, let deadline, status != .done else { return false }
+        guard let scheduledDay, let deadline, status != .done else { return false }
         let today = Calendar.current.startOfDay(for: Date())
-        return today >= Calendar.current.startOfDay(for: plannedDay)
+        return today >= Calendar.current.startOfDay(for: scheduledDay)
             && today <= Calendar.current.startOfDay(for: deadline)
     }
 
@@ -126,7 +126,7 @@ final class TaskItem {
     func anchorDate(for anchor: ReminderAnchor) -> Date? {
         switch anchor {
         case .deadline: return deadline
-        case .plannedDay: return plannedDay
+        case .plannedDay: return scheduledDay
         }
     }
 
@@ -160,7 +160,7 @@ final class TaskItem {
             .sorted { $0.sortIndex < $1.sortIndex }
         guard let index = sorted.firstIndex(where: { $0.externalTaskID == externalTaskID }) else { return nil }
 
-        let planningDate = parent.plannedDay ?? parent.deadline
+        let planningDate = parent.scheduledDay ?? parent.deadline
         guard let planningDate else { return nil }
 
         let start = max(Date(), Calendar.current.startOfDay(for: Date()))
@@ -173,10 +173,10 @@ final class TaskItem {
         return start.addingTimeInterval(totalInterval * fraction)
     }
 
-    func validatePlannedDay() {
-        guard let plannedDay, let deadline else { return }
-        if plannedDay >= deadline {
-            self.plannedDay = Calendar.current.date(byAdding: .day, value: -1, to: deadline)
+    func validateScheduledDay() {
+        guard let scheduledDay, let deadline else { return }
+        if scheduledDay >= deadline {
+            self.scheduledDay = Calendar.current.date(byAdding: .day, value: -1, to: deadline)
         }
     }
 
@@ -186,7 +186,7 @@ final class TaskItem {
     func complete() -> Bool {
         if recurrence != .none, let deadline {
             let previousDeadline = deadline
-            let previousPlannedDay = plannedDay
+            let previousScheduledDay = scheduledDay
 
             let nextDate: Date?
             if recurrence == .custom, let rule = customRecurrenceRule {
@@ -197,10 +197,10 @@ final class TaskItem {
 
             if let nextDate {
                 self.deadline = nextDate
-                if let previousPlannedDay {
-                    let offset = previousDeadline.timeIntervalSince(previousPlannedDay)
-                    self.plannedDay = nextDate.addingTimeInterval(-offset)
-                    validatePlannedDay()
+                if let previousScheduledDay {
+                    let offset = previousDeadline.timeIntervalSince(previousScheduledDay)
+                    self.scheduledDay = nextDate.addingTimeInterval(-offset)
+                    validateScheduledDay()
                 }
                 self.status = .notStarted
                 self.isDirty = true
@@ -233,7 +233,7 @@ enum DeadlineDemoFixture {
         task.priority = .urgent
         task.tags = ["Launch", "Client"]
         task.recurrence = .weekly
-        task.plannedDay = calendar.date(byAdding: .day, value: 9, to: referenceDate)
+        task.scheduledDay = calendar.date(byAdding: .day, value: 9, to: referenceDate)
         task.deadline = calendar.date(byAdding: .day, value: 20, to: referenceDate)
         task.taskReminders = [
             .anchored(AnchoredReminder(anchor: .plannedDay, value: 1, unit: .days)),

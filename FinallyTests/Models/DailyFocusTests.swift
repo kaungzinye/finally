@@ -86,12 +86,12 @@ final class DailyFocusTests: XCTestCase {
         XCTAssertEqual(resolved[3].pick, pick("n9"))
     }
 
-    func testPickingATaskLeavesPlannedDayAndDeadlineUntouched() throws {
+    func testPickingATaskLeavesScheduledDayAndDeadlineUntouched() throws {
         let task = TaskItem(externalTaskID: "n1", title: "Draft the brief")
         task.providerWorkspaceId = "notion-workspace"
-        let plannedDay = day
+        let scheduledDay = day
         let deadline = day.addingTimeInterval(86_400 * 3)
-        task.plannedDay = plannedDay
+        task.scheduledDay = scheduledDay
         task.deadline = deadline
 
         let focus = DailyFocus(day: day)
@@ -100,7 +100,7 @@ final class DailyFocusTests: XCTestCase {
         focus.confirm()
         focus.remove(task.dailyFocusPick)
 
-        XCTAssertEqual(task.plannedDay, plannedDay)
+        XCTAssertEqual(task.scheduledDay, scheduledDay)
         XCTAssertEqual(task.deadline, deadline)
         XCTAssertFalse(task.isDirty)
     }

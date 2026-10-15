@@ -16,14 +16,14 @@ final class Phase6BTaskReminderTests: XCTestCase {
 
     func testReminderAnchorsUseCanonicalNamesAndResolveDates() {
         let task = TaskItem(externalTaskID: "canonical-anchors", title: "Plan launch")
-        let plannedDay = makeDate(year: 2026, month: 9, day: 14)
+        let scheduledDay = makeDate(year: 2026, month: 9, day: 14)
         let deadline = makeDate(year: 2026, month: 9, day: 21, hour: 17)
-        task.plannedDay = plannedDay
+        task.scheduledDay = scheduledDay
         task.deadline = deadline
 
         XCTAssertEqual(ReminderAnchor.plannedDay.rawValue, "plannedDay")
         XCTAssertEqual(ReminderAnchor.deadline.rawValue, "deadline")
-        XCTAssertEqual(task.anchorDate(for: .plannedDay), plannedDay)
+        XCTAssertEqual(task.anchorDate(for: .plannedDay), scheduledDay)
         XCTAssertEqual(task.anchorDate(for: .deadline), deadline)
     }
 
@@ -55,7 +55,7 @@ final class Phase6BTaskReminderTests: XCTestCase {
 
     func testAnchoredReminder_UsesPlannedDayAnchorWhenPresent() {
         let task = TaskItem(externalTaskID: "t-3", title: "Task")
-        task.plannedDay = makeDate(year: 2026, month: 6, day: 10)
+        task.scheduledDay = makeDate(year: 2026, month: 6, day: 10)
         task.deadline = makeDate(year: 2026, month: 6, day: 20)
 
         let reminder = TaskReminder.anchored(
@@ -64,7 +64,7 @@ final class Phase6BTaskReminderTests: XCTestCase {
 
         let fire = reminder.fireDate(for: task, defaultReminderMinutes: 540)
         let expected = calendar.date(byAdding: .weekOfYear, value: -1, to: task.adjustedAnchorDate(
-            task.plannedDay!,
+            task.scheduledDay!,
             hasTime: false,
             defaultReminderMinutes: 540
         ))

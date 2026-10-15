@@ -2,7 +2,7 @@ import Foundation
 
 struct SubtaskScheduler {
 
-    /// Distribute suggested dates backward from the parent's planned day or deadline.
+    /// Distribute suggested dates backward from the parent's scheduled day or deadline.
     static func distributeSubtaskDates(parent: TaskItem) {
         let sorted = parent.activeSubtasks
             .filter { $0.status != .done }
@@ -10,7 +10,7 @@ struct SubtaskScheduler {
 
         guard !sorted.isEmpty else { return }
 
-        guard let planningWindowEnd = parent.plannedDay ?? parent.deadline else {
+        guard let planningWindowEnd = parent.scheduledDay ?? parent.deadline else {
             for subtask in parent.activeSubtasks {
                 subtask.suggestedDate = nil
             }
@@ -43,7 +43,7 @@ struct SubtaskScheduler {
         let slip = now.timeIntervalSince(suggestedDate)
         guard slip > 0 else { return }
 
-        let planningWindowEnd = parent.plannedDay ?? parent.deadline ?? Date.distantFuture
+        let planningWindowEnd = parent.scheduledDay ?? parent.deadline ?? Date.distantFuture
 
         let remaining = parent.activeSubtasks
             .filter { $0.status != .done && $0.externalTaskID != completedSubtask.externalTaskID }

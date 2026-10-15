@@ -91,7 +91,7 @@ final class FinallyServerTaskProviderAdapter: TaskProviderAdapter {
             let mutation = FinallyServerTaskMutation(
                 title: task.title,
                 isCompleted: false,
-                plannedDay: task.plannedDay,
+                plannedDay: task.scheduledDay,
                 deadline: task.deadline,
                 priority: task.priority
             )
@@ -176,7 +176,7 @@ final class FinallyServerTaskProviderAdapter: TaskProviderAdapter {
         task.title = remote.title
         task.status = canonicalStatus(remoteIsCompleted: remote.isCompleted, local: task.status)
         // A planned day is date-only, so the server's timestamp reads as its calendar day.
-        task.plannedDay = remote.plannedDay.map { Calendar.current.startOfDay(for: $0) }
+        task.scheduledDay = remote.plannedDay.map { Calendar.current.startOfDay(for: $0) }
         // Finally Server carries every deadline as a timestamp, so a payload cannot say whether
         // the user meant a whole day or a moment. Keep the local reading while the instant is
         // unchanged, and read a genuinely new instant as timed.

@@ -295,7 +295,7 @@ final class SyncServiceNotionMappingIntegrationTests: XCTestCase {
         XCTAssertEqual(session.propertyMappings.taskStatusSchema?.preferredOptionName(for: .done), "✅")
     }
 
-    func testFullSync_MapsPlannedDayAndDeadlineRange() async throws {
+    func testFullSync_MapsScheduledDayAndDeadlineRange() async throws {
         let mock = MockNotionAPIClient()
         let syncService = SyncService(api: mock)
         let context = try makeInMemoryContext()
@@ -331,9 +331,9 @@ final class SyncServiceNotionMappingIntegrationTests: XCTestCase {
         try await syncService.fullSync(session: session, modelContext: context)
 
         let task = try XCTUnwrap(try context.fetch(FetchDescriptor<TaskItem>()).first)
-        XCTAssertNotNil(task.plannedDay)
+        XCTAssertNotNil(task.scheduledDay)
         XCTAssertNotNil(task.deadline)
-        XCTAssertTrue(task.plannedDay! < task.deadline!)
+        XCTAssertTrue(task.scheduledDay! < task.deadline!)
     }
 
     func testFullSync_WhenChildArrivesBeforeParent_LinksSubtaskToParent() async throws {

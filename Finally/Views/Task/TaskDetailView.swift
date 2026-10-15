@@ -183,7 +183,7 @@ struct TaskDetailView: View {
         .onAppear {
             editedTitle = task.title
             editedDeadline = task.deadline
-            editedPlannedDay = task.plannedDay
+            editedPlannedDay = task.scheduledDay
             editedDeadlineHasTime = task.deadlineHasTime
             editedPriority = task.priority
             editedTags = task.tags
@@ -313,13 +313,13 @@ struct TaskDetailView: View {
 
     private func saveChanges() async {
         let deadlineChanged = task.deadline != editedDeadline
-        let plannedDayChanged = task.plannedDay != editedPlannedDay
+        let plannedDayChanged = task.scheduledDay != editedPlannedDay
 
         task.title = editedTitle
         task.deadline = editedDeadline
-        task.plannedDay = editedPlannedDay
+        task.scheduledDay = editedPlannedDay
         task.deadlineHasTime = editedDeadline != nil && editedDeadlineHasTime
-        task.validatePlannedDay()
+        task.validateScheduledDay()
         task.priority = editedPriority
         task.tags = editedTags
         task.project = editedProject

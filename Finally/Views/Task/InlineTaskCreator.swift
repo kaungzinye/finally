@@ -289,9 +289,9 @@ struct InlineTaskCreator: View {
         let selectedWorkspace = try? modelContext.selectedProviderWorkspace()
         task.providerWorkspaceId = selectedWorkspace?.workspaceId
         task.deadline = deadline
-        task.plannedDay = plannedDay
+        task.scheduledDay = plannedDay
         task.deadlineHasTime = deadline != nil && deadlineHasTime
-        task.validatePlannedDay()
+        task.validateScheduledDay()
         task.priority = priority
         task.tags = tags
         task.project = project

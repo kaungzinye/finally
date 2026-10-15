@@ -236,7 +236,7 @@ final class FinallyServerConnectionIntegrationTests: XCTestCase {
         context.insert(workspace)
         let task = TaskItem(externalTaskID: UUID().uuidString, title: "Plan tomorrow")
         task.providerWorkspaceId = workspace.workspaceId
-        task.plannedDay = Calendar.current.startOfDay(for: Date(timeIntervalSince1970: 1_780_000_000))
+        task.scheduledDay = Calendar.current.startOfDay(for: Date(timeIntervalSince1970: 1_780_000_000))
         task.deadline = Date(timeIntervalSince1970: 1_780_086_400)
         task.priority = .urgent
         task.isDirty = true
@@ -247,7 +247,7 @@ final class FinallyServerConnectionIntegrationTests: XCTestCase {
         XCTAssertEqual(task.externalTaskID, "1")
         XCTAssertFalse(task.isDirty)
         XCTAssertEqual(api.tasks["1"]?.title, "Plan tomorrow")
-        XCTAssertEqual(api.tasks["1"]?.plannedDay, task.plannedDay)
+        XCTAssertEqual(api.tasks["1"]?.plannedDay, task.scheduledDay)
         XCTAssertEqual(api.tasks["1"]?.deadline, task.deadline)
         XCTAssertEqual(api.tasks["1"]?.priority, .urgent)
 

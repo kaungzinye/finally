@@ -427,7 +427,7 @@ final class TaskProviderCoordinator {
 
     private func populatedFields(in task: TaskItem) -> Set<CanonicalTaskField> {
         var fields: Set<CanonicalTaskField> = [.title, .state]
-        if task.plannedDay != nil { fields.insert(.plannedDay) }
+        if task.scheduledDay != nil { fields.insert(.plannedDay) }
         if task.deadline != nil { fields.insert(.deadline) }
         if task.project != nil { fields.insert(.project) }
         if !task.tags.isEmpty { fields.insert(.labels) }
