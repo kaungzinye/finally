@@ -143,6 +143,7 @@ struct FinallyApp: App {
         let token = KeychainHelper.readNotionToken()
         let serverCredentials = KeychainFinallyServerCredentialStore()
         let context = ModelContext(appContainer)
+        try? WidgetPublisher.applyPendingCompletions(store: context)
         NotificationService.shared.rescheduleAllReminders(modelContext: context)
         let sessions = (try? context.fetch(FetchDescriptor<UserSession>())) ?? []
         let usableSessions = sessions.filter { session in
@@ -194,6 +195,7 @@ struct FinallyApp: App {
 
     private func runIncrementalSyncIfPossible() async {
         let context = ModelContext(appContainer)
+        try? WidgetPublisher.applyPendingCompletions(store: context)
         NotificationService.shared.rescheduleAllReminders(modelContext: context)
         guard sessionRoute == .tasks else { return }
         guard let session = try? context.selectedProviderWorkspace() else { return }
@@ -234,13 +236,20 @@ private struct DeadlineDemoView: View {
 }
 
 /// The Today tab over an in-memory store seeded with a Daily Focus that mixes providers and
-/// carries one pick whose task is gone.
+/// carries one pick whose task is gone. The widgets draw the same store, and completions made
+/// from them apply when the app comes to the foreground.
 private struct DailyFocusDemoView: View {
     @State private var container = DailyFocusDemoFixture.makeContainer()
+    @Environment(\.scenePhase) private var scenePhase
 
     var body: some View {
         ContentView()
             .modelContainer(container)
+            .onChange(of: scenePhase, initial: true) { _, phase in
+                guard phase == .active else { return }
+                try? WidgetPublisher.applyPendingCompletions(store: container.mainContext)
+                try? WidgetPublisher.publish(store: container.mainContext)
+            }
     }
 }
 

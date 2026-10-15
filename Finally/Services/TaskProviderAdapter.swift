@@ -267,7 +267,7 @@ final class TaskProviderCoordinator {
         lastError = nil
         do {
             try await synchronization.value
-            try? WidgetTaskSnapshotStore.publish(store: store)
+            try? WidgetPublisher.publish(store: store)
         } catch is CancellationError {
             return
         } catch {
@@ -383,7 +383,7 @@ final class TaskProviderCoordinator {
 
     func persistPendingChanges(store: ModelContext) throws {
         try store.save()
-        try? WidgetTaskSnapshotStore.publish(store: store)
+        try? WidgetPublisher.publish(store: store)
     }
 
     func clearError() {

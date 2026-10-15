@@ -68,7 +68,7 @@ struct DailyFocusSection: View {
 
     private var header: some View {
         HStack(alignment: .firstTextBaseline) {
-            Text(focus.focusLimit == 1 ? "1 thing to do" : "\(focus.focusLimit) things to do")
+            Text(DailyFocusHeading.text(focusLimit: focus.focusLimit))
                 .font(.cardTitle)
                 .foregroundStyle(Palette.ink)
             Spacer()

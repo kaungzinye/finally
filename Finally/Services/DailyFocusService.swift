@@ -82,6 +82,7 @@ final class DailyFocusService {
             focus.isDirty = usesServer
         }
         try store.save()
+        try? WidgetPublisher.publish(store: store)
         guard usesServer, let workspace else { return }
         var firstError: Error?
         for focus in focuses {
@@ -141,6 +142,7 @@ final class DailyFocusService {
             focus.focusLimit = DailyFocus.clampedFocusLimit(record.focusLimit)
             focus.isDirty = false
             try store.save()
+            try? WidgetPublisher.publish(store: store)
             lastError = nil
         } catch {
             lastError = error.localizedDescription
