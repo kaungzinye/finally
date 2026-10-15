@@ -86,10 +86,50 @@ final class DailyFocusTests: XCTestCase {
         XCTAssertEqual(resolved[3].pick, pick("n9"))
     }
 
-    func testPickingATaskLeavesScheduledDayAndDeadlineUntouched() throws {
+    func testPickingATaskSchedulesItForTheDayAndConfirmsTheDay() throws {
         let task = TaskItem(externalTaskID: "n1", title: "Draft the brief")
         task.providerWorkspaceId = "notion-workspace"
-        let scheduledDay = day
+        let deadline = day.addingTimeInterval(86_400 * 3)
+        task.scheduledDay = day.addingTimeInterval(86_400 * 2)
+        task.deadline = deadline
+        let focus = DailyFocus(day: day)
+        XCTAssertFalse(focus.isConfirmed)
+
+        try focus.pick(task)
+
+        XCTAssertEqual(focus.picks, [task.dailyFocusPick])
+        XCTAssertTrue(focus.isConfirmed)
+        XCTAssertEqual(task.scheduledDay, day)
+        XCTAssertEqual(task.deadline, deadline)
+        XCTAssertTrue(task.isDirty)
+    }
+
+    func testPickingIntoAFullDayReplacesTheChosenPick() throws {
+        let urgent = TaskItem(externalTaskID: "urgent", title: "Ship the fix")
+        urgent.providerWorkspaceId = "server-workspace"
+        let focus = DailyFocus(day: day, focusLimit: 2)
+        try focus.add(pick("first"))
+        try focus.add(pick("second"))
+
+        XCTAssertThrowsError(try focus.pick(urgent)) { error in
+            XCTAssertEqual(error as? DailyFocusError, .full(limit: 2))
+        }
+        XCTAssertNil(urgent.scheduledDay)
+        XCTAssertFalse(urgent.isDirty)
+        XCTAssertFalse(focus.isConfirmed)
+
+        try focus.pick(urgent, replacing: pick("second"))
+
+        XCTAssertEqual(focus.picks, [pick("first"), urgent.dailyFocusPick])
+        XCTAssertTrue(focus.isConfirmed)
+        XCTAssertEqual(urgent.scheduledDay, day)
+        XCTAssertTrue(urgent.isDirty)
+    }
+
+    func testConfirmingReorderingAndRemovingPicksLeaveTaskDatesFixed() throws {
+        let task = TaskItem(externalTaskID: "n1", title: "Draft the brief")
+        task.providerWorkspaceId = "notion-workspace"
+        let scheduledDay = day.addingTimeInterval(86_400)
         let deadline = day.addingTimeInterval(86_400 * 3)
         task.scheduledDay = scheduledDay
         task.deadline = deadline

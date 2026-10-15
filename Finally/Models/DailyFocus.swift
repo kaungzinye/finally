@@ -94,6 +94,24 @@ final class DailyFocus {
         picks = current
     }
 
+    /// The user picks a task for this day. Picking schedules the task for the day, so every pick is
+    /// part of Today, and commits the user to the day. A full day takes a pick only by replacing
+    /// the one the user chooses.
+    func pick(_ task: TaskItem, replacing displaced: DailyFocusPick? = nil) throws {
+        if let displaced {
+            try replace(displaced, with: task.dailyFocusPick)
+        } else {
+            try add(task.dailyFocusPick)
+        }
+        let focusDay = Calendar.current.startOfDay(for: day)
+        if task.scheduledDay != focusDay {
+            task.scheduledDay = focusDay
+            task.isDirty = true
+            SubtaskScheduler.distributeSubtaskDates(parent: task)
+        }
+        confirm()
+    }
+
     func remove(_ pick: DailyFocusPick) {
         picks = picks.filter { $0 != pick }
     }
