@@ -12,3 +12,5 @@ appId: com.kaungzinye.finally
 - assertVisible: "Daily Focus is full"
 - tapOn: "Confirm"
 - assertVisible: "Confirmed"
+- tapOn: "Draft the brief"
+- assertVisible: "Scheduled"

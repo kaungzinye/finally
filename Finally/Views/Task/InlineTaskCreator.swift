@@ -10,7 +10,7 @@ struct InlineTaskCreator: View {
 
     @State private var taskTitle = ""
     @State private var deadline: Date?
-    @State private var plannedDay: Date?
+    @State private var scheduledDay: Date?
     @State private var deadlineHasTime = false
     @State private var priority: TaskPriority?
     @State private var tags: [String] = []
@@ -31,7 +31,7 @@ struct InlineTaskCreator: View {
     @State private var showTagSuggestions = false
 
     @State private var showDatePicker = false
-    @State private var showPlannedDayPicker = false
+    @State private var showScheduledDayPicker = false
     @State private var showPriorityPicker = false
     @State private var showTagPicker = false
     @State private var showProjectPicker = false
@@ -126,11 +126,11 @@ struct InlineTaskCreator: View {
                                 icon: "calendar"
                             ) { showDatePicker = true }
                         }
-                        if let plannedDay {
+                        if let scheduledDay {
                             ChipView(
-                                label: "Planned \(formatPlanningDate(plannedDay, hasTime: false))",
+                                label: "Scheduled \(formatPlanningDate(scheduledDay, hasTime: false))",
                                 icon: "scope"
-                            ) { showPlannedDayPicker = true }
+                            ) { showScheduledDayPicker = true }
                         }
                         if let priority {
                             ChipView(
@@ -180,9 +180,9 @@ struct InlineTaskCreator: View {
                     Image(systemName: "calendar")
                         .foregroundStyle(deadline != nil ? Palette.ink : Palette.muted)
                 }
-                Button { showPlannedDayPicker = true } label: {
+                Button { showScheduledDayPicker = true } label: {
                     Image(systemName: "scope")
-                        .foregroundStyle(plannedDay != nil ? Palette.ink : Palette.muted)
+                        .foregroundStyle(scheduledDay != nil ? Palette.ink : Palette.muted)
                 }
                 Button { showPriorityPicker = true } label: {
                     Image(systemName: "flag")
@@ -242,8 +242,8 @@ struct InlineTaskCreator: View {
         .sheet(isPresented: $showDatePicker) {
             DatePickerSheet(selectedDate: $deadline, hasTime: $deadlineHasTime)
         }
-        .sheet(isPresented: $showPlannedDayPicker) {
-            DatePickerSheet(selectedDate: $plannedDay)
+        .sheet(isPresented: $showScheduledDayPicker) {
+            DatePickerSheet(selectedDate: $scheduledDay)
         }
         .sheet(isPresented: $showPriorityPicker) {
             PriorityPicker(selection: $priority)
@@ -270,7 +270,7 @@ struct InlineTaskCreator: View {
     }
 
     private var hasSelections: Bool {
-        deadline != nil || plannedDay != nil || priority != nil || !tags.isEmpty || project != nil || recurrence != .none || !reminderChoices.isEmpty || parentTask != nil
+        deadline != nil || scheduledDay != nil || priority != nil || !tags.isEmpty || project != nil || recurrence != .none || !reminderChoices.isEmpty || parentTask != nil
     }
 
     private func createTask() {
@@ -289,7 +289,7 @@ struct InlineTaskCreator: View {
         let selectedWorkspace = try? modelContext.selectedProviderWorkspace()
         task.providerWorkspaceId = selectedWorkspace?.workspaceId
         task.deadline = deadline
-        task.scheduledDay = plannedDay
+        task.scheduledDay = scheduledDay
         task.deadlineHasTime = deadline != nil && deadlineHasTime
         task.validateScheduledDay()
         task.priority = priority
@@ -311,7 +311,7 @@ struct InlineTaskCreator: View {
             SubtaskScheduler.distributeSubtaskDates(parent: parent)
         }
 
-        task.taskReminders = reminderChoices.map { $0.toTaskReminder(hasScheduledDay: plannedDay != nil) }
+        task.taskReminders = reminderChoices.map { $0.toTaskReminder(hasScheduledDay: scheduledDay != nil) }
 
         if !task.taskReminders.isEmpty {
             NotificationService.shared.rescheduleAllReminders(modelContext: modelContext)
@@ -329,7 +329,7 @@ struct InlineTaskCreator: View {
         // Reset for next task
         taskTitle = ""
         deadline = nil
-        plannedDay = nil
+        scheduledDay = nil
         deadlineHasTime = false
         priority = nil
         tags = []

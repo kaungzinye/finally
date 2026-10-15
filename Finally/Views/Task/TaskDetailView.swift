@@ -8,7 +8,7 @@ struct TaskDetailView: View {
     @Environment(TaskProviderCoordinator.self) private var taskProvider
 
     @State private var showDatePicker = false
-    @State private var showPlannedDayPicker = false
+    @State private var showScheduledDayPicker = false
     @State private var showPriorityPicker = false
     @State private var showTagPicker = false
     @State private var showProjectPicker = false
@@ -18,7 +18,7 @@ struct TaskDetailView: View {
 
     @State private var editedTitle: String = ""
     @State private var editedDeadline: Date?
-    @State private var editedPlannedDay: Date?
+    @State private var editedScheduledDay: Date?
     @State private var editedDeadlineHasTime = false
     @State private var editedPriority: TaskPriority?
     @State private var editedTags: [String] = []
@@ -183,7 +183,7 @@ struct TaskDetailView: View {
         .onAppear {
             editedTitle = task.title
             editedDeadline = task.deadline
-            editedPlannedDay = task.scheduledDay
+            editedScheduledDay = task.scheduledDay
             editedDeadlineHasTime = task.deadlineHasTime
             editedPriority = task.priority
             editedTags = task.tags
@@ -194,8 +194,8 @@ struct TaskDetailView: View {
         .sheet(isPresented: $showDatePicker) {
             DatePickerSheet(selectedDate: $editedDeadline, hasTime: $editedDeadlineHasTime)
         }
-        .sheet(isPresented: $showPlannedDayPicker) {
-            DatePickerSheet(selectedDate: $editedPlannedDay)
+        .sheet(isPresented: $showScheduledDayPicker) {
+            DatePickerSheet(selectedDate: $editedScheduledDay)
         }
         .sheet(isPresented: $showPriorityPicker) {
             PriorityPicker(selection: $editedPriority)
@@ -221,10 +221,10 @@ struct TaskDetailView: View {
     @ViewBuilder
     private var fieldChips: some View {
         ChipView(
-            label: editedPlannedDay.map { formattedPlanningDate($0, hasTime: false) } ?? "Planned day",
+            label: editedScheduledDay.map { formattedPlanningDate($0, hasTime: false) } ?? "Scheduled",
             icon: "scope",
-            isPlaceholder: editedPlannedDay == nil
-        ) { showPlannedDayPicker = true }
+            isPlaceholder: editedScheduledDay == nil
+        ) { showScheduledDayPicker = true }
 
         ChipView(
             label: editedDeadline.map { "Due \(formattedPlanningDate($0, hasTime: editedDeadlineHasTime))" } ?? "Deadline",
@@ -313,11 +313,11 @@ struct TaskDetailView: View {
 
     private func saveChanges() async {
         let deadlineChanged = task.deadline != editedDeadline
-        let plannedDayChanged = task.scheduledDay != editedPlannedDay
+        let scheduledDayChanged = task.scheduledDay != editedScheduledDay
 
         task.title = editedTitle
         task.deadline = editedDeadline
-        task.scheduledDay = editedPlannedDay
+        task.scheduledDay = editedScheduledDay
         task.deadlineHasTime = editedDeadline != nil && editedDeadlineHasTime
         task.validateScheduledDay()
         task.priority = editedPriority
@@ -328,7 +328,7 @@ struct TaskDetailView: View {
         task.isDirty = true
 
         // Reschedule reminders if deadline changed
-        if deadlineChanged || plannedDayChanged {
+        if deadlineChanged || scheduledDayChanged {
             NotificationService.shared.rescheduleAllReminders(modelContext: modelContext)
             // Redistribute subtask dates if parent deadline changed
             if task.hasSubtasks {
