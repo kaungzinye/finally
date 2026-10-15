@@ -258,9 +258,8 @@ final class TaskProviderContractTests: XCTestCase {
             notion.fieldSupport[.scheduledDay],
             .lossy(reason: "A separate Notion scheduled-day property is required to preserve every scheduled-day shape.")
         )
-        guard case .lossy = server.fieldSupport[.deadline] else {
-            return XCTFail("Finally Server timestamp normalization must remain explicit")
-        }
+        XCTAssertEqual(server.fieldSupport[.deadline], .lossless)
+        XCTAssertEqual(server.fieldSupport[.reminders], .lossless)
         guard case .lossy = server.fieldSupport[.state] else {
             return XCTFail("Finally Server records completion only, so state cannot claim a full round trip")
         }

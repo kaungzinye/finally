@@ -2,7 +2,7 @@ import Foundation
 
 // MARK: - Reminder enums (Phase 6B)
 
-enum ReminderAnchor: String, Codable, CaseIterable, Identifiable {
+enum ReminderAnchor: String, Codable, CaseIterable, Identifiable, Sendable {
     case deadline = "deadline"
     case scheduledDay = "scheduledDay"
 
@@ -16,7 +16,7 @@ enum ReminderAnchor: String, Codable, CaseIterable, Identifiable {
     }
 }
 
-enum ReminderOffsetUnit: String, Codable, CaseIterable, Identifiable {
+enum ReminderOffsetUnit: String, Codable, CaseIterable, Identifiable, Sendable {
     case minutes, hours, days, weeks, months
 
     var id: String { rawValue }
@@ -58,7 +58,7 @@ enum ReminderOffsetUnit: String, Codable, CaseIterable, Identifiable {
     }
 }
 
-enum ReminderOffsetDirection: String, Codable, CaseIterable, Identifiable {
+enum ReminderOffsetDirection: String, Codable, CaseIterable, Identifiable, Sendable {
     case before, after
 
     var id: String { rawValue }
@@ -73,7 +73,7 @@ enum ReminderOffsetDirection: String, Codable, CaseIterable, Identifiable {
 
 // MARK: - Stored reminder entries
 
-struct AnchoredReminder: Codable, Equatable, Identifiable {
+struct AnchoredReminder: Codable, Equatable, Identifiable, Sendable {
     var id: UUID
     var anchor: ReminderAnchor
     var value: Int
@@ -104,7 +104,7 @@ struct AnchoredReminder: Codable, Equatable, Identifiable {
     }
 }
 
-struct ExplicitDateReminder: Codable, Equatable, Identifiable {
+struct ExplicitDateReminder: Codable, Equatable, Identifiable, Sendable {
     var id: UUID
     var dateTime: Date
 
@@ -118,7 +118,7 @@ struct ExplicitDateReminder: Codable, Equatable, Identifiable {
     }
 }
 
-enum TaskReminder: Codable, Equatable, Identifiable {
+enum TaskReminder: Codable, Equatable, Identifiable, Sendable {
     case anchored(AnchoredReminder)
     case explicitDate(ExplicitDateReminder)
 
@@ -147,8 +147,10 @@ enum TaskReminder: Codable, Equatable, Identifiable {
         }
     }
 
-    var notificationId: String {
-        "task-reminder-\(id.uuidString)"
+    func notificationId(for task: TaskItem) -> String {
+        let workspace = task.providerWorkspaceId ?? "local"
+        let taskID = task.externalTaskID
+        return "task-reminder-\(workspace.count):\(workspace)\(taskID.count):\(taskID):\(id.uuidString)"
     }
 
     func fireDate(for task: TaskItem, defaultReminderMinutes: Int? = nil) -> Date? {

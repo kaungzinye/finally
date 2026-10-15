@@ -7,6 +7,18 @@ import SwiftData
 final class NotionAuthService: NSObject {
     var isAuthenticating = false
     var errorMessage: String?
+    private var webAuthenticationSession: ASWebAuthenticationSession?
+    private let urlSession: URLSession
+    private let saveToken: (String) throws -> Void
+
+    init(
+        urlSession: URLSession = .shared,
+        saveToken: @escaping (String) throws -> Void = KeychainHelper.saveNotionToken
+    ) {
+        self.urlSession = urlSession
+        self.saveToken = saveToken
+        super.init()
+    }
 
     // MARK: - OAuth URL
 
@@ -27,6 +39,7 @@ final class NotionAuthService: NSObject {
     /// Notion auth → Vercel callback → finally:// redirect → session intercepts → token exchange.
     @MainActor
     func startOAuthFlow(modelContext: ModelContext) async -> Bool {
+        guard !isAuthenticating else { return false }
         guard let url = buildAuthorizationURL() else {
             errorMessage = "Failed to build authorization URL."
             return false
@@ -34,6 +47,10 @@ final class NotionAuthService: NSObject {
 
         isAuthenticating = true
         errorMessage = nil
+        defer {
+            isAuthenticating = false
+            webAuthenticationSession = nil
+        }
 
         do {
             let callbackURL = try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<URL, Error>) in
@@ -51,22 +68,22 @@ final class NotionAuthService: NSObject {
                 }
                 session.presentationContextProvider = self
                 session.prefersEphemeralWebBrowserSession = false
-                session.start()
+                webAuthenticationSession = session
+                if !session.start() {
+                    continuation.resume(throwing: AuthError.cannotStart)
+                }
             }
 
             guard let code = extractAuthCode(from: callbackURL) else {
                 errorMessage = "No authorization code in callback."
-                isAuthenticating = false
                 return false
             }
 
-            return await completeOAuth(withCode: code, modelContext: modelContext)
+            return await exchangeAndStore(code: code, modelContext: modelContext)
         } catch let error as ASWebAuthenticationSessionError where error.code == .canceledLogin {
-            isAuthenticating = false
             return false
         } catch {
             errorMessage = error.localizedDescription
-            isAuthenticating = false
             return false
         }
     }
@@ -74,8 +91,12 @@ final class NotionAuthService: NSObject {
     // MARK: - Extract Code
 
     func extractAuthCode(from url: URL) -> String? {
+        guard url.scheme == AppConstants.urlScheme,
+              url.host == "oauth-callback" else { return nil }
         let components = URLComponents(url: url, resolvingAgainstBaseURL: false)
-        return components?.queryItems?.first(where: { $0.name == "code" })?.value
+        guard let code = components?.queryItems?.first(where: { $0.name == "code" })?.value,
+              !code.isEmpty else { return nil }
+        return code
     }
 
     // MARK: - Token Exchange
@@ -96,18 +117,22 @@ final class NotionAuthService: NSObject {
 
     @MainActor
     func completeOAuth(withCode code: String, modelContext: ModelContext) async -> Bool {
+        guard !isAuthenticating else { return false }
         isAuthenticating = true
         errorMessage = nil
+        defer { isAuthenticating = false }
+        return await exchangeAndStore(code: code, modelContext: modelContext)
+    }
 
+    @MainActor
+    private func exchangeAndStore(code: String, modelContext: ModelContext) async -> Bool {
         do {
             let tokenResponse = try await exchangeCodeForToken(code: code)
             try storeSession(tokenResponse: tokenResponse, modelContext: modelContext)
-            isAuthenticating = false
             return true
         } catch {
             print("[OAuth] completeOAuth error: \(error)")
             errorMessage = error.localizedDescription
-            isAuthenticating = false
             return false
         }
     }
@@ -122,16 +147,13 @@ final class NotionAuthService: NSObject {
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.httpBody = try JSONSerialization.data(withJSONObject: ["code": code])
 
-        print("[OAuth] POST \(url) with code: \(code.prefix(10))...")
-        let (data, response) = try await URLSession.shared.data(for: request)
+        let (data, response) = try await urlSession.data(for: request)
 
         guard let httpResponse = response as? HTTPURLResponse else {
             throw AuthError.tokenExchangeFailed
         }
 
         guard (200...299).contains(httpResponse.statusCode) else {
-            let body = String(data: data, encoding: .utf8) ?? "no body"
-            print("[OAuth] Token exchange failed: HTTP \(httpResponse.statusCode) — \(body)")
             throw AuthError.tokenExchangeFailed
         }
 
@@ -142,41 +164,38 @@ final class NotionAuthService: NSObject {
 
     @MainActor
     func storeSession(tokenResponse: TokenResponse, modelContext: ModelContext) throws {
-        try KeychainHelper.saveNotionToken(tokenResponse.accessToken)
+        let existing = try modelContext.fetch(FetchDescriptor<UserSession>())
+        let notionSessions = existing.filter { $0.providerIdentity == .notion }
+        let session = notionSessions.first { $0.workspaceId == tokenResponse.workspaceId }
+            ?? UserSession(
+                workspaceId: tokenResponse.workspaceId,
+                workspaceName: tokenResponse.workspaceName,
+                providerIdentity: .notion
+            )
+        try saveToken(tokenResponse.accessToken)
 
-        print("[OAuth] Saving session for workspace: \(tokenResponse.workspaceName)")
-
-        let container = try ModelContainer.shared()
-        let context = ModelContext(container)
-        context.autosaveEnabled = false
-
-        let existing = try context.fetch(FetchDescriptor<UserSession>())
-        for session in existing where session.providerIdentity == .notion {
-            context.delete(session)
+        for otherSession in notionSessions where otherSession.id != session.id {
+            modelContext.delete(otherSession)
         }
         existing.forEach { $0.isSelected = false }
-
-        let session = UserSession(
-            workspaceId: tokenResponse.workspaceId,
-            workspaceName: tokenResponse.workspaceName,
-            providerIdentity: .notion
-        )
+        session.workspaceName = tokenResponse.workspaceName
         session.isSelected = true
-        context.insert(session)
-        try context.save()
-        print("[OAuth] Session saved successfully")
+        if session.modelContext == nil { modelContext.insert(session) }
+        try modelContext.save()
     }
 
     // MARK: - Errors
 
     enum AuthError: LocalizedError {
         case noCallback
+        case cannotStart
         case invalidTokenEndpoint
         case tokenExchangeFailed
 
         var errorDescription: String? {
             switch self {
             case .noCallback: return "No response from Notion."
+            case .cannotStart: return "The Notion sign-in sheet could not open. Please try again."
             case .invalidTokenEndpoint: return "Invalid token exchange URL."
             case .tokenExchangeFailed: return "Failed to exchange authorization code."
             }

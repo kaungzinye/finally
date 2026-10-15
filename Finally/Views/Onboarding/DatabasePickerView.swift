@@ -3,6 +3,7 @@ import SwiftData
 
 struct DatabasePickerView: View {
     var onComplete: () -> Void
+    var onChooseProvider: () -> Void
 
     @Environment(\.modelContext) private var modelContext
     @State private var databases: [NotionAPIService.NotionSearchResult] = []
@@ -12,7 +13,7 @@ struct DatabasePickerView: View {
     @State private var selectedProjectsDb: String?
     @State private var isValidating = false
     @State private var validationErrors: [ValidationResult.Issue] = []
-    @State private var authService = NotionAuthService()
+    @Environment(NotionAuthService.self) private var authService
 
     private let api = NotionAPIService()
     private let validator = SchemaValidator()
@@ -20,106 +21,108 @@ struct DatabasePickerView: View {
     var body: some View {
         NavigationStack {
             List {
-                Group {
-                    if isLoading {
-                        Section {
-                            HStack {
-                                ProgressView()
-                                Text("Loading databases...")
-                                    .padding(.leading, 8)
-                            }
+                if isLoading {
+                    Section {
+                        HStack {
+                            ProgressView()
+                            Text("Loading databases...")
+                                .padding(.leading, 8)
                         }
-                    } else if let errorMessage {
-                        Section {
-                            Text(errorMessage)
-                                .foregroundStyle(Palette.urgent)
-                            Button("Retry") {
-                                Task { await loadDatabases() }
-                            }
+                    }
+                } else if let errorMessage {
+                    Section {
+                        Text(errorMessage)
+                            .foregroundStyle(.red)
+                        Button("Retry") {
+                            Task { await loadDatabases() }
                         }
-                    } else if databases.isEmpty {
-                        Section {
-                            Text("No databases found. You may need to share pages with this integration in Notion.")
-                                .foregroundStyle(.secondary)
-                            Button {
-                                Task {
-                                    let success = await authService.startOAuthFlow(modelContext: modelContext)
-                                    if success {
-                                        await loadDatabases()
-                                    }
-                                }
-                            } label: {
-                                Label("Update Notion Permissions", systemImage: "arrow.triangle.2.circlepath")
-                            }
-                        }
-                    } else {
-                        Section("Tasks Database (Required)") {
-                            ForEach(databases, id: \.id) { db in
-                                Button {
-                                    selectedTasksDb = db.id
-                                } label: {
-                                    HStack {
-                                        Text(db.title?.first?.plainText ?? "Untitled")
-                                        Spacer()
-                                        if selectedTasksDb == db.id {
-                                            Image(systemName: "checkmark")
-                                                .foregroundStyle(.tint)
-                                        }
-                                    }
+                    }
+                } else if databases.isEmpty {
+                    Section {
+                        Text("No databases found. You may need to share pages with this integration in Notion.")
+                            .foregroundStyle(.secondary)
+                        Button {
+                            Task {
+                                let success = await authService.startOAuthFlow(modelContext: modelContext)
+                                if success {
+                                    await loadDatabases()
                                 }
                             }
+                        } label: {
+                            Label("Update Notion Permissions", systemImage: "arrow.triangle.2.circlepath")
                         }
-
-                        Section("Projects Database (Optional)") {
+                        .disabled(authService.isAuthenticating)
+                        if let message = authService.errorMessage {
+                            Text(message)
+                                .foregroundStyle(.red)
+                        }
+                    }
+                } else {
+                    Section("Tasks Database (Required)") {
+                        ForEach(databases, id: \.id) { db in
                             Button {
-                                selectedProjectsDb = nil
+                                selectedTasksDb = db.id
                             } label: {
                                 HStack {
-                                    Text("None")
+                                    Text(db.title?.first?.plainText ?? "Untitled")
                                     Spacer()
-                                    if selectedProjectsDb == nil {
+                                    if selectedTasksDb == db.id {
                                         Image(systemName: "checkmark")
-                                            .foregroundStyle(.tint)
-                                    }
-                                }
-                            }
-
-                            ForEach(databases, id: \.id) { db in
-                                Button {
-                                    selectedProjectsDb = db.id
-                                } label: {
-                                    HStack {
-                                        Text(db.title?.first?.plainText ?? "Untitled")
-                                        Spacer()
-                                        if selectedProjectsDb == db.id {
-                                            Image(systemName: "checkmark")
-                                                .foregroundStyle(.tint)
-                                        }
-                                    }
-                                }
-                            }
-                        }
-
-                        if !validationErrors.isEmpty {
-                            Section("Schema Issues") {
-                                ForEach(validationErrors, id: \.propertyName) { issue in
-                                    VStack(alignment: .leading, spacing: 4) {
-                                        HStack {
-                                            Image(systemName: "exclamationmark.triangle.fill")
-                                                .foregroundStyle(Palette.high)
-                                            Text(issue.propertyName)
-                                                .fontWeight(.medium)
-                                        }
-                                        Text(issue.message)
-                                            .font(.caption)
-                                            .foregroundStyle(.secondary)
+                                            .foregroundStyle(.primary)
                                     }
                                 }
                             }
                         }
                     }
+
+                    Section("Projects Database (Optional)") {
+                        Button {
+                            selectedProjectsDb = nil
+                        } label: {
+                            HStack {
+                                Text("None")
+                                Spacer()
+                                if selectedProjectsDb == nil {
+                                    Image(systemName: "checkmark")
+                                        .foregroundStyle(.primary)
+                                }
+                            }
+                        }
+
+                        ForEach(databases, id: \.id) { db in
+                            Button {
+                                selectedProjectsDb = db.id
+                            } label: {
+                                HStack {
+                                    Text(db.title?.first?.plainText ?? "Untitled")
+                                    Spacer()
+                                    if selectedProjectsDb == db.id {
+                                        Image(systemName: "checkmark")
+                                            .foregroundStyle(.primary)
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    if !validationErrors.isEmpty {
+                        Section("Schema Issues") {
+                            ForEach(validationErrors, id: \.propertyName) { issue in
+                                VStack(alignment: .leading, spacing: 4) {
+                                    HStack {
+                                        Image(systemName: "exclamationmark.triangle.fill")
+                                            .foregroundStyle(.orange)
+                                        Text(issue.propertyName)
+                                            .fontWeight(.medium)
+                                    }
+                                    Text(issue.message)
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                }
+                            }
+                        }
+                    }
                 }
-                .cardRow()
             }
             .paperList()
             .navigationTitle("Select Databases")
@@ -129,7 +132,12 @@ struct DatabasePickerView: View {
                     Button("Continue") {
                         Task { await validateAndContinue() }
                     }
-                    .disabled(selectedTasksDb == nil || isValidating)
+                    .disabled(selectedTasksDb == nil || isLoading || isValidating || authService.isAuthenticating)
+                }
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Task Providers", action: onChooseProvider)
+                        .disabled(isValidating || authService.isAuthenticating)
+                        .accessibilityIdentifier("choose-task-provider")
                 }
             }
         }
@@ -141,6 +149,9 @@ struct DatabasePickerView: View {
     private func loadDatabases() async {
         isLoading = true
         errorMessage = nil
+        selectedTasksDb = nil
+        selectedProjectsDb = nil
+        validationErrors = []
         do {
             databases = try await api.searchDatabases()
             isLoading = false
@@ -178,13 +189,16 @@ struct DatabasePickerView: View {
             }
 
             // Save to session
-            let descriptor = FetchDescriptor<UserSession>()
-            if let session = try? modelContext.fetch(descriptor).first(where: { $0.providerIdentity == .notion }) {
-                session.tasksDatabaseId = tasksDbId
-                session.projectsDatabaseId = selectedProjectsDb ?? ""
-                session.propertyMappings = finalMappings
-                try modelContext.save()
+            guard let session = try modelContext.selectedProviderWorkspace(),
+                  session.providerIdentity == .notion else {
+                errorMessage = "Connect a Notion workspace to select its databases."
+                isValidating = false
+                return
             }
+            session.tasksDatabaseId = tasksDbId
+            session.projectsDatabaseId = selectedProjectsDb ?? ""
+            session.propertyMappings = finalMappings
+            try modelContext.save()
 
             isValidating = false
             onComplete()

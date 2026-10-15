@@ -8,11 +8,15 @@ final class MockFinallyServerAPIClient: FinallyServerAPIClient {
     var error: Error?
     var updateError: Error?
     var completeError: Error?
+    var updateHook: (() async -> Void)?
+    private(set) var mutations: [FinallyServerTaskMutation] = []
     var projects = [FinallyServerProject(id: 42, title: "Personal")]
     private(set) var loginRequests = 0
     private(set) var taskOperations: [String] = []
     var dailyFocus: [String: FinallyServerDailyFocus] = [:]
     private(set) var dailyFocusOperations: [String] = []
+    var dailyFocusReadHook: (@MainActor () async -> Void)?
+    var dailyFocusWriteHook: (@MainActor () async -> Void)?
 
     func login(username: String, password: String) async throws -> String {
         loginRequests += 1
@@ -41,7 +45,9 @@ final class MockFinallyServerAPIClient: FinallyServerAPIClient {
             isCompleted: mutation.isCompleted,
             scheduledDay: mutation.scheduledDay,
             deadline: mutation.deadline,
-            priority: mutation.priority
+            priority: mutation.priority,
+            deadlineHasTime: mutation.deadlineHasTime,
+            reminders: mutation.reminders
         )
         nextTaskID += 1
         tasks[task.id] = task
@@ -59,20 +65,25 @@ final class MockFinallyServerAPIClient: FinallyServerAPIClient {
         if let updateError { throw updateError }
         if let error { throw error }
         guard let current = tasks[id] else { throw FinallyServerClientError.notFound }
+        mutations.append(mutation)
+        let fields = mutation.changedFields ?? ["title", "done", "start_date", "due_date", "priority", "deadline_has_time", "reminder_rules"]
         let task = FinallyServerTask(
-            id: current.id,
-            projectID: current.projectID,
-            title: mutation.title,
-            isCompleted: mutation.isCompleted,
-            scheduledDay: mutation.scheduledDay,
-            deadline: mutation.deadline,
-            priority: mutation.priority
+            id: current.id, projectID: current.projectID,
+            title: fields.contains("title") ? mutation.title : current.title,
+            isCompleted: fields.contains("done") ? mutation.isCompleted : current.isCompleted,
+            scheduledDay: fields.contains("start_date") ? mutation.scheduledDay : current.scheduledDay,
+            deadline: fields.contains("due_date") ? mutation.deadline : current.deadline,
+            priority: fields.contains("priority") ? mutation.priority : current.priority,
+            revision: current.revision + 1,
+            deadlineHasTime: fields.contains("deadline_has_time") ? mutation.deadlineHasTime : current.deadlineHasTime,
+            reminders: fields.contains("reminder_rules") ? mutation.reminders : current.reminders
         )
+        await updateHook?()
         tasks[id] = task
         return task
     }
 
-    func completeTask(id: String) async throws -> FinallyServerTask {
+    func completeTask(id: String, revision: Int64) async throws -> FinallyServerTask {
         taskOperations.append("complete")
         if let completeError { throw completeError }
         if let error { throw error }
@@ -84,13 +95,15 @@ final class MockFinallyServerAPIClient: FinallyServerAPIClient {
             isCompleted: true,
             scheduledDay: current.scheduledDay,
             deadline: current.deadline,
-            priority: current.priority
+            priority: current.priority,
+            deadlineHasTime: current.deadlineHasTime,
+            reminders: current.reminders
         )
         tasks[id] = task
         return task
     }
 
-    func deleteTask(id: String) async throws {
+    func deleteTask(id: String, revision: Int64) async throws {
         if let error { throw error }
         guard tasks.removeValue(forKey: id) != nil else { throw FinallyServerClientError.notFound }
     }
@@ -100,7 +113,9 @@ final class MockFinallyServerAPIClient: FinallyServerAPIClient {
     func readDailyFocus(projectID: Int64, day: String) async throws -> FinallyServerDailyFocus? {
         dailyFocusOperations.append("read")
         if let error { throw error }
-        return dailyFocus[Self.dailyFocusKey(projectID: projectID, day: day)]
+        let record = dailyFocus[Self.dailyFocusKey(projectID: projectID, day: day)]
+        await dailyFocusReadHook?()
+        return record
     }
 
     func writeDailyFocus(
@@ -118,14 +133,17 @@ final class MockFinallyServerAPIClient: FinallyServerAPIClient {
             focusLimit: mutation.focusLimit
         )
         dailyFocus[Self.dailyFocusKey(projectID: projectID, day: day)] = record
+        await dailyFocusWriteHook?()
         return record
     }
 }
 
 final class InMemoryCredentialStore: FinallyServerCredentialStore {
     private(set) var credentials: [String: String] = [:]
+    var saveError: Error?
 
     func saveToken(_ token: String, workspaceID: String) throws {
+        if let saveError { throw saveError }
         credentials[workspaceID] = token
     }
 

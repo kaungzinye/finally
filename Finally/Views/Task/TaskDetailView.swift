@@ -279,7 +279,7 @@ struct TaskDetailView: View {
         for subtask in removed {
             subtask.isDeleted = true
             subtask.isDirty = true
-            NotificationService.shared.cancelRemindersForTask(subtask)
+            NotificationService.shared.cancelRemindersForTask(subtask, modelContext: modelContext)
         }
         SubtaskScheduler.distributeSubtaskDates(parent: task)
         NotificationService.shared.rescheduleAllReminders(modelContext: modelContext)

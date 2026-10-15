@@ -355,6 +355,7 @@ final class TaskProviderCoordinator {
         workspace: UserSession?,
         store: ModelContext
     ) async throws {
+        defer { NotificationService.shared.rescheduleAllReminders(modelContext: store) }
         if let synchronizeProvider {
             try await synchronizeProvider(intent, workspace, store)
             return

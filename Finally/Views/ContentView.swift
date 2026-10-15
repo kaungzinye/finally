@@ -1,4 +1,5 @@
 import SwiftUI
+import SwiftData
 
 struct ContentView: View {
     @Environment(NavigationRouter.self) private var router
@@ -7,6 +8,13 @@ struct ContentView: View {
     @Environment(DailyFocusService.self) private var dailyFocusService
     @Environment(\.modelContext) private var modelContext
 
+    @Query private var tasks: [TaskItem]
+    @Query private var sessions: [UserSession]
+    @State private var presentedTask: PresentedTask?
+    private enum PresentedTask: Identifiable {
+        case conflict(TaskItem), detail(TaskItem)
+        var id: String { switch self { case .conflict(let task): "conflict-\(task.externalTaskID)"; case .detail(let task): "detail-\(task.externalTaskID)" } }
+    }
     @State private var showCreator = false
 
     var body: some View {
@@ -57,6 +65,11 @@ struct ContentView: View {
                     .transition(.move(edge: .bottom).combined(with: .opacity))
             }
         }
+        .sheet(item: $presentedTask) { item in
+            switch item { case .conflict(let task): TaskConflictReviewView(task: task); case .detail(let task): TaskDetailView(task: task) }
+        }
+        .onAppear { openNotificationTask() }
+        .onChange(of: router.deepLinkTaskId) { _, _ in openNotificationTask() }
         .onChange(of: router.showNewTaskSheet) { _, show in
             guard show else { return }
             openCreator()
@@ -71,6 +84,25 @@ struct ContentView: View {
                 .transition(.move(edge: .top).combined(with: .opacity))
         }
 
+        if let conflict = tasks.first(where: { $0.providerWorkspaceId == sessions.selectedProviderWorkspace?.workspaceId && ($0.serverConflictJSON != nil || $0.serverTaskMissing) }) {
+            Button("Review conflict: \(conflict.title)") { presentedTask = .conflict(conflict) }
+                .buttonStyle(InkButtonStyle())
+        }
+
+        if let message = NotificationService.shared.authorizationMessage {
+            Callout(message: message, onRetry: {
+                if NotificationService.shared.authorizationNeedsSettings,
+                   let url = URL(string: UIApplication.openNotificationSettingsURLString) { UIApplication.shared.open(url) }
+                else { Task { _ = await NotificationService.shared.requestPermission() } }
+            })
+        }
+        if let message = NotificationService.shared.schedulingError {
+            Callout(message: message, onRetry: { NotificationService.shared.rescheduleAllReminders(modelContext: modelContext) })
+        }
+        if NotificationService.shared.deferredCount > 0 {
+            Callout(icon: "bell.badge", message: "\(NotificationService.shared.deferredCount) reminders stay queued. The nearest reminders are scheduled; opening the app refreshes the queue.")
+        }
+
         if let message = taskProvider.lastError {
             Callout(
                 message: message,
@@ -82,12 +114,28 @@ struct ContentView: View {
         }
 
         if let message = dailyFocusService.lastError {
-            Callout(message: message, onDismiss: { dailyFocusService.clearError() })
+            Callout(
+                message: message,
+                onRetry: { Task { await dailyFocusService.retryPendingChanges(store: modelContext) } },
+                onDismiss: { dailyFocusService.clearError() }
+            )
         }
 
         if let message = taskProvider.lastWarning {
             Callout(message: message, onDismiss: { taskProvider.clearWarning() })
         }
+    }
+
+    private func openNotificationTask() {
+        guard let id = router.deepLinkTaskId,
+              let task = tasks.first(where: { $0.externalTaskID == id && ($0.providerWorkspaceId ?? "local") == (router.deepLinkWorkspaceId ?? sessions.selectedProviderWorkspace?.workspaceId ?? "local") }) else { return }
+        router.deepLinkTaskId = nil
+        router.deepLinkWorkspaceId = nil
+        if let workspace = task.providerWorkspaceId {
+            sessions.forEach { $0.isSelected = $0.workspaceId == workspace }
+            try? modelContext.save()
+        }
+        presentedTask = .detail(task)
     }
 
     private func openCreator() {

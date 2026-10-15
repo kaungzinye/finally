@@ -3,6 +3,7 @@ import SwiftData
 import UserNotifications
 @testable import Finally
 
+@MainActor
 final class Phase6BNotificationServiceTests: XCTestCase {
     private let referenceDate = Date(timeIntervalSinceReferenceDate: 2_000_000)
 
@@ -12,7 +13,7 @@ final class Phase6BNotificationServiceTests: XCTestCase {
         return ModelContext(container)
     }
 
-    func testScheduleReminder_WithAnchoredTaskReminder_SchedulesNotification() throws {
+    func testScheduleReminder_WithAnchoredTaskReminder_SchedulesNotification() async throws {
         let ctx = try makeContext()
         let scheduler = MockNotificationScheduler()
         let now = referenceDate
@@ -27,13 +28,14 @@ final class Phase6BNotificationServiceTests: XCTestCase {
         try ctx.save()
 
         let service = NotificationService(center: scheduler, now: { now })
-        service.scheduleReminder(for: task, reminder: reminder)
+        service.rescheduleAllReminders(modelContext: ctx)
+        await service.waitUntilIdle()
 
         XCTAssertEqual(scheduler.addedRequests.count, 1)
-        XCTAssertEqual(scheduler.addedRequests.first?.identifier, reminder.notificationId)
+        XCTAssertEqual(scheduler.addedRequests.first?.identifier, reminder.notificationId(for: task))
     }
 
-    func testRescheduleAll_UsesTaskRemindersJSON() throws {
+    func testRescheduleAll_UsesTaskRemindersJSON() async throws {
         let ctx = try makeContext()
         let scheduler = MockNotificationScheduler()
         let now = referenceDate
@@ -47,11 +49,12 @@ final class Phase6BNotificationServiceTests: XCTestCase {
 
         let service = NotificationService(center: scheduler, now: { now })
         service.rescheduleAllReminders(modelContext: ctx)
+        await service.waitUntilIdle()
 
         XCTAssertEqual(scheduler.addedRequests.count, 1)
     }
 
-    func testCancelRemindersForTask_RemovesAnchoredNotificationIds() throws {
+    func testCancelRemindersForTask_RemovesAnchoredNotificationIds() async throws {
         let scheduler = MockNotificationScheduler()
         let task = TaskItem(externalTaskID: "t-3", title: "Task")
         task.taskReminders = [
@@ -59,7 +62,9 @@ final class Phase6BNotificationServiceTests: XCTestCase {
             .explicitDate(ExplicitDateReminder(dateTime: referenceDate.addingTimeInterval(5000))),
         ]
 
-        NotificationService(center: scheduler).cancelRemindersForTask(task)
+        let service = NotificationService(center: scheduler)
+        service.cancelRemindersForTask(task)
+        await service.waitUntilIdle()
 
         XCTAssertEqual(scheduler.removedIdentifiers.count, 2)
     }
