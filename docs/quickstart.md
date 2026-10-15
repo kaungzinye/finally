@@ -74,6 +74,7 @@ Finally/
 │   │   ├── TaskItem.swift               # SwiftData @Model
 │   │   ├── ProjectItem.swift
 │   │   ├── ReminderItem.swift
+│   │   ├── ModelContainer+Shared.swift  # App Group container config
 │   │   └── UserSession.swift
 │   ├── Services/
 │   │   ├── NotionAuthService.swift      # OAuth + ASWebAuthenticationSession
@@ -109,15 +110,16 @@ Finally/
 │   │       ├── SettingsView.swift
 │   │       ├── AppearanceSettingView.swift
 │   │       └── DatabaseSetupGuideView.swift
-│   └── Shared/
-│       ├── ModelContainer+Shared.swift  # App Group container config
-│       └── Constants.swift              # App Group ID, URL scheme, API URLs
+│   └── Shared/                          # Compiled by the app and the widget
+│       ├── Constants.swift              # App Group ID, URL scheme, API URLs
+│       ├── Today.swift                  # The one Today query
+│       ├── TaskRowDate.swift            # The date a task row shows
+│       ├── WidgetSnapshot.swift         # Snapshot and pending widget completions
+│       └── WidgetDay.swift              # What each widget draws from the snapshot
 ├── FinallyWidget/        # Widget extension target
-│   ├── TaskListWidget.swift             # Widget definition + timeline provider
-│   ├── WidgetViews.swift                # Small/Medium/Large layouts
-│   └── ToggleTaskCompleteIntent.swift   # AppIntent for checkbox
-├── Shared/                              # Shared between app + widget
-│   └── SharedConstants.swift            # App Group ID, shared model config
+│   ├── FinallyWidget.swift              # Widget definition + timeline provider
+│   ├── FinallyWidgetViews.swift         # Now, focus, today, and lock screen layouts
+│   └── CompleteTaskIntent.swift         # AppIntent behind each ring and Done button
 └── vercel-notion-auth/                  # Vercel serverless function
     ├── api/
     │   └── notion/

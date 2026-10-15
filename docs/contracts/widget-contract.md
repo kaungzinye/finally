@@ -15,11 +15,12 @@ Every widget reads the same Today definition as the Today tab. See `docs/model/T
 ## Interactive Elements
 
 - **Complete**: A `Button(intent:)` runs an AppIntent in the widget process. It appends the task's provider workspace and external ID to a pending-completion list in app-group storage, updates the snapshot so the task shows done, and reloads timelines. On launch and on foreground the app applies pending completions as dirty edits, reschedules reminders, and clears the list.
-- **Open task**: Tapping a row opens `finally://task/<id>`.
+- **Open task**: Tapping a row opens `finally://tasks/<id>?workspace=<provider workspace>`, so a pick from another provider opens in its own workspace.
 - **Add**: `finally://tasks/new` opens capture.
 
 ## Data Source
 
 - **Shared container**: App Group `group.com.kaungzinye.finally`
-- **Storage**: a JSON presentation snapshot in app-group `UserDefaults`, written by the app after every local change and sync. It carries each open task's title, priority, status, scheduled day, deadline, and Daily Focus position for the selected workspace.
+- **Storage**: a JSON presentation snapshot in app-group `UserDefaults`, written by the app after every local change and sync. It carries each open dated task's title, priority, status, scheduled day, deadline, and Daily Focus position for the selected workspace. It also carries every Daily Focus pick, whatever its provider, and each task finished on its scheduled or deadline day, so the lock screen ring can fill their sections.
+- **Shared code**: the widget compiles `Finally/Shared`, which holds the Today query, the row date rule, the snapshot, and the widget selection. The widget and the Today tab read the same code.
 - **Refresh**: the app calls `WidgetCenter.shared.reloadAllTimelines()` after writing the snapshot. The timeline adds an entry at the next midnight so Today rolls over.
