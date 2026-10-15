@@ -101,6 +101,7 @@
 		D684A2A1AEB4D0DD228DF4E2 /* MockNotificationScheduler.swift in Sources */ = {isa = PBXBuildFile; fileRef = B3D49B256E36F33AAD2C9991 /* MockNotificationScheduler.swift */; };
 		D6D0544538223C2E6CF6F0E6 /* ProjectPicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = 832612E5901E80295CD69C97 /* ProjectPicker.swift */; };
 		D71410F4BEF4D1538E8D6A5D /* NotionWorkspaceConfiguration.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6AB16B5D414051565B4B4B2B /* NotionWorkspaceConfiguration.swift */; };
+		D8706E906584CA988076A65F /* TasksDemoFixture.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8379C4A99FB2D717844E53B8 /* TasksDemoFixture.swift */; };
 		D97C60EE3542CFC75F712AA4 /* UpcomingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A9A54018F6182362CEAB38B7 /* UpcomingView.swift */; };
 		DCA78CA7E0DC752FFBA0F504 /* E2EConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8875DF7703CDE08E6E96792D /* E2EConfig.swift */; };
 		EE23D4C64F30E93498271399 /* MockNotionAPIClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 17927D5217F64C91979B6708 /* MockNotionAPIClient.swift */; };
@@ -201,6 +202,7 @@
 		808133DFC488C4EE614EC96B /* ProviderConnectView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProviderConnectView.swift; sourceTree = "<group>"; };
 		8241A4815501F18DBAF175F6 /* BoardFilterView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BoardFilterView.swift; sourceTree = "<group>"; };
 		832612E5901E80295CD69C97 /* ProjectPicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProjectPicker.swift; sourceTree = "<group>"; };
+		8379C4A99FB2D717844E53B8 /* TasksDemoFixture.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TasksDemoFixture.swift; sourceTree = "<group>"; };
 		837D45B286A6CB5EEF5A4D27 /* InlineTaskCreator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InlineTaskCreator.swift; sourceTree = "<group>"; };
 		886B142AE74239CB20B81B88 /* SubtaskScheduler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubtaskScheduler.swift; sourceTree = "<group>"; };
 		8875DF7703CDE08E6E96792D /* E2EConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = E2EConfig.swift; sourceTree = "<group>"; };
@@ -264,6 +266,7 @@
 				DFAA764278E2B2298E8B7404 /* ProjectItem.swift */,
 				E3DCE4B37409BDE28BFD5686 /* TaskItem.swift */,
 				E23557EFB66C7C96C459D609 /* TaskReminder.swift */,
+				8379C4A99FB2D717844E53B8 /* TasksDemoFixture.swift */,
 				B12204C23AFB16226884D3C7 /* TasksList.swift */,
 				EFCAC682CEE30C58506E0425 /* UserSession.swift */,
 				F1CAC1083AD59B4081B77077 /* WorkspaceScope.swift */,
@@ -753,6 +756,7 @@
 				ACB67A088AA0A224717E6FEE /* TaskReminder.swift in Sources */,
 				6B3F6A15D72DE7B329EEAFBE /* TaskRowView.swift in Sources */,
 				8A4013637BD595F7018BBDCF /* TaskTitleParser.swift in Sources */,
+				D8706E906584CA988076A65F /* TasksDemoFixture.swift in Sources */,
 				33457F14B7B4D6B3BCE08099 /* TasksList.swift in Sources */,
 				A3A3594E80C835546635FBA3 /* TasksView.swift in Sources */,
 				4772476F586F0B8090B14981 /* TodayView.swift in Sources */,

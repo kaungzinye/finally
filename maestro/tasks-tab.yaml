@@ -1,0 +1,81 @@
+# The runner launches the in-memory fixture with -tasks-demo first.
+appId: com.kaungzinye.finally
+---
+- extendedWaitUntil:
+    visible: "Tasks"
+    timeout: 10000
+- tapOn:
+    text: "Tasks"
+    index: 0
+- extendedWaitUntil:
+    visible:
+      id: "tasks-inbox-header"
+    timeout: 5000
+- takeScreenshot: 02-tasks-list
+
+# Inbox comes first, with its count.
+- assertVisible: "Sort the receipts"
+- assertVisible: "Book the dentist"
+
+# Home shows its three nearest tasks and a more row.
+- assertVisible: "Service the boiler"
+- assertVisible: "Hang the shelves"
+- assertVisible: "Choose paint colors"
+- assertNotVisible: "Clear the gutters"
+- assertNotVisible: "Fix the hall lamp"
+- tapOn:
+    id: "tasks-more-demo-home"
+- assertVisible: "Clear the gutters"
+- assertVisible: "Fix the hall lamp"
+- takeScreenshot: 03-project-home
+- tapOn:
+    id: "BackButton"
+
+# The Unscheduled filter keeps tasks with neither date.
+- tapOn:
+    id: "tasks-filter-unscheduled"
+- assertVisible: "Sort the receipts"
+- assertNotVisible: "Book the dentist"
+- assertVisible: "Fix the hall lamp"
+- assertNotVisible: "Service the boiler"
+- scrollUntilVisible:
+    element: "Plant the bulbs"
+    direction: DOWN
+- assertNotVisible:
+    id: "tasks-project-demo-taxes"
+- takeScreenshot: 04-tasks-unscheduled
+- tapOn:
+    id: "tasks-filter-unscheduled"
+- assertVisible: "Service the boiler"
+
+# Settings, sort, and search live in the toolbar.
+- tapOn: "Settings"
+- assertVisible: "Workspaces"
+- takeScreenshot: 05-settings
+- tapOn: "Done"
+- tapOn: "Sort"
+- assertVisible: "Priority"
+- takeScreenshot: 06-sort
+- tapOn: "Done"
+
+# The switch hosts the Board in place of the list.
+- tapOn:
+    id: "tasks-layout-board"
+- assertVisible: "To Do"
+- assertVisible: "Service the boiler"
+- assertNotVisible: "Sort"
+- assertNotVisible:
+    id: "tasks-filter-unscheduled"
+- takeScreenshot: 07-board
+- tapOn:
+    id: "tasks-layout-list"
+- assertVisible:
+    id: "tasks-inbox-header"
+
+- tapOn: "Search"
+- inputText: "lamp"
+- assertVisible: "Fix the hall lamp"
+- takeScreenshot: 08-search
+- tapOn: "Fix the hall lamp"
+- assertVisible: "Scheduled"
+- takeScreenshot: 09-search-detail
