@@ -89,6 +89,23 @@ final class ServerReminderRuleTests: XCTestCase {
         XCTAssertEqual(decoded.fireDate(for: task), acceptedDeadline.addingTimeInterval(1800))
     }
 
+    func testScheduledDayAnchorTravelsAsThePlannedDayWireValue() throws {
+        let id = UUID()
+        let original = TaskReminder.anchored(AnchoredReminder(id: id, anchor: .scheduledDay,
+                                                             value: 1, unit: .days, direction: .before))
+
+        let sent = try XCTUnwrap(JSONSerialization.jsonObject(
+            with: JSONEncoder().encode(FinallyServerReminderRule(original))
+        ) as? [String: Any])
+        let payload = """
+        {"id":"\(id.uuidString)","kind":"anchored","anchor":"plannedDay","value":1,"unit":"days","direction":"before"}
+        """
+        let received = try JSONDecoder().decode(FinallyServerReminderRule.self, from: Data(payload.utf8)).reminder()
+
+        XCTAssertEqual(sent["anchor"] as? String, "plannedDay")
+        XCTAssertEqual(received, original)
+    }
+
     func testSharedRuleUUIDKeepsProviderWorkspaceAndTaskNotificationsDistinct() {
         let reminder = TaskReminder.anchored(AnchoredReminder(anchor: .deadline, value: 30, unit: .minutes))
         let first = TaskItem(externalTaskID: "1", title: "Proposal")

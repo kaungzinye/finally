@@ -38,7 +38,7 @@ struct TodayView: View {
                     DatePicker("Focus day", selection: $day, in: Calendar.current.startOfDay(for: Date())..., displayedComponents: .date)
                         .accessibilityIdentifier("daily-focus-day")
                     if !Calendar.current.isDateInToday(day) {
-                        Text("Review the picks for this day. Confirmation keeps each task's planned day and deadline.")
+                        Text("Review the picks for this day. Confirmation keeps each task's scheduled day and deadline.")
                             .font(.subheadline)
                             .foregroundStyle(.secondary)
                     }

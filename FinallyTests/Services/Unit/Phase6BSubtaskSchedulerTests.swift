@@ -8,9 +8,9 @@ final class Phase6BSubtaskSchedulerTests: XCTestCase {
         return cal
     }()
 
-    func testDistributeSubtaskDates_PrefersPlannedDayOverDeadline() {
+    func testDistributeSubtaskDates_PrefersScheduledDayOverDeadline() {
         let parent = TaskItem(externalTaskID: "parent", title: "Parent")
-        parent.plannedDay = calendar.date(from: DateComponents(year: 2026, month: 12, day: 1))!
+        parent.scheduledDay = calendar.date(from: DateComponents(year: 2026, month: 12, day: 1))!
         parent.deadline = calendar.date(from: DateComponents(year: 2026, month: 12, day: 31))!
 
         let sub1 = TaskItem(externalTaskID: "sub-1", title: "First")
@@ -29,7 +29,7 @@ final class Phase6BSubtaskSchedulerTests: XCTestCase {
         XCTAssertNotNil(sub2.suggestedDate)
         if let d1 = sub1.suggestedDate, let d2 = sub2.suggestedDate {
             XCTAssertLessThanOrEqual(d1, d2)
-            XCTAssertLessThanOrEqual(d2, parent.plannedDay!)
+            XCTAssertLessThanOrEqual(d2, parent.scheduledDay!)
         }
     }
 }

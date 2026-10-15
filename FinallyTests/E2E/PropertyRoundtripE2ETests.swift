@@ -78,22 +78,22 @@ final class PropertyRoundtripE2ETests: NotionE2ETestCase {
         XCTAssertEqual(syncedComponents.day, 15)
     }
 
-    func testRoundtrip_PlannedDayAndDeadline() async throws {
+    func testRoundtrip_ScheduledDayAndDeadline() async throws {
         var cal = Calendar(identifier: .gregorian)
         cal.timeZone = TimeZone(identifier: "UTC")!
-        let plannedDay = cal.date(from: DateComponents(year: 2026, month: 7, day: 1))!
+        let scheduledDay = cal.date(from: DateComponents(year: 2026, month: 7, day: 1))!
         let endDate = cal.date(from: DateComponents(year: 2026, month: 7, day: 7))!
 
-        let task = try await pushLocalTask(title: "Planned day and deadline roundtrip") { t in
-            t.plannedDay = plannedDay
+        let task = try await pushLocalTask(title: "Scheduled day and deadline roundtrip") { t in
+            t.scheduledDay = scheduledDay
             t.deadline = endDate
         }
         try await syncService.fullSync(session: session, modelContext: modelContext)
         let synced = try XCTUnwrap(try fetchTask(externalTaskID: task.externalTaskID))
 
-        let plannedDayComponents = cal.dateComponents([.year, .month, .day], from: try XCTUnwrap(synced.plannedDay))
+        let scheduledDayComponents = cal.dateComponents([.year, .month, .day], from: try XCTUnwrap(synced.scheduledDay))
         let endComponents = cal.dateComponents([.year, .month, .day], from: try XCTUnwrap(synced.deadline))
-        XCTAssertEqual(plannedDayComponents.day, 1)
+        XCTAssertEqual(scheduledDayComponents.day, 1)
         XCTAssertEqual(endComponents.day, 7)
     }
 

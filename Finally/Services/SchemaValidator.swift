@@ -93,13 +93,13 @@ final class SchemaValidator {
             }
         }
 
-        // Optional Notion date property for the planned day
+        // Optional Notion date property for the scheduled day
         if let targetProp = database.properties.first(where: {
             ($0.key.lowercased().contains("target") || $0.key.lowercased() == "start") && $0.value.type == "date"
         }) {
-            mappings.taskPlannedDayProperty = targetProp.key
+            mappings.taskScheduledDayProperty = targetProp.key
         } else {
-            mappings.taskPlannedDayProperty = nil
+            mappings.taskScheduledDayProperty = nil
         }
 
         // Optional: Parent task relation (subtasks)

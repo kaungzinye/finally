@@ -132,13 +132,13 @@ final class PhonePriorityConflictTests: XCTestCase {
         XCTAssertFalse(task.isDirty)
     }
 
-    func testTimedRemotePlannedDayProducesTitleOnlyPatch() async throws {
+    func testTimedRemoteScheduledDayProducesTitleOnlyPatch() async throws {
         let (_, context, workspace, api, task) = try fixture()
         let timed = Date(timeIntervalSince1970: 2_000_010_000)
-        api.tasks["1"] = FinallyServerTask(id: "1", projectID: 42, title: "Proposal", isCompleted: false, plannedDay: timed, revision: 8)
+        api.tasks["1"] = FinallyServerTask(id: "1", projectID: 42, title: "Proposal", isCompleted: false, scheduledDay: timed, revision: 8)
         let adapter = FinallyServerTaskProviderAdapter(api: api)
         try await adapter.synchronize(.full, workspace: workspace, store: context)
-        XCTAssertEqual(task.plannedDay, Calendar.current.startOfDay(for: timed))
+        XCTAssertEqual(task.scheduledDay, Calendar.current.startOfDay(for: timed))
         task.title = "Title edit"
         task.isDirty = true
         try await adapter.synchronize(.push, workspace: workspace, store: context)

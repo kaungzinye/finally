@@ -2,7 +2,7 @@ import Foundation
 
 extension FinallyServerTask {
     var mutation: FinallyServerTaskMutation {
-        FinallyServerTaskMutation(title: title, isCompleted: isCompleted, plannedDay: plannedDay.map { Calendar.current.startOfDay(for: $0) }, deadline: deadline, priority: priority, deadlineHasTime: deadlineHasTime, reminders: reminders)
+        FinallyServerTaskMutation(title: title, isCompleted: isCompleted, scheduledDay: scheduledDay.map { Calendar.current.startOfDay(for: $0) }, deadline: deadline, priority: priority, deadlineHasTime: deadlineHasTime, reminders: reminders)
     }
 }
 
@@ -21,7 +21,7 @@ extension FinallyServerTaskMutation {
         var fields: Set<String> = []
         if title != other.title { fields.insert("title") }
         if isCompleted != other.isCompleted { fields.insert("done") }
-        if !sameInstant(plannedDay, other.plannedDay) { fields.insert("start_date") }
+        if !sameInstant(scheduledDay, other.scheduledDay) { fields.insert("start_date") }
         if !sameInstant(deadline, other.deadline) { fields.insert("due_date") }
         if deadlineHasTime != other.deadlineHasTime { fields.formUnion(["due_date", "deadline_has_time"]) }
         if reminders != other.reminders { fields.insert("reminder_rules") }
@@ -40,7 +40,7 @@ extension FinallyServerTaskMutation {
 
 extension TaskItem {
     var serverMutation: FinallyServerTaskMutation {
-        FinallyServerTaskMutation(title: title, isCompleted: status == .done, plannedDay: plannedDay, deadline: deadline, priority: priority, deadlineHasTime: deadlineHasTime, reminders: taskReminders)
+        FinallyServerTaskMutation(title: title, isCompleted: status == .done, scheduledDay: scheduledDay, deadline: deadline, priority: priority, deadlineHasTime: deadlineHasTime, reminders: taskReminders)
     }
 
     var acceptedServerMutation: FinallyServerTaskMutation? { .decode(serverSnapshotJSON) }
@@ -49,7 +49,7 @@ extension TaskItem {
     func applyServerMutation(_ mutation: FinallyServerTaskMutation, fields: Set<String>) {
         if fields.contains("title") { title = mutation.title }
         if fields.contains("done") { status = mutation.isCompleted ? .done : .notStarted }
-        if fields.contains("start_date") { plannedDay = mutation.plannedDay }
+        if fields.contains("start_date") { scheduledDay = mutation.scheduledDay }
         if fields.contains("due_date") { deadline = mutation.deadline }
         if fields.contains("deadline_has_time") { deadlineHasTime = mutation.deadlineHasTime }
         if fields.contains("reminder_rules") { taskReminders = mutation.reminders }

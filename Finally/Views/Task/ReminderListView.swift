@@ -89,7 +89,7 @@ struct ReminderAddSheet: View {
     private var availableAnchors: [ReminderAnchor] {
         var anchors: [ReminderAnchor] = []
         if task.deadline != nil { anchors.append(.deadline) }
-        if task.plannedDay != nil { anchors.append(.plannedDay) }
+        if task.scheduledDay != nil { anchors.append(.scheduledDay) }
         return anchors
     }
 
@@ -148,7 +148,7 @@ struct ReminderAddSheet: View {
     @ViewBuilder private var anchoredSection: some View {
         Section {
             if availableAnchors.isEmpty {
-                Text("Set a deadline or planned day to use anchored reminders.")
+                Text("Set a deadline or scheduled day to use anchored reminders.")
                     .foregroundStyle(.secondary)
             } else {
                 Picker("Anchor", selection: $anchor) {
@@ -360,6 +360,6 @@ struct SubtaskReminderSheet: View {
 
 private extension TaskItem {
     var hasValidAnchoredReminderAnchor: Bool {
-        deadline != nil || plannedDay != nil
+        deadline != nil || scheduledDay != nil
     }
 }

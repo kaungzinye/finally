@@ -109,7 +109,7 @@ final class DailyFocusServiceTests: XCTestCase {
         context.insert(server)
         let task = TaskItem(externalTaskID: "17", title: "Draft the brief")
         task.providerWorkspaceId = server.workspaceId
-        task.plannedDay = day
+        task.scheduledDay = day
         task.deadline = day.addingTimeInterval(86_400 * 4)
         context.insert(task)
         let tomorrow = Calendar.current.date(byAdding: .day, value: 1, to: day)!
@@ -132,7 +132,7 @@ final class DailyFocusServiceTests: XCTestCase {
         let stored = try XCTUnwrap(api.dailyFocus[MockFinallyServerAPIClient.dailyFocusKey(projectID: 42, day: dayKey)])
         XCTAssertTrue(stored.isConfirmed)
         XCTAssertEqual(stored.picks.map(\.externalTaskID), ["17"])
-        XCTAssertEqual(task.plannedDay, day)
+        XCTAssertEqual(task.scheduledDay, day)
         XCTAssertEqual(task.deadline, day.addingTimeInterval(86_400 * 4))
         XCTAssertFalse(task.isDirty)
     }

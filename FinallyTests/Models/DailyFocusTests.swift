@@ -86,12 +86,12 @@ final class DailyFocusTests: XCTestCase {
         XCTAssertEqual(resolved[3].pick, pick("n9"))
     }
 
-    func testPickingATaskLeavesPlannedDayAndDeadlineUntouched() throws {
+    func testPickingATaskLeavesScheduledDayAndDeadlineUntouched() throws {
         let task = TaskItem(externalTaskID: "n1", title: "Draft the brief")
         task.providerWorkspaceId = "notion-workspace"
-        let plannedDay = day
+        let scheduledDay = day
         let deadline = day.addingTimeInterval(86_400 * 3)
-        task.plannedDay = plannedDay
+        task.scheduledDay = scheduledDay
         task.deadline = deadline
 
         let focus = DailyFocus(day: day)
@@ -100,7 +100,7 @@ final class DailyFocusTests: XCTestCase {
         focus.confirm()
         focus.remove(task.dailyFocusPick)
 
-        XCTAssertEqual(task.plannedDay, plannedDay)
+        XCTAssertEqual(task.scheduledDay, scheduledDay)
         XCTAssertEqual(task.deadline, deadline)
         XCTAssertFalse(task.isDirty)
     }
@@ -141,7 +141,7 @@ final class DailyFocusTests: XCTestCase {
     func testKeepRequiresSpaceOrChosenDisplacementAndLeavesTaskDatesFixed() throws {
         let task = TaskItem(externalTaskID: "unfinished", title: "Draft the brief")
         task.providerWorkspaceId = "notion-workspace"
-        task.plannedDay = day
+        task.scheduledDay = day
         task.deadline = day.addingTimeInterval(86_400 * 4)
         let source = DailyFocus(day: day)
         try source.add(task.dailyFocusPick)
@@ -159,7 +159,7 @@ final class DailyFocusTests: XCTestCase {
         XCTAssertTrue(source.picks.isEmpty)
         XCTAssertEqual(target.picks, [task.dailyFocusPick])
         XCTAssertFalse(target.isConfirmed)
-        XCTAssertEqual(task.plannedDay, day)
+        XCTAssertEqual(task.scheduledDay, day)
         XCTAssertEqual(task.deadline, day.addingTimeInterval(86_400 * 4))
         XCTAssertFalse(task.isDirty)
     }
@@ -168,7 +168,7 @@ final class DailyFocusTests: XCTestCase {
         let context = try makeInMemoryContext()
         let task = TaskItem(externalTaskID: "unfinished", title: "Draft the brief")
         task.providerWorkspaceId = "notion-workspace"
-        task.plannedDay = day
+        task.scheduledDay = day
         task.deadline = day.addingTimeInterval(86_400 * 4)
         context.insert(task)
         let focus = DailyFocus(day: day)
@@ -181,12 +181,12 @@ final class DailyFocusTests: XCTestCase {
         XCTAssertTrue(focus.picks.isEmpty)
         XCTAssertEqual(try context.fetchCount(FetchDescriptor<TaskItem>()), 1)
         XCTAssertFalse(task.isDeleted)
-        XCTAssertEqual(task.plannedDay, day)
+        XCTAssertEqual(task.scheduledDay, day)
         XCTAssertEqual(task.deadline, day.addingTimeInterval(86_400 * 4))
         XCTAssertFalse(task.isDirty)
     }
 
-    func testScheduleAndDeferEditOnlyThePlannedDay() throws {
+    func testScheduleAndDeferEditOnlyTheScheduledDay() throws {
         let task = TaskItem(externalTaskID: "unfinished", title: "Draft the brief")
         task.providerWorkspaceId = "notion-workspace"
         let deadline = day.addingTimeInterval(86_400 * 2)
@@ -196,14 +196,14 @@ final class DailyFocusTests: XCTestCase {
         let scheduled = day.addingTimeInterval(86_400 * 5)
 
         try focus.replan(task.dailyFocusPick, decision: .schedule(scheduled), task: task)
-        XCTAssertEqual(task.plannedDay, Calendar.current.startOfDay(for: scheduled))
+        XCTAssertEqual(task.scheduledDay, Calendar.current.startOfDay(for: scheduled))
         XCTAssertEqual(task.deadline, deadline)
         XCTAssertTrue(task.isDirty)
         XCTAssertTrue(focus.picks.isEmpty)
 
         try focus.add(task.dailyFocusPick)
         try focus.replan(task.dailyFocusPick, decision: .deferTask, task: task)
-        XCTAssertNil(task.plannedDay)
+        XCTAssertNil(task.scheduledDay)
         XCTAssertEqual(task.deadline, deadline)
         XCTAssertFalse(task.isDeleted)
         XCTAssertTrue(focus.picks.isEmpty)

@@ -255,8 +255,8 @@ final class TaskProviderContractTests: XCTestCase {
         XCTAssertEqual(Set(server.fieldSupport.keys), canonicalFields)
         XCTAssertEqual(notion.fieldSupport[.deadline], .lossless)
         XCTAssertEqual(
-            notion.fieldSupport[.plannedDay],
-            .lossy(reason: "A separate Notion planned-day property is required to preserve every planned-day shape.")
+            notion.fieldSupport[.scheduledDay],
+            .lossy(reason: "A separate Notion scheduled-day property is required to preserve every scheduled-day shape.")
         )
         XCTAssertEqual(server.fieldSupport[.deadline], .lossless)
         XCTAssertEqual(server.fieldSupport[.reminders], .lossless)
@@ -274,8 +274,8 @@ final class TaskProviderContractTests: XCTestCase {
         let workspace = makeServerWorkspace()
         let task = TaskItem(externalTaskID: UUID().uuidString, title: "Plan the week")
         task.providerWorkspaceId = workspace.workspaceId
-        let plannedDay = Calendar.current.startOfDay(for: Date(timeIntervalSince1970: 1_780_000_000))
-        task.plannedDay = plannedDay
+        let scheduledDay = Calendar.current.startOfDay(for: Date(timeIntervalSince1970: 1_780_000_000))
+        task.scheduledDay = scheduledDay
         task.deadline = Date(timeIntervalSince1970: 1_780_086_400)
         task.deadlineHasTime = true
         task.isDirty = true
@@ -284,29 +284,29 @@ final class TaskProviderContractTests: XCTestCase {
         let adapter = FinallyServerTaskProviderAdapter(api: api)
 
         try await adapter.synchronize(.push, workspace: workspace, store: context)
-        XCTAssertEqual(task.plannedDay, plannedDay)
+        XCTAssertEqual(task.scheduledDay, scheduledDay)
         XCTAssertTrue(task.deadlineHasTime)
 
         try await adapter.synchronize(.launch, workspace: workspace, store: context)
 
-        XCTAssertEqual(task.plannedDay, plannedDay)
+        XCTAssertEqual(task.scheduledDay, scheduledDay)
         XCTAssertTrue(task.deadlineHasTime)
     }
 
-    func testFinallyServerReadsARemotePlannedDayAsItsCalendarDay() async throws {
+    func testFinallyServerReadsARemoteScheduledDayAsItsCalendarDay() async throws {
         let api = MockFinallyServerAPIClient()
         api.tasks["1"] = FinallyServerTask(
             id: "1",
             projectID: 42,
             title: "Plan the week",
             isCompleted: false,
-            plannedDay: Date(timeIntervalSince1970: 1_780_012_345)
+            scheduledDay: Date(timeIntervalSince1970: 1_780_012_345)
         )
         let context = try makeInMemoryContext()
         let workspace = makeServerWorkspace()
         let task = TaskItem(externalTaskID: "1", title: "Plan the week")
         task.providerWorkspaceId = workspace.workspaceId
-        task.plannedDay = Calendar.current.startOfDay(for: Date(timeIntervalSince1970: 1_780_000_000))
+        task.scheduledDay = Calendar.current.startOfDay(for: Date(timeIntervalSince1970: 1_780_000_000))
         task.lastSyncedAt = Date()
         context.insert(workspace)
         context.insert(task)
@@ -314,7 +314,7 @@ final class TaskProviderContractTests: XCTestCase {
         try await FinallyServerTaskProviderAdapter(api: api)
             .synchronize(.full, workspace: workspace, store: context)
 
-        XCTAssertEqual(task.plannedDay, Calendar.current.startOfDay(for: Date(timeIntervalSince1970: 1_780_012_345)))
+        XCTAssertEqual(task.scheduledDay, Calendar.current.startOfDay(for: Date(timeIntervalSince1970: 1_780_012_345)))
     }
 
     func testFinallyServerKeepsInProgressStateAcrossARoundTrip() async throws {
@@ -409,7 +409,7 @@ final class TaskProviderContractTests: XCTestCase {
         )
         let task = TaskItem(externalTaskID: "task-1", title: "Plan launch")
         task.providerWorkspaceId = workspace.workspaceId
-        task.plannedDay = Date(timeIntervalSince1970: 1_780_000_000)
+        task.scheduledDay = Date(timeIntervalSince1970: 1_780_000_000)
         task.deadline = Date(timeIntervalSince1970: 1_780_086_400)
         task.deadlineHasTime = true
         task.priority = .urgent
@@ -423,7 +423,7 @@ final class TaskProviderContractTests: XCTestCase {
         try context.save()
 
         let stored = try XCTUnwrap(ModelContext(container).fetch(FetchDescriptor<TaskItem>()).first)
-        XCTAssertNotEqual(stored.plannedDay, stored.deadline)
+        XCTAssertNotEqual(stored.scheduledDay, stored.deadline)
         XCTAssertTrue(stored.deadlineHasTime)
         XCTAssertEqual(stored.taskReminders.count, 1)
     }

@@ -171,7 +171,7 @@ enum ReminderOffset: String, CaseIterable, Identifiable {
         }
     }
 
-    func toTaskReminder(hasPlannedDay: Bool) -> TaskReminder {
+    func toTaskReminder(hasScheduledDay: Bool) -> TaskReminder {
         switch self {
         case .atTime:
             return .anchored(AnchoredReminder(anchor: .deadline, value: 0, unit: .minutes, direction: .before))
@@ -186,8 +186,8 @@ enum ReminderOffset: String, CaseIterable, Identifiable {
         case .oneDay:
             return TaskReminder.presetOneDayBeforeDeadline()
         case .oneWeek:
-            return hasPlannedDay
-                ? TaskReminder.presetWeekBeforePlannedDay()
+            return hasScheduledDay
+                ? TaskReminder.presetWeekBeforeScheduledDay()
                 : .anchored(AnchoredReminder(anchor: .deadline, value: 1, unit: .weeks, direction: .before))
         }
     }
@@ -213,10 +213,10 @@ enum ReminderChoice: Equatable, Identifiable {
         }
     }
 
-    func toTaskReminder(hasPlannedDay: Bool) -> TaskReminder {
+    func toTaskReminder(hasScheduledDay: Bool) -> TaskReminder {
         switch self {
         case .preset(let offset):
-            return offset.toTaskReminder(hasPlannedDay: hasPlannedDay)
+            return offset.toTaskReminder(hasScheduledDay: hasScheduledDay)
         case .custom(let date):
             return .explicitDate(ExplicitDateReminder(dateTime: date))
         }

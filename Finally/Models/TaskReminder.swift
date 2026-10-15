@@ -4,14 +4,14 @@ import Foundation
 
 enum ReminderAnchor: String, Codable, CaseIterable, Identifiable, Sendable {
     case deadline = "deadline"
-    case plannedDay = "plannedDay"
+    case scheduledDay = "scheduledDay"
 
     var id: String { rawValue }
 
     var label: String {
         switch self {
         case .deadline: return "Deadline"
-        case .plannedDay: return "Planned day"
+        case .scheduledDay: return "Scheduled day"
         }
     }
 }
@@ -172,8 +172,8 @@ enum TaskReminder: Codable, Equatable, Identifiable, Sendable {
         }
     }
 
-    static func presetWeekBeforePlannedDay() -> TaskReminder {
-        .anchored(AnchoredReminder(anchor: .plannedDay, value: 1, unit: .weeks, direction: .before))
+    static func presetWeekBeforeScheduledDay() -> TaskReminder {
+        .anchored(AnchoredReminder(anchor: .scheduledDay, value: 1, unit: .weeks, direction: .before))
     }
 
     static func presetOneDayBeforeDeadline() -> TaskReminder {

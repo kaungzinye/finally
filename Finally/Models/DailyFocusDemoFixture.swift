@@ -40,7 +40,7 @@ enum DailyFocusDemoFixture {
         let bank = makeTask("demo-bank", "Call the bank", workspace: notionWorkspaceID, priority: .medium)
         bank.deadline = calendar.date(byAdding: .day, value: 2, to: today)
         let contract = makeTask("demo-contract", "Review the contract", workspace: notionWorkspaceID, priority: nil)
-        contract.plannedDay = calendar.date(byAdding: .day, value: 1, to: today)
+        contract.scheduledDay = calendar.date(byAdding: .day, value: 1, to: today)
         let release = makeTask("demo-release", "Ship the release notes", workspace: serverWorkspaceID, priority: .urgent)
         release.deadline = calendar.date(byAdding: .day, value: 1, to: today)
         for task in [brief, bank, contract, release] {

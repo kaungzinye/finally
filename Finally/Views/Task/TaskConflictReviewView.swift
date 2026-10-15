@@ -39,7 +39,7 @@ struct TaskConflictReviewView: View {
     private func values(_ mutation: FinallyServerTaskMutation) -> some View {
         LabeledContent("Task", value: mutation.title)
         LabeledContent("State", value: mutation.isCompleted ? "Done" : "Open")
-        LabeledContent("Planned day", value: mutation.plannedDay?.formatted(date: .abbreviated, time: .omitted) ?? "Unset")
+        LabeledContent("Scheduled", value: mutation.scheduledDay?.formatted(date: .abbreviated, time: .omitted) ?? "Unset")
         LabeledContent("Deadline", value: mutation.deadline?.formatted(date: .abbreviated, time: .shortened) ?? "Unset")
         LabeledContent("Priority", value: mutation.priority?.rawValue ?? "Unset")
         if task.isDeleted { Text("Your phone edit deletes this task.") }

@@ -79,3 +79,5 @@ appId: com.kaungzinye.finally
 - tapOn: "Ship the release notes"
 - assertVisible: "2 of 3 picks · Confirmed"
 - assertVisible: "Ship the release notes"
+- tapOn: "Ship the release notes"
+- assertVisible: "Scheduled"

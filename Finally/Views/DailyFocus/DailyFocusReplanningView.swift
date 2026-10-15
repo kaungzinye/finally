@@ -44,7 +44,7 @@ struct DailyFocusReplanningView: View {
                             }
                             Button("Break down") { breakdownTask = task }
                             Button("Schedule") {
-                                scheduleDay = max(nextDay, task.plannedDay ?? nextDay)
+                                scheduleDay = max(nextDay, task.scheduledDay ?? nextDay)
                                 scheduleTask = task
                             }
                             Button("Defer") { decide(item, .deferTask) }
@@ -54,7 +54,7 @@ struct DailyFocusReplanningView: View {
                     } header: {
                         Text(item.task?.title ?? "Unavailable task")
                     } footer: {
-                        Text("Drop keeps the task and its dates. Defer clears its planned day. Schedule sets its planned day.")
+                        Text("Drop keeps the task and its dates. Defer clears its scheduled day. Schedule sets its scheduled day.")
                     }
                 }
             }
@@ -90,7 +90,7 @@ struct DailyFocusReplanningView: View {
             .sheet(item: $scheduleTask) { task in
                 NavigationStack {
                     Form {
-                        DatePicker("Planned day", selection: $scheduleDay, in: Calendar.current.startOfDay(for: Date())..., displayedComponents: .date)
+                        DatePicker("Scheduled", selection: $scheduleDay, in: Calendar.current.startOfDay(for: Date())..., displayedComponents: .date)
                         Text("The task's deadline stays fixed.").foregroundStyle(.secondary)
                     }
                     .navigationTitle("Schedule task")
