@@ -182,26 +182,25 @@ final class FinallyServerConnectionIntegrationTests: XCTestCase {
         XCTAssertEqual(try context.fetchCount(FetchDescriptor<TaskItem>()), 2)
     }
 
-    func testPresentationSummariesUseSelectedWorkspaceAcrossProviders() throws {
+    func testWidgetSnapshotUsesSelectedWorkspaceAcrossProviders() throws {
         let notion = UserSession(workspaceId: "notion-workspace", workspaceName: "Shared", providerIdentity: .notion)
         let server = makeServerWorkspace()
         server.isSelected = true
         notion.isSelected = false
         let notionTask = TaskItem(externalTaskID: "same-id", title: "Notion task")
         notionTask.providerWorkspaceId = notion.workspaceId
+        notionTask.scheduledDay = Date()
         let serverTask = TaskItem(externalTaskID: "same-id", title: "Server task")
         serverTask.providerWorkspaceId = server.workspaceId
+        serverTask.scheduledDay = Date()
 
-        let summaries = TaskPresentationQuery.summaries(
-            from: [notionTask, serverTask],
-            workspace: server
-        )
+        let snapshot = WidgetSnapshot(tasks: [notionTask, serverTask], focus: nil, workspace: server)
 
-        XCTAssertEqual(summaries.map(\.title), ["Server task"])
-        XCTAssertEqual(summaries.map(\.id), ["server-workspace:same-id"])
+        XCTAssertEqual(snapshot.tasks.map(\.title), ["Server task"])
+        XCTAssertEqual(snapshot.tasks.map(\.id), ["server-workspace:same-id"])
     }
 
-    func testPresentationSummariesRetainTasksForUnavailableProvider() {
+    func testWidgetSnapshotRetainsTasksForUnavailableProvider() {
         let unavailable = UserSession(
             workspaceId: "offline-workspace",
             workspaceName: "Offline",
@@ -209,10 +208,11 @@ final class FinallyServerConnectionIntegrationTests: XCTestCase {
         )
         let task = TaskItem(externalTaskID: "task-1", title: "Available offline")
         task.providerWorkspaceId = unavailable.workspaceId
+        task.scheduledDay = Date()
 
-        let summaries = TaskPresentationQuery.summaries(from: [task], workspace: unavailable)
+        let snapshot = WidgetSnapshot(tasks: [task], focus: nil, workspace: unavailable)
 
-        XCTAssertEqual(summaries.map(\.title), ["Available offline"])
+        XCTAssertEqual(snapshot.tasks.map(\.title), ["Available offline"])
     }
 
     func testProviderConfigurationsShareOneCanonicalSessionPayloadWithoutLeakingFields() {

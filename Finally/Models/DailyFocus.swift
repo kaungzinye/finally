@@ -39,7 +39,7 @@ enum DailyFocusReplanningDecision {
 /// The few tasks picked for one day, bounded by the focus limit.
 @Model
 final class DailyFocus {
-    static let defaultFocusLimit = 3
+    static let defaultFocusLimit = AppConstants.defaultFocusLimit
     static let focusLimitRange = 1...5
 
     var day: Date

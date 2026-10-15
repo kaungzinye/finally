@@ -32,7 +32,8 @@ enum AppConstants {
     // Daily Focus
     /// UserDefaults key for the focus limit applied to new Daily Focus records.
     static let focusLimitKey = "focusLimit"
+    static let defaultFocusLimit = 3
 
     // Widget
-    static let widgetKind = "TaskListWidget"
+    static let widgetKind = "FinallyWidget"
 }

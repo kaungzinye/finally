@@ -33,10 +33,12 @@ final class NavigationRouter {
             if path == "/new" || path == "new" {
                 showNewTaskSheet = true
             } else {
-                // Path is the task ID: /taskNotionPageId
+                // Path is the task ID: /taskNotionPageId. A `workspace` query item names the
+                // task's provider workspace, otherwise the selected one.
                 let taskId = path.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
                 if !taskId.isEmpty {
-                    deepLinkWorkspaceId = nil
+                    deepLinkWorkspaceId = URLComponents(url: url, resolvingAgainstBaseURL: false)?
+                        .queryItems?.first(where: { $0.name == "workspace" })?.value
                     deepLinkTaskId = taskId
                 }
             }
