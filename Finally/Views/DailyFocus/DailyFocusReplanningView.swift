@@ -52,7 +52,7 @@ struct DailyFocusReplanningView: View {
                         Button("Drop focus pick") { decide(item, .drop) }
                             .accessibilityIdentifier("daily-focus-drop-pick")
                     } header: {
-                        Text(item.task?.title ?? "Unavailable task")
+                        Text(item.task?.title ?? "Deleted")
                     } footer: {
                         Text("Drop keeps the task and its dates. Defer clears its scheduled day. Schedule sets its scheduled day.")
                     }
@@ -71,7 +71,7 @@ struct DailyFocusReplanningView: View {
                 if let nextFocus, let keepPick {
                     NavigationStack {
                         List(nextFocus.resolvedPicks(among: tasks)) { item in
-                            Button(item.task?.title ?? "Unavailable task") {
+                            Button(item.task?.title ?? "Deleted") {
                                 let source = ResolvedDailyFocusPick(pick: keepPick, task: tasks.first { $0.dailyFocusPick == keepPick && !$0.isDeleted })
                                 decide(source, .keep, nextFocus: nextFocus, displacing: item.pick)
                                 self.keepPick = nil
