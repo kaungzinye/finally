@@ -39,7 +39,7 @@ enum TaskProviderCapability: String, Codable, Hashable, Sendable {
 
 enum CanonicalTaskField: String, Codable, CaseIterable, Hashable, Sendable {
     case title
-    case plannedDay
+    case scheduledDay
     case deadline
     case state
     case project
@@ -119,8 +119,8 @@ extension SyncService: TaskProviderAdapter {
     var fieldSupport: [CanonicalTaskField: TaskProviderFieldSupport] {
         [
             .title: .lossless,
-            .plannedDay: .lossy(
-                reason: "A separate Notion planned-day property is required to preserve every planned-day shape."
+            .scheduledDay: .lossy(
+                reason: "A separate Notion scheduled-day property is required to preserve every scheduled-day shape."
             ),
             .deadline: .lossless,
             .state: .lossless,
@@ -427,7 +427,7 @@ final class TaskProviderCoordinator {
 
     private func populatedFields(in task: TaskItem) -> Set<CanonicalTaskField> {
         var fields: Set<CanonicalTaskField> = [.title, .state]
-        if task.scheduledDay != nil { fields.insert(.plannedDay) }
+        if task.scheduledDay != nil { fields.insert(.scheduledDay) }
         if task.deadline != nil { fields.insert(.deadline) }
         if task.project != nil { fields.insert(.project) }
         if !task.tags.isEmpty { fields.insert(.labels) }

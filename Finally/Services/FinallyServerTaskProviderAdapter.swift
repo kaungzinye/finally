@@ -16,8 +16,8 @@ final class FinallyServerTaskProviderAdapter: TaskProviderAdapter {
     ]
     static let canonicalFieldSupport: [CanonicalTaskField: TaskProviderFieldSupport] = [
         .title: .lossless,
-        .plannedDay: .lossy(
-            reason: "Finally Server carries planned days as timestamps, so a remotely edited planned day arrives timed."
+        .scheduledDay: .lossy(
+            reason: "Finally Server carries scheduled days as timestamps, so a remotely edited scheduled day arrives timed."
         ),
         .deadline: .lossy(
             reason: "Finally Server carries deadlines as timestamps, so a remotely edited deadline arrives timed."
@@ -91,7 +91,7 @@ final class FinallyServerTaskProviderAdapter: TaskProviderAdapter {
             let mutation = FinallyServerTaskMutation(
                 title: task.title,
                 isCompleted: false,
-                plannedDay: task.scheduledDay,
+                scheduledDay: task.scheduledDay,
                 deadline: task.deadline,
                 priority: task.priority
             )
@@ -175,8 +175,8 @@ final class FinallyServerTaskProviderAdapter: TaskProviderAdapter {
     ) throws {
         task.title = remote.title
         task.status = canonicalStatus(remoteIsCompleted: remote.isCompleted, local: task.status)
-        // A planned day is date-only, so the server's timestamp reads as its calendar day.
-        task.scheduledDay = remote.plannedDay.map { Calendar.current.startOfDay(for: $0) }
+        // A scheduled day is date-only, so the server's timestamp reads as its calendar day.
+        task.scheduledDay = remote.scheduledDay.map { Calendar.current.startOfDay(for: $0) }
         // Finally Server carries every deadline as a timestamp, so a payload cannot say whether
         // the user meant a whole day or a moment. Keep the local reading while the instant is
         // unchanged, and read a genuinely new instant as timed.

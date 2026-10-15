@@ -350,8 +350,8 @@ final class SyncService {
                 task.deadlineHasTime = false
             }
 
-            // The optional Notion "Target" property stores the planned day.
-            if let targetKey = mappings.taskPlannedDayProperty,
+            // The optional Notion "Target" property stores the scheduled day.
+            if let targetKey = mappings.taskScheduledDayProperty,
                let targetProp = page.properties[targetKey],
                let targetStr = targetProp.date?.start {
                 task.scheduledDay = parseDate(targetStr).map { Calendar.current.startOfDay(for: $0) }
@@ -474,7 +474,7 @@ final class SyncService {
         // Deadline and scheduled day
         if let deadline = task.deadline {
             let deadlineString = notionDateString(deadline, hasTime: task.deadlineHasTime)
-            if mappings.taskPlannedDayProperty == nil, let scheduledDay = task.scheduledDay {
+            if mappings.taskScheduledDayProperty == nil, let scheduledDay = task.scheduledDay {
                 props[mappings.taskDeadlineProperty] = [
                     "date": [
                         "start": notionDateString(scheduledDay, hasTime: false),
@@ -493,7 +493,7 @@ final class SyncService {
         }
 
         // Optional Notion "Target" property
-        if let targetKey = mappings.taskPlannedDayProperty {
+        if let targetKey = mappings.taskScheduledDayProperty {
             if let scheduledDay = task.scheduledDay {
                 props[targetKey] = [
                     "date": [

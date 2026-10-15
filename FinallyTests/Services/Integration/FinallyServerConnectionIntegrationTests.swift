@@ -247,7 +247,7 @@ final class FinallyServerConnectionIntegrationTests: XCTestCase {
         XCTAssertEqual(task.externalTaskID, "1")
         XCTAssertFalse(task.isDirty)
         XCTAssertEqual(api.tasks["1"]?.title, "Plan tomorrow")
-        XCTAssertEqual(api.tasks["1"]?.plannedDay, task.scheduledDay)
+        XCTAssertEqual(api.tasks["1"]?.scheduledDay, task.scheduledDay)
         XCTAssertEqual(api.tasks["1"]?.deadline, task.deadline)
         XCTAssertEqual(api.tasks["1"]?.priority, .urgent)
 
@@ -611,6 +611,55 @@ final class FinallyServerConnectionIntegrationTests: XCTestCase {
         XCTAssertEqual(requestedPages, ["1", "2"])
         XCTAssertEqual(tasks.map(\.id), ["1", "2"])
         XCTAssertEqual(tasks.map(\.title), ["First", "Second"])
+    }
+
+    func testURLClientCarriesTheScheduledDayAsTheServerStartDate() async throws {
+        let configuration = URLSessionConfiguration.ephemeral
+        configuration.protocolClasses = [MockURLProtocol.self]
+        let session = URLSession(configuration: configuration)
+        var sentBody: [String: Any] = [:]
+        MockURLProtocol.handler = { request in
+            XCTAssertEqual(request.url?.path, "/api/v2/finally/projects/42/tasks")
+            sentBody = try XCTUnwrap(
+                JSONSerialization.jsonObject(with: Self.bodyData(of: request)) as? [String: Any]
+            )
+            let body = #"{"id":7,"project_id":42,"title":"Plan the week","done":false,"start_date":"2026-06-10T00:00:00Z"}"#
+            return (
+                HTTPURLResponse(url: request.url!, statusCode: 201, httpVersion: nil, headerFields: nil)!,
+                Data(body.utf8)
+            )
+        }
+        let client = URLSessionFinallyServerAPIClient(
+            baseURL: URL(string: "https://tasks.example.com")!,
+            token: "jwt-token",
+            session: session
+        )
+
+        let created = try await client.createTask(
+            projectID: 42,
+            mutation: FinallyServerTaskMutation(
+                title: "Plan the week",
+                scheduledDay: Date(timeIntervalSince1970: 1_781_049_600)
+            )
+        )
+
+        XCTAssertEqual(sentBody["start_date"] as? String, "2026-06-10T00:00:00Z")
+        XCTAssertEqual(created.scheduledDay, Date(timeIntervalSince1970: 1_781_049_600))
+    }
+
+    private static func bodyData(of request: URLRequest) throws -> Data {
+        if let body = request.httpBody { return body }
+        let stream = try XCTUnwrap(request.httpBodyStream)
+        stream.open()
+        defer { stream.close() }
+        var data = Data()
+        var buffer = [UInt8](repeating: 0, count: 1024)
+        while stream.hasBytesAvailable {
+            let count = stream.read(&buffer, maxLength: buffer.count)
+            guard count > 0 else { break }
+            data.append(buffer, count: count)
+        }
+        return data
     }
 
     func testLoginForbiddenResponseReportsInvalidCredentialsWithRetryGuidance() async throws {

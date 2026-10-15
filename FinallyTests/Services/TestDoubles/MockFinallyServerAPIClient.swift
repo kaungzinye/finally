@@ -39,7 +39,7 @@ final class MockFinallyServerAPIClient: FinallyServerAPIClient {
             projectID: projectID,
             title: mutation.title,
             isCompleted: mutation.isCompleted,
-            plannedDay: mutation.plannedDay,
+            scheduledDay: mutation.scheduledDay,
             deadline: mutation.deadline,
             priority: mutation.priority
         )
@@ -64,7 +64,7 @@ final class MockFinallyServerAPIClient: FinallyServerAPIClient {
             projectID: current.projectID,
             title: mutation.title,
             isCompleted: mutation.isCompleted,
-            plannedDay: mutation.plannedDay,
+            scheduledDay: mutation.scheduledDay,
             deadline: mutation.deadline,
             priority: mutation.priority
         )
@@ -82,7 +82,7 @@ final class MockFinallyServerAPIClient: FinallyServerAPIClient {
             projectID: current.projectID,
             title: current.title,
             isCompleted: true,
-            plannedDay: current.plannedDay,
+            scheduledDay: current.scheduledDay,
             deadline: current.deadline,
             priority: current.priority
         )

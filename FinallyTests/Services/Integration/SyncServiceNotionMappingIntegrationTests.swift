@@ -301,7 +301,7 @@ final class SyncServiceNotionMappingIntegrationTests: XCTestCase {
         let context = try makeInMemoryContext()
 
         var mappings = PropertyMappings()
-        mappings.taskPlannedDayProperty = "Target"
+        mappings.taskScheduledDayProperty = "Target"
         mappings.taskDeadlineProperty = "Due Date"
 
         let session = UserSession(workspaceId: "ws-1", workspaceName: "Workspace", providerIdentity: .notion)

@@ -255,8 +255,8 @@ final class TaskProviderContractTests: XCTestCase {
         XCTAssertEqual(Set(server.fieldSupport.keys), canonicalFields)
         XCTAssertEqual(notion.fieldSupport[.deadline], .lossless)
         XCTAssertEqual(
-            notion.fieldSupport[.plannedDay],
-            .lossy(reason: "A separate Notion planned-day property is required to preserve every planned-day shape.")
+            notion.fieldSupport[.scheduledDay],
+            .lossy(reason: "A separate Notion scheduled-day property is required to preserve every scheduled-day shape.")
         )
         guard case .lossy = server.fieldSupport[.deadline] else {
             return XCTFail("Finally Server timestamp normalization must remain explicit")
@@ -294,14 +294,14 @@ final class TaskProviderContractTests: XCTestCase {
         XCTAssertTrue(task.deadlineHasTime)
     }
 
-    func testFinallyServerReadsARemotePlannedDayAsItsCalendarDay() async throws {
+    func testFinallyServerReadsARemoteScheduledDayAsItsCalendarDay() async throws {
         let api = MockFinallyServerAPIClient()
         api.tasks["1"] = FinallyServerTask(
             id: "1",
             projectID: 42,
             title: "Plan the week",
             isCompleted: false,
-            plannedDay: Date(timeIntervalSince1970: 1_780_012_345)
+            scheduledDay: Date(timeIntervalSince1970: 1_780_012_345)
         )
         let context = try makeInMemoryContext()
         let workspace = makeServerWorkspace()
