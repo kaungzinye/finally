@@ -11,6 +11,7 @@ final class DailyFocusService {
     typealias ServerClientFactory = (UserSession) -> FinallyServerAPIClient?
 
     private let serverClient: ServerClientFactory
+    private var failedReads: Set<PersistentIdentifier> = []
     var lastError: String?
 
     func clearError() {
@@ -35,14 +36,15 @@ final class DailyFocusService {
         for day: Date,
         workspace: UserSession?,
         store: ModelContext,
-        focusLimit: Int = DailyFocus.defaultFocusLimit
+        focusLimit: Int = DailyFocus.defaultFocusLimit,
+        requireServerLoad: Bool = false
     ) async throws -> DailyFocus {
         let dayStart = Calendar.current.startOfDay(for: day)
         let focus: DailyFocus
-        if let existing = try localDailyFocus(for: dayStart, store: store) {
+        if let existing = try localDailyFocus(for: dayStart, workspaceID: workspace?.workspaceId ?? "", store: store) {
             focus = existing
         } else {
-            focus = DailyFocus(day: dayStart, focusLimit: focusLimit)
+            focus = DailyFocus(day: dayStart, focusLimit: focusLimit, storageWorkspaceID: workspace?.workspaceId ?? "")
             store.insert(focus)
             try store.save()
         }
@@ -53,24 +55,67 @@ final class DailyFocusService {
             } else {
                 try await pull(into: focus, workspace: workspace, store: store)
             }
+            failedReads.remove(focus.persistentModelID)
         } catch is CancellationError {
             throw CancellationError()
         } catch {
+            if !focus.isDirty { failedReads.insert(focus.persistentModelID) }
             lastError = error.localizedDescription
+            if requireServerLoad { throw error }
         }
         return focus
     }
 
     @MainActor
     func save(_ focus: DailyFocus, workspace: UserSession?, store: ModelContext) async throws {
-        guard let workspace, workspace.providerIdentity == .finallyServer else {
-            focus.isDirty = false
-            try store.save()
-            return
+        try await save([focus], workspace: workspace, store: store)
+    }
+
+    /// Persists every changed day together before attempting provider writes.
+    @MainActor
+    func save(_ focuses: [DailyFocus], workspace: UserSession?, store: ModelContext) async throws {
+        let usesServer = workspace?.providerIdentity == .finallyServer
+        for focus in focuses {
+            guard focus.storageWorkspaceID == (workspace?.workspaceId ?? "") else {
+                throw FinallyServerClientError.invalidConfiguration
+            }
+            focus.isDirty = usesServer
         }
-        focus.isDirty = true
         try store.save()
-        try await push(focus, workspace: workspace, store: store)
+        guard usesServer, let workspace else { return }
+        var firstError: Error?
+        for focus in focuses {
+            do {
+                try await push(focus, workspace: workspace, store: store)
+            } catch {
+                if firstError == nil { firstError = error }
+            }
+        }
+        if let firstError {
+            lastError = firstError.localizedDescription
+            throw firstError
+        }
+    }
+
+    @MainActor
+    func retryPendingChanges(store: ModelContext) async {
+        do {
+            let workspace = try store.fetch(FetchDescriptor<UserSession>()).selectedProviderWorkspace
+            guard let workspace, workspace.providerIdentity == .finallyServer else { return }
+            let workspaceID = workspace.workspaceId
+            let dirty = try store.fetch(FetchDescriptor<DailyFocus>(predicate: #Predicate { $0.isDirty && $0.storageWorkspaceID == workspaceID }))
+            try await save(dirty, workspace: workspace, store: store)
+            let pendingReads = try store.fetch(FetchDescriptor<DailyFocus>()).filter {
+                $0.storageWorkspaceID == workspaceID && failedReads.contains($0.persistentModelID)
+            }
+            for focus in pendingReads where !focus.isDirty {
+                try await pull(into: focus, workspace: workspace, store: store)
+                failedReads.remove(focus.persistentModelID)
+            }
+            lastError = nil
+        } catch {
+            lastError = error.localizedDescription
+        }
     }
 
     // MARK: - Finally Server round trips
@@ -78,8 +123,14 @@ final class DailyFocusService {
     @MainActor
     private func pull(into focus: DailyFocus, workspace: UserSession, store: ModelContext) async throws {
         let (api, projectID) = try client(for: workspace)
+        let initialPicks = focus.picks
+        let initialConfirmation = focus.isConfirmed
+        let initialLimit = focus.focusLimit
         do {
-            guard let record = try await api.readDailyFocus(projectID: projectID, day: focus.dayKey) else {
+            let record = try await api.readDailyFocus(projectID: projectID, day: focus.dayKey)
+            guard !focus.isDirty, focus.picks == initialPicks,
+                  focus.isConfirmed == initialConfirmation, focus.focusLimit == initialLimit else { return }
+            guard let record else {
                 try await push(focus, workspace: workspace, store: store)
                 return
             }
@@ -104,8 +155,9 @@ final class DailyFocusService {
             try store.fetch(FetchDescriptor<UserSession>()).map { ($0.workspaceId, $0.providerIdentity.rawValue) },
             uniquingKeysWith: { first, _ in first }
         )
+        let submittedPicks = focus.picks
         let mutation = FinallyServerDailyFocusMutation(
-            picks: focus.picks.map {
+            picks: submittedPicks.map {
                 FinallyServerDailyFocusPick(
                     provider: providers[$0.providerWorkspaceID] ?? "unknown",
                     workspaceID: $0.providerWorkspaceID,
@@ -117,7 +169,9 @@ final class DailyFocusService {
         )
         do {
             _ = try await api.writeDailyFocus(projectID: projectID, day: focus.dayKey, mutation: mutation)
-            focus.isDirty = false
+            focus.isDirty = focus.picks != submittedPicks
+                || focus.isConfirmed != mutation.isConfirmed
+                || focus.focusLimit != mutation.focusLimit
             try store.save()
             lastError = nil
         } catch {
@@ -132,7 +186,7 @@ final class DailyFocusService {
         return (api, projectID)
     }
 
-    private func localDailyFocus(for dayStart: Date, store: ModelContext) throws -> DailyFocus? {
-        try store.fetch(FetchDescriptor<DailyFocus>(predicate: #Predicate { $0.day == dayStart })).first
+    private func localDailyFocus(for dayStart: Date, workspaceID: String, store: ModelContext) throws -> DailyFocus? {
+        try store.fetch(FetchDescriptor<DailyFocus>(predicate: #Predicate { $0.day == dayStart && $0.storageWorkspaceID == workspaceID })).first
     }
 }

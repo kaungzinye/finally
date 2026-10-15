@@ -11,8 +11,7 @@ struct FinallyApp: App {
     @State private var dailyFocusService = DailyFocusService()
     @State private var authService = NotionAuthService()
     @State private var networkService = NetworkService()
-    @State private var hasSession = false
-    @State private var needsDatabaseSetup = false
+    @State private var sessionRoute: ProviderSessionRoute = .connect
     @State private var isLoading = true
     @State private var notificationDelegate: NotificationDelegate?
     @AppStorage("appearanceMode") private var appearanceMode: Int = 0 // 0=system, 1=light, 2=dark
@@ -40,24 +39,27 @@ struct FinallyApp: App {
                     ProgressView("Loading...")
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                         .background(Palette.paper.ignoresSafeArea())
-                } else if !hasSession {
-                    NotionConnectView(onConnected: {
-                        needsDatabaseSetup = true
-                        hasSession = true
-                    })
-                } else if needsDatabaseSetup {
-                    DatabasePickerView(onComplete: {
-                        needsDatabaseSetup = false
-                        Task { await triggerSync() }
-                    })
                 } else {
-                    ContentView()
+                    switch sessionRoute {
+                    case .connect:
+                        ProviderConnectView(onConnected: {
+                            Task { await checkSession() }
+                        })
+                    case .databaseSetup:
+                        DatabasePickerView(
+                            onComplete: { Task { await checkSession() } },
+                            onChooseProvider: { sessionRoute = .connect }
+                        )
+                    case .tasks:
+                        ContentView()
+                    }
                 }
             }
             .environment(router)
             .environment(taskProvider)
             .environment(dailyFocusService)
             .environment(networkService)
+            .environment(authService)
             .tint(Palette.ink)
             .preferredColorScheme(colorScheme)
             .onOpenURL { url in
@@ -72,13 +74,20 @@ struct FinallyApp: App {
                 guard let code else { return }
                 Task { await handleOAuthCallback(code: code) }
             }
+            .onReceive(NotificationCenter.default.publisher(for: .NSSystemTimeZoneDidChange)) { _ in
+                NotificationService.shared.rescheduleAllReminders(modelContext: ModelContext(appContainer))
+            }
             .onReceive(NotificationCenter.default.publisher(for: .notionSessionExpired)) { _ in
                 handleSessionExpired()
             }
             .onReceive(NotificationCenter.default.publisher(for: .notionDatabasesReset)) { _ in
-                needsDatabaseSetup = true
+                Task { await checkSession() }
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .providerWorkspaceChanged)) { _ in
+                Task { await checkSession() }
             }
             .task {
+                if isDeadlineDemoMode || isDailyFocusDemoMode { return }
                 await checkSession()
                 await startForegroundSyncLoop()
             }
@@ -124,6 +133,7 @@ struct FinallyApp: App {
         let token = KeychainHelper.readNotionToken()
         let serverCredentials = KeychainFinallyServerCredentialStore()
         let context = ModelContext(appContainer)
+        NotificationService.shared.rescheduleAllReminders(modelContext: context)
         let sessions = (try? context.fetch(FetchDescriptor<UserSession>())) ?? []
         let usableSessions = sessions.filter { session in
             switch session.providerIdentity {
@@ -132,45 +142,29 @@ struct FinallyApp: App {
             default: false
             }
         }
-        hasSession = !usableSessions.isEmpty
         if usableSessions.selectedProviderWorkspace == nil, let first = usableSessions.first {
             sessions.forEach { $0.isSelected = $0.id == first.id }
             try? context.save()
         }
         let selectedSession = usableSessions.selectedProviderWorkspace ?? usableSessions.first
 
-        print("[FinallyApp] checkSession: token=\(token != nil), sessions=\(sessions.count), hasSession=\(hasSession)")
-
-        // Check if database IDs are configured
-        if let session = selectedSession,
-           session.providerIdentity == .notion,
-           session.tasksDatabaseId.isEmpty {
-            needsDatabaseSetup = true
-            print("[FinallyApp] needsDatabaseSetup=true (tasksDatabaseId is empty)")
-        }
-
-        print("[FinallyApp] Final state: isLoading=false, hasSession=\(hasSession), needsDatabaseSetup=\(needsDatabaseSetup)")
-        print("[FinallyApp] Will show: \(!hasSession ? "NotionConnectView" : needsDatabaseSetup ? "DatabasePickerView" : "ContentView")")
-
+        sessionRoute = .resolve(selectedWorkspace: selectedSession)
         isLoading = false
 
-        // Trigger sync on launch if we have a session with databases configured
-        if hasSession && !needsDatabaseSetup, let selectedSession {
+        if sessionRoute == .tasks, let selectedSession {
             try? await taskProvider.synchronize(.launch, workspace: selectedSession, store: context)
         }
     }
 
     @MainActor
     private func handleOAuthCallback(code: String) async {
+        router.pendingOAuthCode = nil
+        guard !authService.isAuthenticating else { return }
         let context = ModelContext(appContainer)
         let success = await authService.completeOAuth(withCode: code, modelContext: context)
         if success {
-            hasSession = true
-            if let session = try? context.selectedProviderWorkspace() {
-                try? await taskProvider.synchronize(.launch, workspace: session, store: context)
-            }
+            await checkSession()
         }
-        router.pendingOAuthCode = nil
     }
 
     @MainActor
@@ -185,28 +179,24 @@ struct FinallyApp: App {
             }
             try? context.save()
         }
-        let remaining = (try? context.fetchCount(FetchDescriptor<UserSession>())) ?? 0
-        hasSession = remaining > 0
-        router.showReauthPrompt = true
-    }
-
-    @MainActor
-    private func triggerSync() async {
-        let context = ModelContext(appContainer)
-        guard let session = try? context.selectedProviderWorkspace() else { return }
-        try? await taskProvider.synchronize(.launch, workspace: session, store: context)
+        Task { await checkSession() }
     }
 
     private func runIncrementalSyncIfPossible() async {
-        guard hasSession else { return }
         let context = ModelContext(appContainer)
+        NotificationService.shared.rescheduleAllReminders(modelContext: context)
+        guard sessionRoute == .tasks else { return }
         guard let session = try? context.selectedProviderWorkspace() else { return }
         try? await taskProvider.synchronize(.incremental, workspace: session, store: context)
     }
 
     private func startForegroundSyncLoop() async {
-        while true {
-            try? await Task.sleep(for: .seconds(AppConstants.syncIntervalSeconds))
+        while !Task.isCancelled {
+            do {
+                try await Task.sleep(for: .seconds(AppConstants.syncIntervalSeconds))
+            } catch {
+                return
+            }
             if scenePhase == .active {
                 await runIncrementalSyncIfPossible()
             }

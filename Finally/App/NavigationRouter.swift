@@ -13,6 +13,7 @@ final class NavigationRouter {
     /// The project a new task starts in, set while a project's screen is open.
     var creatorProject: ProjectItem?
     var deepLinkTaskId: String?
+    var deepLinkWorkspaceId: String?
     var showNewTaskSheet: Bool = false
     var showReauthPrompt: Bool = false
     var pendingOAuthCode: String?
@@ -36,6 +37,7 @@ final class NavigationRouter {
                 // Path is the task ID: /taskNotionPageId
                 let taskId = path.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
                 if !taskId.isEmpty {
+                    deepLinkWorkspaceId = nil
                     deepLinkTaskId = taskId
                 }
             }

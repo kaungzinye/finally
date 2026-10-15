@@ -1,14 +1,81 @@
-# Prerequisite: the runner launches the app with the demo argument first:
-#   xcrun simctl launch <udid> com.kaungzinye.finally -daily-focus-demo
+# The runner launches the in-memory fixture with -daily-focus-demo first.
 appId: com.kaungzinye.finally
 ---
 - extendedWaitUntil:
-    visible: "Daily Focus"
+    visible: "Proposed Daily Focus"
     timeout: 10000
-- assertVisible: "3 of 3"
+- assertVisible: "3 of 3 picks · Awaiting confirmation"
 - assertVisible: "Draft the brief"
 - assertVisible: "Ship the release notes"
-- assertVisible: "Task no longer available"
-- assertVisible: "Daily Focus is full"
-- tapOn: "Confirm"
-- assertVisible: "Confirmed"
+- assertVisible: "Task unavailable"
+- scrollUntilVisible:
+    element:
+      id: "daily-focus-add-pick"
+    direction: DOWN
+    centerElement: true
+- tapOn:
+    id: "daily-focus-add-pick"
+- tapOn: "Call the bank"
+- assertVisible: "Choose a pick to replace"
+- tapOn: "Unavailable task"
+- extendedWaitUntil:
+    visible: "Call the bank"
+    timeout: 5000
+- assertNotVisible: "Task unavailable"
+- assertVisible: "3 of 3 picks · Awaiting confirmation"
+- tapOn:
+    id: "daily-focus-confirm"
+- assertVisible: "Current"
+- assertVisible: "Next"
+- assertVisible: "3 of 3 picks · Confirmed"
+- scrollUntilVisible:
+    element:
+      id: "daily-focus-review-day"
+    direction: DOWN
+    centerElement: true
+- tapOn:
+    id: "daily-focus-review-day"
+- tapOn:
+    text: "Drop focus pick"
+    index: 0
+- tapOn: "Done"
+- assertVisible: "2 of 3 picks · Confirmed"
+- scrollUntilVisible:
+    element:
+      id: "daily-focus-add-pick"
+    direction: DOWN
+    centerElement: true
+- tapOn:
+    id: "daily-focus-add-pick"
+- assertVisible: "Draft the brief"
+- tapOn: "Cancel"
+- tapOn:
+    id: "daily-focus-tomorrow"
+- assertVisible: "Proposed Daily Focus"
+- assertVisible: "0 of 3 picks · Awaiting confirmation"
+- scrollUntilVisible:
+    element:
+      id: "daily-focus-add-pick"
+    direction: DOWN
+    centerElement: true
+- tapOn:
+    id: "daily-focus-add-pick"
+- tapOn: "Review the contract"
+- tapOn:
+    id: "daily-focus-confirm"
+- assertVisible: "Current"
+- assertVisible: "Review the contract"
+- assertVisible: "1 of 3 picks · Confirmed"
+
+- scrollUntilVisible:
+    element:
+      id: "daily-focus-add-pick"
+    direction: DOWN
+    centerElement: true
+- tapOn:
+    id: "daily-focus-add-pick"
+- tapOn: "Demo Notion"
+- tapOn: "Demo Server"
+- tapOn: "Ship the release notes"
+- assertVisible: "2 of 3 picks · Confirmed"
+- assertVisible: "Ship the release notes"

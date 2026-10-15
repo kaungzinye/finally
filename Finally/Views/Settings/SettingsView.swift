@@ -4,9 +4,9 @@ import SwiftData
 struct SettingsView: View {
     @Query private var sessions: [UserSession]
     @Environment(\.modelContext) private var modelContext
-    @Environment(TaskProviderCoordinator.self) private var taskProvider
     @Environment(\.dismiss) private var dismiss
-    @State private var authService = NotionAuthService()
+    @Environment(TaskProviderCoordinator.self) private var taskProvider
+    @Environment(NotionAuthService.self) private var authService
     @AppStorage(AppConstants.focusLimitKey) private var focusLimit = DailyFocus.defaultFocusLimit
 
     private var notionSession: UserSession? {
@@ -16,118 +16,124 @@ struct SettingsView: View {
     var body: some View {
         NavigationStack {
             List {
-                Group {
-                    Section("Workspaces") {
-                        ForEach(sessions, id: \.id) { workspace in
-                            Button {
-                                select(workspace)
-                            } label: {
-                                HStack {
-                                    Label(
-                                        workspace.workspaceName,
-                                        systemImage: workspace.providerIdentity == .finallyServer ? "server.rack" : "building.2"
-                                    )
-                                    Spacer()
-                                    if workspace.isSelected {
-                                        Image(systemName: "checkmark")
-                                            .foregroundStyle(.tint)
-                                    }
-                                }
-                            }
-                            .foregroundStyle(.primary)
-                        }
-
-                        NavigationLink {
-                            FinallyServerConnectView()
-                        } label: {
-                            Label("Add Finally Server", systemImage: "plus.circle")
-                        }
-                    }
-
-                    Section {
-                        Stepper(value: $focusLimit, in: DailyFocus.focusLimitRange) {
-                            HStack {
-                                Label("Focus limit", systemImage: "scope")
-                                Spacer()
-                                Text("\(focusLimit)")
-                                    .foregroundStyle(.secondary)
-                            }
-                        }
-                        .accessibilityIdentifier("focus-limit-stepper")
-                    } header: {
-                        Text("Daily Focus")
-                    } footer: {
-                        Text("New Daily Focus days use this limit, one to five picks. Each existing day keeps its limit.")
-                    }
-
-                    Section("Notifications") {
-                        NavigationLink {
-                            NotificationTimePickerView()
-                        } label: {
-                            HStack {
-                                Label("Default Reminder Time", systemImage: "clock")
-                                Spacer()
-                                DefaultReminderTimeLabel()
-                                    .foregroundStyle(.secondary)
-                            }
-                        }
-                    }
-
-                    Section("Appearance") {
-                        NavigationLink {
-                            AppearanceSettingView()
-                        } label: {
-                            Label("Theme", systemImage: "paintbrush")
-                        }
-                    }
-
-                    Section("Notion") {
-                        if let notionSession {
-                            HStack {
-                                Label("Workspace", systemImage: "building.2")
-                                Spacer()
-                                Text(notionSession.workspaceName)
-                                    .foregroundStyle(.secondary)
-                            }
-                        }
-
+                Section("Workspaces") {
+                    ForEach(sessions, id: \.id) { workspace in
                         Button {
-                            Task {
-                                let success = await authService.startOAuthFlow(modelContext: modelContext)
-                                if success {
-                                    reselectDatabases()
+                            select(workspace)
+                        } label: {
+                            HStack {
+                                Label(
+                                    workspace.workspaceName,
+                                    systemImage: workspace.providerIdentity == .finallyServer ? "server.rack" : "building.2"
+                                )
+                                Spacer()
+                                if workspace.isSelected {
+                                    Image(systemName: "checkmark")
+                                        .foregroundStyle(.tint)
                                 }
                             }
-                        } label: {
-                            Label("Update Notion Permissions", systemImage: "arrow.triangle.2.circlepath")
                         }
-
-                        NavigationLink {
-                            DatabaseSetupGuideView()
-                        } label: {
-                            Label("Database Setup Guide", systemImage: "book")
-                        }
+                        .foregroundStyle(.primary)
                     }
 
-                    Section("Account") {
-                        if notionSession != nil {
-                            Button(role: .destructive) {
-                                disconnectNotion()
-                            } label: {
-                                Label("Disconnect Notion", systemImage: "arrow.right.square")
-                            }
-                        }
+                    NavigationLink {
+                        FinallyServerConnectView(onConnected: workspaceChanged)
+                    } label: {
+                        Label("Add Finally Server", systemImage: "plus.circle")
+                    }
+                }
 
-                        ForEach(sessions.filter { $0.providerIdentity == .finallyServer }, id: \.id) { server in
-                            Button(role: .destructive) {
-                                removeServer(server)
-                            } label: {
-                                Label("Remove \(server.workspaceName)", systemImage: "trash")
-                            }
+                Section {
+                    Stepper(value: $focusLimit, in: DailyFocus.focusLimitRange) {
+                        HStack {
+                            Label("Focus limit", systemImage: "scope")
+                            Spacer()
+                            Text("\(focusLimit)")
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                    .accessibilityIdentifier("focus-limit-stepper")
+                } header: {
+                    Text("Daily Focus")
+                } footer: {
+                    Text("New Daily Focus days use this limit, one to five picks. Each existing day keeps its limit.")
+                }
+
+                Section("Notifications") {
+                    NavigationLink {
+                        NotificationTimePickerView()
+                    } label: {
+                        HStack {
+                            Label("Default Reminder Time", systemImage: "clock")
+                            Spacer()
+                            DefaultReminderTimeLabel()
+                                .foregroundStyle(.secondary)
                         }
                     }
                 }
-                .cardRow()
+
+                Section("Appearance") {
+                    NavigationLink {
+                        AppearanceSettingView()
+                    } label: {
+                        Label("Theme", systemImage: "paintbrush")
+                    }
+                }
+
+                Section("Notion") {
+                    if let notionSession {
+                        HStack {
+                            Label("Workspace", systemImage: "building.2")
+                            Spacer()
+                            Text(notionSession.workspaceName)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+
+                    Button {
+                        Task {
+                            let success = await authService.startOAuthFlow(modelContext: modelContext)
+                            if success {
+                                reselectDatabases()
+                            }
+                        }
+                    } label: {
+                        Label(
+                            authService.isAuthenticating ? "Connecting…" : notionSession == nil ? "Connect Notion" : "Update Notion Permissions",
+                            systemImage: "arrow.triangle.2.circlepath"
+                        )
+                    }
+                    .disabled(authService.isAuthenticating)
+
+                    if let message = authService.errorMessage {
+                        Text(message)
+                            .foregroundStyle(.red)
+                    }
+
+                    NavigationLink {
+                        DatabaseSetupGuideView()
+                    } label: {
+                        Label("Database Setup Guide", systemImage: "book")
+                    }
+                }
+
+                Section("Account") {
+                    if notionSession != nil {
+                        Button(role: .destructive) {
+                            disconnectNotion()
+                        } label: {
+                            Label("Disconnect Notion", systemImage: "arrow.right.square")
+                        }
+                    }
+
+                    ForEach(sessions.filter { $0.providerIdentity == .finallyServer }, id: \.id) { server in
+                        Button(role: .destructive) {
+                            removeServer(server)
+                        } label: {
+                            Label("Remove \(server.workspaceName)", systemImage: "trash")
+                        }
+                    }
+                }
             }
             .paperList()
             .navigationTitle("Settings")
@@ -150,240 +156,45 @@ struct SettingsView: View {
     private func select(_ workspace: UserSession) {
         sessions.forEach { $0.isSelected = $0.id == workspace.id }
         try? modelContext.save()
+        workspaceChanged()
     }
 
     private func disconnectNotion() {
-        KeychainHelper.deleteNotionToken()
-        if let session = notionSession {
+        guard let session = notionSession else { return }
+        do {
+            let workspaceID = session.workspaceId
+            let tasks = try modelContext.fetch(FetchDescriptor<TaskItem>()).filter {
+                $0.providerWorkspaceId == workspaceID
+            }
+            let projects = try modelContext.fetch(FetchDescriptor<ProjectItem>()).filter {
+                $0.providerWorkspaceId == workspaceID
+            }
+            let focuses = try modelContext.fetch(FetchDescriptor<DailyFocus>()).filter {
+                $0.storageWorkspaceID == workspaceID
+            }
+            focuses.forEach(modelContext.delete)
+            tasks.forEach(modelContext.delete)
+            projects.forEach(modelContext.delete)
             modelContext.delete(session)
+            sessions.first { $0.providerIdentity == .finallyServer }?.isSelected = true
+            try modelContext.save()
+            KeychainHelper.deleteNotionToken()
+            workspaceChanged()
+        } catch {
+            taskProvider.lastError = error.localizedDescription
         }
-        sessions.first { $0.providerIdentity == .finallyServer }?.isSelected = true
-        try? modelContext.save()
     }
 
     private func removeServer(_ server: UserSession) {
         do {
             try FinallyServerAccountService.remove(server, store: modelContext)
+            workspaceChanged()
         } catch {
             taskProvider.lastError = error.localizedDescription
         }
     }
-}
 
-private struct FinallyServerConnectView: View {
-    @Environment(\.dismiss) private var dismiss
-    @Environment(\.modelContext) private var modelContext
-    @Environment(TaskProviderCoordinator.self) private var taskProvider
-
-    @State private var name = "Finally Server"
-    @State private var address = ""
-    @State private var username = ""
-    @State private var password = ""
-    @State private var authenticatedAccount: FinallyServerAuthenticatedAccount?
-    @State private var selectedProject: FinallyServerProject?
-    @State private var isWorking = false
-    @State private var errorMessage: String?
-    @State private var connectionTask: Task<Void, Never>?
-    @State private var connectedWorkspace: UserSession?
-
-    var body: some View {
-        Form {
-            Group {
-                Section("Workspace") {
-                    TextField("Workspace name", text: $name)
-                        .textContentType(.organizationName)
-                    TextField("https://tasks.example.com", text: $address)
-                        .textContentType(.URL)
-                        .textInputAutocapitalization(.never)
-                        .autocorrectionDisabled()
-                        .disabled(authenticatedAccount != nil)
-
-                    if let account = authenticatedAccount {
-                        Picker("Workspace", selection: $selectedProject) {
-                            Text("Select a workspace").tag(Optional<FinallyServerProject>.none)
-                            ForEach(account.projects) { project in
-                                Text(project.title).tag(Optional(project))
-                            }
-                        }
-                    }
-                }
-
-                Section("Account") {
-                    TextField("Username", text: $username)
-                        .textContentType(.username)
-                        .textInputAutocapitalization(.never)
-                        .autocorrectionDisabled()
-                        .disabled(authenticatedAccount != nil)
-                    SecureField("Password", text: $password)
-                        .textContentType(.password)
-                        .disabled(authenticatedAccount != nil)
-
-                    if authenticatedAccount != nil {
-                        Button("Use a different account") {
-                            authenticatedAccount = nil
-                            selectedProject = nil
-                            connectedWorkspace = nil
-                            password = ""
-                        }
-                    }
-                }
-
-                if let errorMessage {
-                    Section {
-                        Text(errorMessage)
-                            .foregroundStyle(Palette.urgent)
-                            .accessibilityIdentifier("finally-server-connection-error")
-                    }
-                }
-
-                Section {
-                    primaryButton
-                } footer: {
-                    Text("Finally stores the server token in Keychain. Your password is used only to sign in.")
-                }
-            }
-            .cardRow()
-        }
-        .paperList()
-        .navigationTitle("Connect Server")
-        .navigationBarTitleDisplayMode(.inline)
-        .onDisappear {
-            connectionTask?.cancel()
-        }
-        .onChange(of: selectedProject) { _, project in
-            if name == "Finally Server", let project {
-                name = project.title
-            }
-        }
-    }
-
-    @ViewBuilder
-    private var primaryButton: some View {
-        if #available(iOS 26, *) {
-            Button(action: primaryAction) {
-                primaryLabel
-            }
-            .buttonStyle(.glassProminent)
-            .disabled(!canContinue || isWorking)
-        } else {
-            Button(action: primaryAction) {
-                primaryLabel
-            }
-            .buttonStyle(.borderedProminent)
-            .disabled(!canContinue || isWorking)
-        }
-    }
-
-    @ViewBuilder
-    private var primaryLabel: some View {
-        if isWorking {
-            ProgressView()
-                .frame(maxWidth: .infinity)
-        } else {
-            Text(authenticatedAccount == nil ? "Find Workspaces" : "Connect")
-                .frame(maxWidth: .infinity)
-        }
-    }
-
-    private var canContinue: Bool {
-        if authenticatedAccount == nil {
-            return validatedURL != nil && !username.isEmpty && !password.isEmpty
-        }
-        return selectedProject != nil && !name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-    }
-
-    private var validatedURL: URL? {
-        guard let url = URL(string: address),
-              url.scheme?.lowercased() == "https",
-              url.host != nil else {
-            return nil
-        }
-        return url
-    }
-
-    private func primaryAction() {
-        if authenticatedAccount == nil {
-            authenticate()
-        } else {
-            saveConnection()
-        }
-    }
-
-    private func authenticate() {
-        guard let url = validatedURL else { return }
-        isWorking = true
-        errorMessage = nil
-        connectionTask?.cancel()
-        connectionTask = Task {
-            do {
-                let account = try await accountService(for: url).authenticate(
-                    baseURL: url,
-                    username: username,
-                    password: password
-                )
-                guard !Task.isCancelled else { return }
-                guard !account.projects.isEmpty else {
-                    errorMessage = "This account has no writable workspaces."
-                    isWorking = false
-                    return
-                }
-                authenticatedAccount = account
-                selectedProject = account.projects.count == 1 ? account.projects[0] : nil
-                isWorking = false
-            } catch is CancellationError {
-                isWorking = false
-            } catch {
-                errorMessage = error.localizedDescription
-                isWorking = false
-            }
-        }
-    }
-
-    private func saveConnection() {
-        guard let url = validatedURL,
-              let account = authenticatedAccount,
-              let selectedProject else { return }
-        isWorking = true
-        errorMessage = nil
-        connectionTask?.cancel()
-        do {
-            let workspace: UserSession
-            if let connectedWorkspace {
-                workspace = connectedWorkspace
-            } else {
-                workspace = try accountService(for: url).connect(
-                    name: name.trimmingCharacters(in: .whitespacesAndNewlines),
-                    baseURL: url,
-                    project: selectedProject,
-                    account: account,
-                    store: modelContext
-                )
-                connectedWorkspace = workspace
-            }
-            connectionTask = Task {
-                do {
-                    try await taskProvider.synchronize(.launch, workspace: workspace, store: modelContext)
-                    guard !Task.isCancelled else { return }
-                    dismiss()
-                } catch is CancellationError {
-                    isWorking = false
-                } catch {
-                    errorMessage = error.localizedDescription
-                    isWorking = false
-                }
-            }
-        } catch {
-            errorMessage = error.localizedDescription
-            isWorking = false
-        }
-    }
-
-    private func accountService(for url: URL) -> FinallyServerAccountService {
-        FinallyServerAccountService(
-            api: URLSessionFinallyServerAPIClient(baseURL: url),
-            authenticatedAPI: { token in
-                URLSessionFinallyServerAPIClient(baseURL: url, token: token)
-            }
-        )
+    private func workspaceChanged() {
+        NotificationCenter.default.post(name: .providerWorkspaceChanged, object: nil)
     }
 }

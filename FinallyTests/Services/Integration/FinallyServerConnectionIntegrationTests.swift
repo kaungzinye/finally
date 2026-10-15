@@ -43,6 +43,29 @@ final class FinallyServerConnectionIntegrationTests: XCTestCase {
         XCTAssertEqual(storedProjects.map(\.providerWorkspaceId), [server.workspaceId])
     }
 
+    func testCredentialFailurePreservesTheSelectedProviderWorkspace() async throws {
+        let api = MockFinallyServerAPIClient()
+        let credentials = InMemoryCredentialStore()
+        credentials.saveError = FinallyServerClientError.unauthorized
+        let context = try makeInMemoryContext()
+        let notion = UserSession(workspaceId: "notion-workspace", workspaceName: "Shared", providerIdentity: .notion)
+        notion.isSelected = true
+        context.insert(notion)
+        try context.save()
+        let service = FinallyServerAccountService(api: api, credentials: credentials)
+        let account = try await service.authenticate(baseURL: URL(string: "https://tasks.example.com")!, username: "demo", password: "demo")
+
+        XCTAssertThrowsError(try service.connect(
+            name: "Server", baseURL: URL(string: "https://tasks.example.com")!,
+            project: try XCTUnwrap(account.projects.first), account: account, store: context
+        ))
+
+        XCTAssertTrue(notion.isSelected)
+        XCTAssertEqual(try context.fetchCount(FetchDescriptor<UserSession>()), 1)
+        XCTAssertEqual(try context.fetchCount(FetchDescriptor<ProjectItem>()), 0)
+        XCTAssertTrue(credentials.credentials.isEmpty)
+    }
+
     func testRemovingServerAccountPreservesNotionWorkspaceAndCredential() async throws {
         let api = MockFinallyServerAPIClient()
         let credentials = InMemoryCredentialStore()
@@ -75,6 +98,8 @@ final class FinallyServerConnectionIntegrationTests: XCTestCase {
         context.insert(serverTask)
         context.insert(notionProject)
         context.insert(serverProject)
+        context.insert(DailyFocus(day: Date(), storageWorkspaceID: server.workspaceId))
+        context.insert(DailyFocus(day: Date(), storageWorkspaceID: notion.workspaceId))
         try context.save()
 
         try accounts.remove(server, store: context)
@@ -85,6 +110,7 @@ final class FinallyServerConnectionIntegrationTests: XCTestCase {
         XCTAssertNil(credentials.token(workspaceID: server.workspaceId))
         XCTAssertEqual(try context.fetch(FetchDescriptor<TaskItem>()).map(\.title), ["Shared task"])
         XCTAssertEqual(try context.fetch(FetchDescriptor<ProjectItem>()).map(\.title), ["Shared project"])
+        XCTAssertEqual(try context.fetch(FetchDescriptor<DailyFocus>()).map(\.storageWorkspaceID), [notion.workspaceId])
     }
 
     func testFailedConnectionDoesNotPersistAccountOrCredential() async throws {
@@ -292,41 +318,9 @@ final class FinallyServerConnectionIntegrationTests: XCTestCase {
             .synchronize(.push, workspace: workspace, store: context)
 
         XCTAssertEqual(task.externalTaskID, "1")
-        XCTAssertEqual(api.taskOperations, ["complete"])
+        XCTAssertEqual(api.taskOperations, [])
         XCTAssertTrue(api.tasks["1"]?.isCompleted == true)
         XCTAssertEqual(task.status, .done)
-        XCTAssertFalse(task.isDirty)
-    }
-
-    func testFinallyServerRetriesCompletionWithoutCreatingSecondRemoteTask() async throws {
-        let api = MockFinallyServerAPIClient()
-        api.completeError = FinallyServerClientError.serverUnavailable
-        let context = try makeInMemoryContext()
-        let workspace = makeServerWorkspace()
-        let task = TaskItem(externalTaskID: UUID().uuidString, title: "Retry completion")
-        task.providerWorkspaceId = workspace.workspaceId
-        task.status = .done
-        task.isDirty = true
-        context.insert(workspace)
-        context.insert(task)
-
-        do {
-            try await FinallyServerTaskProviderAdapter(api: api)
-                .synchronize(.push, workspace: workspace, store: context)
-            XCTFail("Expected completion failure")
-        } catch FinallyServerClientError.serverUnavailable {
-            XCTAssertEqual(task.externalTaskID, "1")
-            XCTAssertNotNil(task.lastSyncedAt)
-            XCTAssertTrue(task.isDirty)
-            XCTAssertEqual(api.tasks.count, 1)
-        }
-
-        api.completeError = nil
-        try await FinallyServerTaskProviderAdapter(api: api)
-            .synchronize(.push, workspace: workspace, store: context)
-
-        XCTAssertEqual(api.tasks.count, 1)
-        XCTAssertTrue(api.tasks["1"]?.isCompleted == true)
         XCTAssertFalse(task.isDirty)
     }
 
@@ -434,6 +428,7 @@ final class FinallyServerConnectionIntegrationTests: XCTestCase {
         let task = TaskItem(externalTaskID: "1", title: "Edit survives")
         task.providerWorkspaceId = workspace.workspaceId
         task.lastSyncedAt = Date()
+        task.serverSnapshotJSON = FinallyServerTaskMutation(title: "Old title").json
         task.isDirty = true
         context.insert(task)
         api.error = FinallyServerClientError.serverUnavailable
@@ -456,6 +451,7 @@ final class FinallyServerConnectionIntegrationTests: XCTestCase {
         let task = TaskItem(externalTaskID: "1", title: "Edited title")
         task.providerWorkspaceId = workspace.workspaceId
         task.lastSyncedAt = Date()
+        task.serverSnapshotJSON = FinallyServerTaskMutation(title: "Old title").json
         task.status = .done
         task.isDirty = true
         context.insert(workspace)
@@ -464,7 +460,7 @@ final class FinallyServerConnectionIntegrationTests: XCTestCase {
         try await FinallyServerTaskProviderAdapter(api: api)
             .synchronize(.push, workspace: workspace, store: context)
 
-        XCTAssertEqual(api.taskOperations, ["update", "complete"])
+        XCTAssertEqual(api.taskOperations, ["update"])
         XCTAssertEqual(api.tasks["1"]?.title, "Edited title")
         XCTAssertTrue(api.tasks["1"]?.isCompleted == true)
         XCTAssertEqual(task.title, "Edited title")
@@ -490,26 +486,6 @@ final class FinallyServerConnectionIntegrationTests: XCTestCase {
         }
     }
 
-    func testDirtyCompletedTaskKeepsLocalStateWhenCompletionFails() async throws {
-        let api = MockFinallyServerAPIClient()
-        api.tasks["1"] = FinallyServerTask(id: "1", projectID: 42, title: "Old title", isCompleted: false)
-        api.completeError = FinallyServerClientError.serverUnavailable
-        let (context, workspace, task) = try makeDirtyCompletedTask()
-
-        do {
-            try await FinallyServerTaskProviderAdapter(api: api)
-                .synchronize(.push, workspace: workspace, store: context)
-            XCTFail("Expected completion failure")
-        } catch FinallyServerClientError.serverUnavailable {
-            XCTAssertEqual(api.taskOperations, ["update", "complete"])
-            XCTAssertEqual(api.tasks["1"]?.title, "Edited title")
-            XCTAssertFalse(api.tasks["1"]?.isCompleted == true)
-            XCTAssertEqual(task.title, "Edited title")
-            XCTAssertEqual(task.status, .done)
-            XCTAssertTrue(task.isDirty)
-        }
-    }
-
     func testURLClientUsesVersionedAuthenticatedLifecycleContract() async throws {
         let configuration = URLSessionConfiguration.ephemeral
         configuration.protocolClasses = [MockURLProtocol.self]
@@ -528,16 +504,16 @@ final class FinallyServerConnectionIntegrationTests: XCTestCase {
                 body = #"[{"id":42,"title":"Personal"}]"#
                 status = 200
             case ("POST", "/api/v2/finally/projects/42/tasks"):
-                body = #"{"id":1,"project_id":42,"title":"Plan tomorrow","done":false}"#
+                body = #"{"id":1,"project_id":42,"title":"Plan tomorrow","revision":0,"deadline_has_time":false,"reminder_rules":[],"done":false}"#
                 status = 201
             case ("GET", "/api/v2/finally/tasks/1"):
-                body = #"{"id":1,"project_id":42,"title":"Plan tomorrow","done":false}"#
+                body = #"{"id":1,"project_id":42,"title":"Plan tomorrow","revision":0,"deadline_has_time":false,"reminder_rules":[],"done":false}"#
                 status = 200
             case ("PUT", "/api/v2/finally/tasks/1"):
-                body = #"{"id":1,"project_id":42,"title":"Plan focused tomorrow","done":false}"#
+                body = #"{"id":1,"project_id":42,"title":"Plan focused tomorrow","revision":0,"deadline_has_time":false,"reminder_rules":[],"done":false}"#
                 status = 200
             case ("POST", "/api/v2/finally/tasks/1/complete"):
-                body = #"{"id":1,"project_id":42,"title":"Plan focused tomorrow","done":true}"#
+                body = #"{"id":1,"project_id":42,"title":"Plan focused tomorrow","revision":0,"deadline_has_time":false,"reminder_rules":[],"done":true}"#
                 status = 200
             case ("DELETE", "/api/v2/finally/tasks/1"):
                 body = ""
@@ -558,9 +534,9 @@ final class FinallyServerConnectionIntegrationTests: XCTestCase {
         let projects = try await client.listProjects()
         let created = try await client.createTask(projectID: 42, title: "Plan tomorrow")
         _ = try await client.readTask(id: created.id)
-        _ = try await client.updateTask(id: created.id, title: "Plan focused tomorrow", isCompleted: false)
-        _ = try await client.completeTask(id: created.id)
-        try await client.deleteTask(id: created.id)
+        _ = try await client.updateTask(id: created.id, title: "Plan focused tomorrow", isCompleted: false, revision: created.revision)
+        _ = try await client.completeTask(id: created.id, revision: created.revision)
+        try await client.deleteTask(id: created.id, revision: created.revision)
 
         XCTAssertEqual(token, "jwt-token")
         XCTAssertEqual(projects, [FinallyServerProject(id: 42, title: "Personal")])
@@ -591,9 +567,9 @@ final class FinallyServerConnectionIntegrationTests: XCTestCase {
             requestedPages.append(page)
             let body: String
             if page == "1" {
-                body = #"{"items":[{"id":1,"project_id":42,"title":"First","done":false}],"total":2,"page":1,"per_page":1,"total_pages":2}"#
+                body = #"{"items":[{"id":1,"project_id":42,"title":"First","revision":0,"deadline_has_time":false,"reminder_rules":[],"done":false}],"total":2,"page":1,"per_page":1,"total_pages":2}"#
             } else {
-                body = #"{"items":[{"id":2,"project_id":42,"title":"Second","done":true}],"total":2,"page":2,"per_page":1,"total_pages":2}"#
+                body = #"{"items":[{"id":2,"project_id":42,"title":"Second","revision":0,"deadline_has_time":false,"reminder_rules":[],"done":true}],"total":2,"page":2,"per_page":1,"total_pages":2}"#
             }
             return (
                 HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: nil, headerFields: nil)!,
@@ -685,6 +661,7 @@ final class FinallyServerConnectionIntegrationTests: XCTestCase {
         let task = TaskItem(externalTaskID: "1", title: "Edited title")
         task.providerWorkspaceId = workspace.workspaceId
         task.lastSyncedAt = Date()
+        task.serverSnapshotJSON = FinallyServerTaskMutation(title: "Old title").json
         task.status = .done
         task.isDirty = true
         context.insert(workspace)

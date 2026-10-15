@@ -5,7 +5,7 @@ struct NotionConnectView: View {
     var onConnected: () -> Void
 
     @Environment(\.modelContext) private var modelContext
-    @State private var authService = NotionAuthService()
+    @Environment(NotionAuthService.self) private var authService
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -17,7 +17,7 @@ struct NotionConnectView: View {
                 .rotationEffect(.degrees(-4))
                 .padding(.top, 48)
 
-            Text("Finally")
+            Text("Connect Notion")
                 .font(.pageTitle)
                 .foregroundStyle(Palette.ink)
                 .padding(.top, 28)
@@ -52,6 +52,7 @@ struct NotionConnectView: View {
             }
             .buttonStyle(.ink)
             .disabled(authService.isAuthenticating)
+            .accessibilityIdentifier("notion-authorize")
 
             Text("You'll sign in on notion.so")
                 .font(.meta)

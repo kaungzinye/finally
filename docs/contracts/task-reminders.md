@@ -1,0 +1,13 @@
+# Task reminder rules
+
+Finally Server persists `deadline_has_time` and `reminder_rules` on each task. Conditional task writes synchronize these fields alongside the task revision. Deadline precision shares the `due_date` field's conflict ownership. Reminder rules have their own field ownership.
+
+Every rule has a canonical hyphenated UUID, unique within its task. An anchored rule carries `kind: "anchored"`, `anchor: "deadline" | "plannedDay"`, `value`, `unit`, and `direction: "before" | "after"`. Offset bounds follow the phone editor: minutes 1–59, hours 1–23, days 1–30, weeks 1–51, months 1–11. An exact rule carries `kind: "exact"` and `at`, an RFC3339 timestamp. Exact timestamps preserve fractional seconds and represent fixed instants. Clearing rules uses `reminder_rules: []`.
+
+The phone stores synchronized rules in SwiftData and resolves them locally. A timed deadline at 18:00 with a 30-minute-before rule resolves to 17:30. Date-only anchors use the phone's selected reminder time and local calendar. Exact rules keep their timestamp when task dates change. The phone schedules resolved instants using explicit UTC calendar components, so timezone changes retain their instant; reconciliation recalculates date-only anchors in the local calendar.
+
+Reconciliation runs at launch, foreground entry, timezone changes, provider synchronization, and local reminder/task edits. It cancels orphaned requests, excludes completed/deleted/unavailable tasks, and schedules the earliest future reminders. Request identity includes provider workspace, task, and rule UUID. Notification taps open the matching task in its provider workspace.
+
+The pending queue reserves requests belonging to other app moments and schedules at most 60 task reminders within the phone's 64-request budget. Deferred rules remain persisted and refill when reconciliation runs. Saved rules, pending-limit status, denied permission, quiet permission, and scheduling failures remain distinct; the app displays recovery actions. Deferred rules require a reconciliation opportunity before they enter the system queue. Scheduled reminders fire through iOS while the app and server are offline, subject to the phone's notification settings.
+
+`ServerReminderRuleTests` covers wire precision, anchored/exact semantics, identity, and fresh-context scheduling. `ReminderReconciliationTests` covers pending budgets, relaunch refill, authorization, failures, orphan cancellation, completion, and timezone changes. `ServerReminderSyncTests` covers provider synchronization and dirty edits. Server route tests cover persistence, narrow patches, deadline precision conflicts, empty arrays, and malformed rules.
