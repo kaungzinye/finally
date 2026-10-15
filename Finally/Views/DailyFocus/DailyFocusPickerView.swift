@@ -1,10 +1,11 @@
 import SwiftData
 import SwiftUI
 
-/// Adds a task, with a user-chosen displacement when Daily Focus is full.
+/// Picks a task for the day, listing Today's tasks first. A full day takes a pick only by
+/// replacing the one the user chooses.
 struct DailyFocusPickerView: View {
     let focus: DailyFocus
-    let onPick: () -> Void
+    let onPick: (TaskItem) -> Void
 
     @Environment(\.dismiss) private var dismiss
     @Query(
@@ -38,6 +39,15 @@ struct DailyFocusPickerView: View {
         }
     }
 
+    private var todayCandidates: [TaskItem] {
+        Today.members(of: candidates, at: Date()).map(\.task)
+    }
+
+    private var otherCandidates: [TaskItem] {
+        let today = Set(todayCandidates.map(\.persistentModelID))
+        return candidates.filter { !today.contains($0.persistentModelID) }
+    }
+
     var body: some View {
         NavigationStack {
             List {
@@ -57,20 +67,18 @@ struct DailyFocusPickerView: View {
                 if let errorMessage {
                     Text(errorMessage).foregroundStyle(.red)
                 }
-                ForEach(candidates) { task in
-                    Button {
-                        pick(task)
-                    } label: {
-                        HStack {
-                            Text(task.title)
-                                .foregroundStyle(.primary)
-                            Spacer()
-                            if let deadline = task.deadline {
-                                Text(deadline, style: .date)
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
-                            }
-                        }
+                if !todayCandidates.isEmpty {
+                    Section {
+                        ForEach(todayCandidates) { candidateRow($0) }
+                    } header: {
+                        SectionLabel("Today")
+                    }
+                }
+                if !otherCandidates.isEmpty {
+                    Section {
+                        ForEach(otherCandidates) { candidateRow($0) }
+                    } header: {
+                        SectionLabel("Everything else")
                     }
                 }
             }
@@ -85,15 +93,15 @@ struct DailyFocusPickerView: View {
                     )
                 }
             }
-            .navigationTitle("Add to Daily Focus")
+            .navigationTitle("Pick a task")
             .navigationBarTitleDisplayMode(.inline)
             .sheet(item: $replacementTask) { task in
                 NavigationStack {
                     List(focus.resolvedPicks(among: allTasks)) { item in
                         Button {
                             do {
-                                try focus.replace(item.pick, with: task.dailyFocusPick)
-                                onPick()
+                                try focus.pick(task, replacing: item.pick)
+                                onPick(task)
                                 replacementTask = nil
                                 dismiss()
                             } catch {
@@ -101,13 +109,13 @@ struct DailyFocusPickerView: View {
                                 replacementTask = nil
                             }
                         } label: {
-                            Label(item.task?.title ?? "Unavailable task", systemImage: "arrow.left.arrow.right")
+                            Label(item.task?.title ?? "Deleted", systemImage: "arrow.left.arrow.right")
                         }
                     }
-                    .navigationTitle("Choose a pick to replace")
+                    .navigationTitle("Choose a task to replace")
                     .navigationBarTitleDisplayMode(.inline)
                     .safeAreaInset(edge: .top) {
-                        Text("Make room for \(task.title). The displaced task stays in its provider.")
+                        Text("Make room for \(task.title). The task you replace keeps its dates.")
                             .font(.subheadline).foregroundStyle(.secondary).padding()
                     }
                     .toolbar {
@@ -118,10 +126,6 @@ struct DailyFocusPickerView: View {
                 }
             }
             .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Text("\(focus.picks.count) of \(focus.focusLimit)")
-                        .foregroundStyle(.secondary)
-                }
                 ToolbarItem(placement: .topBarLeading) {
                     Button("Cancel") { dismiss() }
                 }
@@ -135,11 +139,29 @@ struct DailyFocusPickerView: View {
             return
         }
         do {
-            try focus.add(task.dailyFocusPick)
-            onPick()
+            try focus.pick(task)
+            onPick(task)
             dismiss()
         } catch {
             errorMessage = error.localizedDescription
         }
+    }
+
+    private func candidateRow(_ task: TaskItem) -> some View {
+        Button {
+            pick(task)
+        } label: {
+            HStack {
+                Text(task.title)
+                    .foregroundStyle(Palette.ink)
+                Spacer()
+                if let date = TaskRowDate(for: task, at: Date()) {
+                    Text(date.text)
+                        .font(.meta)
+                        .foregroundStyle(Palette.muted)
+                }
+            }
+        }
+        .cardRow()
     }
 }
