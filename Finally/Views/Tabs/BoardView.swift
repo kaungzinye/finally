@@ -8,7 +8,6 @@ struct BoardView: View {
     @Environment(\.modelContext) private var modelContext
 
     @State private var selectedTask: TaskItem?
-    @State private var showSearch = false
     @State private var showFilterSheet = false
     @State private var draggingTaskId: String?
     @State private var filterProjects: Set<String> = []
@@ -44,61 +43,51 @@ struct BoardView: View {
     }
 
     var body: some View {
-        NavigationStack {
-            Group {
-                if taskProvider.isSyncing && allTasks.isEmpty {
-                    // First-load sync: replace content entirely
-                    VStack(spacing: 12) {
-                        ProgressView()
-                        Text("Syncing your tasks…")
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
-                    }
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                } else {
-                    GeometryReader { geo in
-                        let isLandscape = geo.size.width > geo.size.height
-                        let columnWidth = isLandscape ? geo.size.width * 0.32 : geo.size.width * 0.48
+        Group {
+            if taskProvider.isSyncing && allTasks.isEmpty {
+                // First-load sync: replace content entirely
+                VStack(spacing: 12) {
+                    ProgressView()
+                    Text("Syncing your tasks…")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else {
+                GeometryReader { geo in
+                    let isLandscape = geo.size.width > geo.size.height
+                    let columnWidth = isLandscape ? geo.size.width * 0.32 : geo.size.width * 0.48
 
-                        ScrollView(.horizontal, showsIndicators: false) {
-                            HStack(alignment: .top, spacing: 12) {
-                                boardColumn("To Do", color: Palette.hairline, status: .notStarted, tasks: notStartedTasks, width: columnWidth, isLandscape: isLandscape)
-                                boardColumn("In Progress", color: Palette.muted, status: .inProgress, tasks: inProgressTasks, width: columnWidth, isLandscape: isLandscape)
-                                boardColumn("Done", color: Palette.ink, status: .done, tasks: doneTasks, width: columnWidth, isLandscape: isLandscape)
-                            }
-                            .padding(.horizontal, 16)
-                            .padding(.bottom, 20)
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(alignment: .top, spacing: 12) {
+                            boardColumn("To Do", color: Palette.hairline, status: .notStarted, tasks: notStartedTasks, width: columnWidth, isLandscape: isLandscape)
+                            boardColumn("In Progress", color: Palette.muted, status: .inProgress, tasks: inProgressTasks, width: columnWidth, isLandscape: isLandscape)
+                            boardColumn("Done", color: Palette.ink, status: .done, tasks: doneTasks, width: columnWidth, isLandscape: isLandscape)
                         }
+                        .padding(.horizontal, 16)
+                        .padding(.bottom, 20)
                     }
                 }
             }
-            .background(Palette.paper)
-            .navigationTitle("Board")
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    HStack(spacing: 12) {
-                        Button { showFilterSheet = true } label: {
-                            Image(systemName: hasActiveFilters ? "line.3.horizontal.decrease.circle.fill" : "line.3.horizontal.decrease.circle")
-                        }
-                        Button { showSearch = true } label: {
-                            Image(systemName: "magnifyingglass")
-                        }
-                    }
+        }
+        .background(Palette.paper)
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                Button { showFilterSheet = true } label: {
+                    Image(systemName: hasActiveFilters ? "line.3.horizontal.decrease.circle.fill" : "line.3.horizontal.decrease.circle")
                 }
+                .accessibilityLabel("Filter")
             }
-            .sheet(isPresented: $showSearch) {
-                SearchFilterView()
-            }
-            .sheet(isPresented: $showFilterSheet) {
-                BoardFilterView(
-                    filterProjects: $filterProjects,
-                    filterPriorities: $filterPriorities
-                )
-            }
-            .sheet(item: $selectedTask) { task in
-                TaskDetailView(task: task)
-                    .presentationDetents([.fraction(0.8)])
-            }
+        }
+        .sheet(isPresented: $showFilterSheet) {
+            BoardFilterView(
+                filterProjects: $filterProjects,
+                filterPriorities: $filterPriorities
+            )
+        }
+        .sheet(item: $selectedTask) { task in
+            TaskDetailView(task: task)
+                .presentationDetents([.fraction(0.8)])
         }
     }
 

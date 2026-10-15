@@ -35,6 +35,8 @@ struct FinallyApp: App {
                     DeadlineDemoView()
                 } else if isDailyFocusDemoMode {
                     DailyFocusDemoView()
+                } else if isTasksDemoMode {
+                    TasksDemoView()
                 } else if isLoading {
                     ProgressView("Loading...")
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -87,7 +89,7 @@ struct FinallyApp: App {
                 Task { await checkSession() }
             }
             .task {
-                if isDeadlineDemoMode || isDailyFocusDemoMode { return }
+                if isDeadlineDemoMode || isDailyFocusDemoMode || isTasksDemoMode { return }
                 await checkSession()
                 await startForegroundSyncLoop()
             }
@@ -116,6 +118,14 @@ struct FinallyApp: App {
     private var isDailyFocusDemoMode: Bool {
 #if DEBUG
         ProcessInfo.processInfo.arguments.contains("-daily-focus-demo")
+#else
+        false
+#endif
+    }
+
+    private var isTasksDemoMode: Bool {
+#if DEBUG
+        ProcessInfo.processInfo.arguments.contains("-tasks-demo")
 #else
         false
 #endif
@@ -227,6 +237,16 @@ private struct DeadlineDemoView: View {
 /// carries one pick whose task is gone.
 private struct DailyFocusDemoView: View {
     @State private var container = DailyFocusDemoFixture.makeContainer()
+
+    var body: some View {
+        ContentView()
+            .modelContainer(container)
+    }
+}
+
+/// The app over an in-memory store seeded with Inbox tasks and projects of different sizes.
+private struct TasksDemoView: View {
+    @State private var container = TasksDemoFixture.makeContainer()
 
     var body: some View {
         ContentView()

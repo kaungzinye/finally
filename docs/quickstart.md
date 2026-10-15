@@ -84,11 +84,11 @@ Finally/
 │   │   └── KeychainHelper.swift         # Thin wrapper over Security framework
 │   ├── Views/
 │   │   ├── Tabs/
-│   │   │   ├── InboxView.swift
 │   │   │   ├── TodayView.swift
 │   │   │   ├── UpcomingView.swift
-│   │   │   ├── SearchFilterView.swift
-│   │   │   └── BrowseProjectsView.swift
+│   │   │   ├── TasksView.swift          # Inbox, projects, and the List/Board switch
+│   │   │   ├── BoardView.swift
+│   │   │   └── SearchFilterView.swift
 │   │   ├── Task/
 │   │   │   ├── TaskRowView.swift        # Single task row with checkbox + chips
 │   │   │   ├── TaskDetailView.swift     # Full task editing sheet
