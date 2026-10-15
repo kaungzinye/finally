@@ -5,8 +5,7 @@ final class NavigationRouter {
     enum Tab: Int, CaseIterable {
         case today = 0
         case upcoming
-        case board
-        case browse
+        case tasks
     }
 
     var selectedTab: Tab = .today

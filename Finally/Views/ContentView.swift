@@ -17,6 +17,10 @@ struct ContentView: View {
     }
     @State private var showCreator = false
 
+    private var inboxCount: Int {
+        TasksList(tasks: tasks, projects: [], workspace: sessions.selectedProviderWorkspace).inbox.count
+    }
+
     var body: some View {
         @Bindable var router = router
 
@@ -36,15 +40,11 @@ struct ContentView: View {
                         .tabItem { Label("Upcoming", systemImage: "calendar") }
                         .tag(NavigationRouter.Tab.upcoming)
 
-                    BoardView()
+                    TasksView()
                         .addTaskButton(isHidden: showCreator, action: openCreator)
-                        .tabItem { Label("Board", systemImage: "rectangle.split.3x1") }
-                        .tag(NavigationRouter.Tab.board)
-
-                    BrowseProjectsView()
-                        .addTaskButton(isHidden: showCreator, action: openCreator)
-                        .tabItem { Label("Browse", systemImage: "square.grid.2x2") }
-                        .tag(NavigationRouter.Tab.browse)
+                        .tabItem { Label("Tasks", systemImage: "checklist") }
+                        .badge(inboxCount)
+                        .tag(NavigationRouter.Tab.tasks)
                 }
             }
             .background(Palette.paper.ignoresSafeArea())
