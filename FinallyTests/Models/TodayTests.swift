@@ -133,7 +133,25 @@ final class TodayTests: XCTestCase {
         XCTAssertFalse(upcoming.isOverdue)
     }
 
+    func testARowShowsTheDeadlineWhenThereIsOneOtherwiseTheScheduledDay() {
+        let both = task("Plan the trip", scheduled: at(day: 16), deadline: at(day: 20))
+        let scheduled = task("Water the plants", scheduled: at(day: 17))
+        let missed = task("Book the dentist", scheduled: at(day: 14))
+        let longMissed = task("Fix the bike", scheduled: at(day: 1))
+        let undated = task("Read the novel")
+
+        XCTAssertEqual(rowDate(both), TaskRowDate(kind: .deadline, text: "Tue"))
+        XCTAssertEqual(rowDate(scheduled), TaskRowDate(kind: .scheduledDay, text: "Tomorrow"))
+        XCTAssertEqual(rowDate(missed), TaskRowDate(kind: .scheduledDay, text: "from Wed"))
+        XCTAssertEqual(rowDate(longMissed), TaskRowDate(kind: .scheduledDay, text: "from Oct 1"))
+        XCTAssertNil(rowDate(undated))
+    }
+
     // MARK: - Helpers
+
+    private func rowDate(_ task: TaskItem) -> TaskRowDate? {
+        TaskRowDate(for: task, at: now, calendar: calendar, locale: Locale(identifier: "en_US_POSIX"))
+    }
 
     private func subtask(_ title: String, of parent: TaskItem, suggested: Date, index: Int) -> TaskItem {
         let subtask = task(title)

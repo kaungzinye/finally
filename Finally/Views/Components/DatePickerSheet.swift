@@ -30,7 +30,7 @@ struct DatePickerSheet: View {
                 }
 
                 DatePicker(
-                    "Deadline",
+                    offersTime ? "Deadline" : "Scheduled",
                     selection: $pickerDate,
                     displayedComponents: hasTime ? [.date, .hourAndMinute] : [.date]
                 )
