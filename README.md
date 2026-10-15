@@ -8,7 +8,7 @@ Finally is a free, open-source iOS task manager that connects to [Notion](https:
 
 - Notion OAuth: connect any workspace where you're a member
 - Two-way sync with your Tasks and Projects databases
-- Inbox, Today, Upcoming, Kanban, and project browse views
+- Today, Upcoming, and Tasks tabs. Tasks holds the Inbox, projects, an Unscheduled filter, and the Board
 - Inline task creation with chip-based fields (due date, target date, priority, tags, project, recurrence)
 - Per-task local push reminders (anchored or exact-date)
 - Home screen widget
