@@ -69,7 +69,7 @@ final class TaskItem {
 
     var isOverdue: Bool {
         guard let deadline, status != .done else { return false }
-        return deadline < Calendar.current.startOfDay(for: Date())
+        return Today.isOverdue(deadline: deadline, hasTime: deadlineHasTime, at: Date())
     }
 
     var isInActiveWindow: Bool {
