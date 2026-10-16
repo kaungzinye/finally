@@ -160,6 +160,49 @@ final class PhonePriorityConflictTests: XCTestCase {
         XCTAssertFalse(task.isDirty)
     }
 
+    func testUsingTheServersVersionReschedulesItsRemindersAndRewritesTheWidget() async throws {
+        let (_, context, _, api, task) = try fixture()
+        let now = Date(timeIntervalSince1970: 1_900_000_000)
+        let phoneReminder = TaskReminder.exact(ExactReminder(at: now.addingTimeInterval(60)))
+        let serverReminder = TaskReminder.exact(ExactReminder(at: now.addingTimeInterval(120)))
+        task.taskReminders = [phoneReminder]
+        task.isDirty = true
+        task.serverConflictJSON = FinallyServerTaskMutation(
+            title: "Proposal", deadline: task.deadline, deadlineHasTime: true, reminders: [serverReminder]
+        ).json
+        let service = NotificationService.shared
+        await service.waitUntilIdle()
+        let originalCenter = service.center
+        let originalClock = service.now
+        let center = MockNotificationScheduler()
+        service.center = center
+        service.now = { now }
+        defer { service.center = originalCenter; service.now = originalClock }
+        service.rescheduleAllReminders(modelContext: context)
+        await service.waitUntilIdle()
+        XCTAssertEqual(Array(center.pending.keys), [phoneReminder.notificationId(for: task)])
+        let storage = makeWidgetStorage()
+
+        try TaskProviderCoordinator(adapter: FinallyServerTaskProviderAdapter(api: api))
+            .resolveConflict(for: task, keepingPhoneEdits: false, store: context, widgetStorage: storage)
+        await service.waitUntilIdle()
+
+        XCTAssertFalse(task.isDirty)
+        XCTAssertEqual(Array(center.pending.keys), [serverReminder.notificationId(for: task)])
+        XCTAssertNotNil(storage.snapshot)
+    }
+
+    private func makeWidgetStorage() -> WidgetStorage {
+        let suite = "PhonePriorityConflictTests-\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suite)!
+        let directory = FileManager.default.temporaryDirectory.appending(path: suite, directoryHint: .isDirectory)
+        addTeardownBlock {
+            defaults.removePersistentDomain(forName: suite)
+            try? FileManager.default.removeItem(at: directory)
+        }
+        return WidgetStorage(defaults: defaults, completionsDirectory: directory)
+    }
+
     func testRemoteDeletionFinishesPendingPhoneDelete() async throws {
         let (_, context, workspace, api, task) = try fixture()
         api.tasks.removeAll()

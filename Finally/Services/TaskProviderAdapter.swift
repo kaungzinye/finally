@@ -390,6 +390,23 @@ final class TaskProviderCoordinator {
         }
     }
 
+    /// Saves the version the user chose in conflict review, then refreshes reminders and the
+    /// widget snapshot to match it. A version that still differs from the server stays dirty
+    /// for the caller to push.
+    @MainActor
+    func resolveConflict(
+        for task: TaskItem,
+        keepingPhoneEdits: Bool,
+        store: ModelContext,
+        widgetStorage: WidgetStorage? = .appGroup
+    ) throws {
+        task.resolveServerConflict(keepingPhoneEdits: keepingPhoneEdits)
+        try store.save()
+        lastError = nil
+        try? WidgetPublisher.publish(store: store, storage: widgetStorage)
+        NotificationService.shared.rescheduleAllReminders(modelContext: store)
+    }
+
     func persistPendingChanges(store: ModelContext) throws {
         try store.save()
         try? WidgetPublisher.publish(store: store)
