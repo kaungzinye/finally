@@ -1,0 +1,38 @@
+# The runner launches the in-memory fixture with -tasks-demo first.
+# Settings edits the default deadline reminders. The edit persists, so the next run starts
+# from the edited list. Reinstall the app to reset it.
+appId: com.kaungzinye.finally
+---
+- extendedWaitUntil:
+    visible: "Tasks"
+    timeout: 10000
+- tapOn:
+    text: "Tasks"
+    index: 0
+- tapOn: "Settings"
+- tapOn:
+    id: "deadline-reminders-setting"
+- assertVisible: "Morning of"
+- assertVisible: "1 day before"
+- assertVisible: "1 week before"
+- assertVisible: "1 hour before"
+- takeScreenshot: settings-default-reminders
+
+- tapOn:
+    id: "remove 1 week before"
+- assertNotVisible: "1 week before"
+- tapOn:
+    id: "add-default-reminder"
+- tapOn: "2 days before"
+- assertVisible:
+    id: "remove 2 days before"
+- takeScreenshot: settings-edited-reminders
+
+# The edit persists across leaving and reopening the page.
+- tapOn:
+    id: "BackButton"
+- tapOn:
+    id: "deadline-reminders-setting"
+- assertVisible:
+    id: "remove 2 days before"
+- assertNotVisible: "1 week before"

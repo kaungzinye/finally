@@ -38,7 +38,7 @@ The Notion provider authenticates through OAuth, lets the user select task and p
 - `scheduledDay` maps to a dedicated Notion date property. `deadline` maps to a separate Notion date property.
 - Priority maps to a select property, labels map to a multi-select property, projects map to the Projects database relation, and subtasks map to a native parent-child relation.
 - Provider recurrence properties encode the recurrence rule while Finally applies the canonical recurrence behavior.
-- Reminder rules synchronize through Finally's device-support layer because Notion does not provide the required anchored-reminder model.
+- Notion carries no reminder rules, so the phone keeps a Notion task's deadline reminders and exact reminders. A pull that first brings a deadline gives the task the default deadline reminders on the phone.
 - OAuth access tokens remain in Keychain on the phone. Client secrets remain in a server-side token-exchange component.
 - The adapter detects schema by property type and requests an explicit choice when multiple properties are plausible.
 - The provider stores page IDs, last-edited timestamps, property mappings, sync cursors, and dirty-state metadata.
