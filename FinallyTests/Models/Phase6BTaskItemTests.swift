@@ -24,15 +24,38 @@ final class Phase6BTaskItemTests: XCTestCase {
         XCTAssertEqual(try XCTUnwrap(task.deadline), deadline)
     }
 
-    func testValidateScheduledDay_KeepsScheduledDayEarlierThanDeadline() {
+    func testValidateScheduledDay_MovesScheduledDayAfterDeadlineToDeadlineDay() {
         let task = TaskItem(externalTaskID: "t-1", title: "Task")
         task.deadline = makeDate(year: 2026, month: 6, day: 20)
         task.scheduledDay = makeDate(year: 2026, month: 6, day: 25)
 
-        task.validateScheduledDay()
+        task.validateScheduledDay(calendar: calendar)
 
-        XCTAssertNotNil(task.scheduledDay)
-        XCTAssertTrue(task.scheduledDay! < task.deadline!)
+        XCTAssertEqual(task.scheduledDay, makeDate(year: 2026, month: 6, day: 20))
+    }
+
+    func testValidateScheduledDay_KeepsScheduledDayOnDeadlineDay() {
+        let task = TaskItem(externalTaskID: "t-1b", title: "Task")
+        task.deadline = makeDate(year: 2026, month: 6, day: 20)
+        task.scheduledDay = makeDate(year: 2026, month: 6, day: 20)
+
+        task.validateScheduledDay(calendar: calendar)
+
+        XCTAssertEqual(task.scheduledDay, makeDate(year: 2026, month: 6, day: 20))
+    }
+
+    func testValidateScheduledDay_KeepsScheduledDayOnTimedDeadlineDay() {
+        let task = TaskItem(externalTaskID: "t-1c", title: "Task")
+        task.setDeadline(
+            calendar.date(from: DateComponents(year: 2026, month: 6, day: 20, hour: 9)),
+            hasTime: true,
+            defaults: .standard
+        )
+        task.scheduledDay = makeDate(year: 2026, month: 6, day: 20)
+
+        task.validateScheduledDay(calendar: calendar)
+
+        XCTAssertEqual(task.scheduledDay, makeDate(year: 2026, month: 6, day: 20))
     }
 
     func testIsInActiveWindow_RequiresScheduledDayAndDeadlineSpanningToday() {
