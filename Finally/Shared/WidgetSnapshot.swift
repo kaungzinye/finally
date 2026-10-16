@@ -55,15 +55,29 @@ struct WidgetCompletion: Codable, Hashable {
     let externalTaskID: String
 }
 
-/// App-group storage shared by the app and the widget.
+/// A widget completion as stored: one file per tap, named by `id`.
+struct PendingWidgetCompletion: Equatable {
+    let id: String
+    let completion: WidgetCompletion
+}
+
+/// App-group storage shared by the app and the widget. Each widget completion is its own file,
+/// so the widget adds taps and the app removes the ones it applied without rewriting each other's.
 struct WidgetStorage {
     static let snapshotKey = "widgetSnapshot"
-    static let pendingCompletionsKey = "pendingWidgetCompletions"
 
     let defaults: UserDefaults
+    let completionsDirectory: URL
 
     static var appGroup: WidgetStorage? {
-        UserDefaults(suiteName: AppConstants.appGroupID).map(WidgetStorage.init)
+        guard let defaults = UserDefaults(suiteName: AppConstants.appGroupID),
+              let container = FileManager.default.containerURL(
+                  forSecurityApplicationGroupIdentifier: AppConstants.appGroupID
+              ) else { return nil }
+        return WidgetStorage(
+            defaults: defaults,
+            completionsDirectory: container.appending(path: "PendingWidgetCompletions", directoryHint: .isDirectory)
+        )
     }
 
     var snapshot: WidgetSnapshot? {
@@ -75,20 +89,22 @@ struct WidgetStorage {
         }
     }
 
-    private(set) var pendingCompletions: [WidgetCompletion] {
-        get {
-            defaults.data(forKey: Self.pendingCompletionsKey)
-                .flatMap { try? JSONDecoder().decode([WidgetCompletion].self, from: $0) } ?? []
-        }
-        nonmutating set {
-            defaults.set(try? JSONEncoder().encode(newValue), forKey: Self.pendingCompletionsKey)
+    var pendingCompletions: [PendingWidgetCompletion] {
+        let files = (try? FileManager.default.contentsOfDirectory(
+            at: completionsDirectory, includingPropertiesForKeys: nil
+        )) ?? []
+        return files.filter { $0.pathExtension == "json" }.compactMap { file in
+            guard let data = try? Data(contentsOf: file),
+                  let completion = try? JSONDecoder().decode(WidgetCompletion.self, from: data) else { return nil }
+            return PendingWidgetCompletion(id: file.deletingPathExtension().lastPathComponent, completion: completion)
         }
     }
 
     /// The widget's side of completing a task: record it for the app and show it done.
     func complete(_ completion: WidgetCompletion) {
-        if !pendingCompletions.contains(completion) {
-            pendingCompletions.append(completion)
+        if let data = try? JSONEncoder().encode(completion) {
+            try? FileManager.default.createDirectory(at: completionsDirectory, withIntermediateDirectories: true)
+            try? data.write(to: file(for: UUID().uuidString), options: .atomic)
         }
         guard var snapshot else { return }
         for index in snapshot.tasks.indices where snapshot.tasks[index].providerWorkspaceID == completion.providerWorkspaceID
@@ -98,8 +114,14 @@ struct WidgetStorage {
         self.snapshot = snapshot
     }
 
-    /// Forgets completions the app has applied, keeping any the widget recorded since.
-    func removePendingCompletions(_ applied: [WidgetCompletion]) {
-        pendingCompletions.removeAll { applied.contains($0) }
+    /// Forgets the completions the app applied. Any the widget recorded since stay pending.
+    func removePendingCompletions(_ applied: [PendingWidgetCompletion]) {
+        for entry in applied {
+            try? FileManager.default.removeItem(at: file(for: entry.id))
+        }
+    }
+
+    private func file(for id: String) -> URL {
+        completionsDirectory.appending(path: id + ".json")
     }
 }

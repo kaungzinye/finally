@@ -128,7 +128,7 @@ final class WidgetSnapshotTests: XCTestCase {
         let suite = "WidgetSnapshotTests-\(UUID().uuidString)"
         let defaults = UserDefaults(suiteName: suite)!
         addTeardownBlock { defaults.removePersistentDomain(forName: suite) }
-        return WidgetStorage(defaults: defaults)
+        return WidgetStorage(defaults: defaults, completionsDirectory: FileManager.default.temporaryDirectory.appending(path: suite, directoryHint: .isDirectory))
     }
 
     private func at(day: Int, hour: Int = 0, minute: Int = 0) -> Date {

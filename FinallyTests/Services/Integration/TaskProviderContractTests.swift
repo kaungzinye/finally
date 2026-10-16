@@ -113,7 +113,7 @@ final class TaskProviderContractTests: XCTestCase {
         let suite = "TaskProviderContractTests-\(UUID().uuidString)"
         let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
         addTeardownBlock { defaults.removePersistentDomain(forName: suite) }
-        let storage = WidgetStorage(defaults: defaults)
+        let storage = WidgetStorage(defaults: defaults, completionsDirectory: FileManager.default.temporaryDirectory.appending(path: suite, directoryHint: .isDirectory))
         storage.complete(WidgetCompletion(providerWorkspaceID: "selected", externalTaskID: "brief"))
         storage.complete(WidgetCompletion(providerWorkspaceID: "other", externalTaskID: "release"))
 
