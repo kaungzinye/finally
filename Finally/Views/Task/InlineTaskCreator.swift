@@ -205,6 +205,8 @@ struct InlineTaskCreator: View {
                         .foregroundStyle(taskTitle.isEmpty ? Palette.hairline : Palette.ink)
                 }
                 .disabled(taskTitle.trimmingCharacters(in: .whitespaces).isEmpty || syncErrorMessage != nil)
+                .accessibilityLabel("Add task")
+                .accessibilityIdentifier("send-task")
             }
             .font(.title3)
             .padding(.horizontal, 16)
@@ -298,7 +300,6 @@ struct InlineTaskCreator: View {
         if task.hasReminders {
             NotificationService.shared.rescheduleAllReminders(modelContext: modelContext)
         }
-
 
         let context = modelContext
         Task {
