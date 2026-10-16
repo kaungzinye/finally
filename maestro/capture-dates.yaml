@@ -1,0 +1,76 @@
+# The runner installs the app, then launches the in-memory fixture:
+#   xcrun simctl launch <udid> com.kaungzinye.finally -tasks-demo
+# A bare date in capture sets the scheduled day, and "due" before it sets the deadline.
+# Both captures name no project, so both land in the Inbox.
+appId: com.kaungzinye.finally
+---
+- extendedWaitUntil:
+    visible: "Tasks"
+    timeout: 10000
+- tapOn:
+    text: "Tasks"
+    index: 0
+- extendedWaitUntil:
+    visible:
+      id: "tasks-inbox-header"
+    timeout: 5000
+
+# "fri" alone fills the Scheduled chip.
+- tapOn:
+    id: "add-task"
+- extendedWaitUntil:
+    visible: "Add a task..."
+    timeout: 5000
+- inputText: "Call the bank fri"
+- assertVisible: "Scheduled .*"
+- assertNotVisible: "Deadline .*"
+- takeScreenshot: capture-scheduled-chip
+- tapOn:
+    id: "send-task"
+
+# "due fri" fills the Deadline chip.
+- inputText: "Pay rent due fri"
+- assertVisible: "Deadline .*"
+- assertNotVisible: "Scheduled .*"
+- takeScreenshot: capture-deadline-chip
+- tapOn:
+    id: "send-task"
+
+# A tap above the add bar dismisses it.
+- tapOn:
+    point: "50%,20%"
+- assertVisible:
+    id: "add-task"
+
+# Both land in the Inbox.
+- assertVisible:
+    text: "Call the bank"
+    below:
+      id: "tasks-inbox-header"
+- assertVisible:
+    text: "Pay rent"
+    below:
+      id: "tasks-inbox-header"
+- takeScreenshot: capture-inbox
+
+# The deadline carries the default deadline reminders.
+- tapOn: "Pay rent"
+- extendedWaitUntil:
+    visible:
+      id: "remove Morning of"
+    timeout: 5000
+- assertVisible:
+    id: "remove 1 day before"
+- assertVisible:
+    id: "remove 1 week before"
+- takeScreenshot: capture-deadline-detail
+- tapOn: "Cancel"
+
+# The scheduled day leaves the task without a deadline or reminders.
+- tapOn: "Call the bank"
+- extendedWaitUntil:
+    visible: "Deadline reminders start when the task has a deadline."
+    timeout: 5000
+- assertNotVisible:
+    id: "remove Morning of"
+- takeScreenshot: capture-scheduled-detail
