@@ -92,7 +92,77 @@ final class WidgetCompletionTests: XCTestCase {
         XCTAssertTrue(storage.pendingCompletions.isEmpty)
     }
 
+    func testCompletingAPickedParentsStepFromAWidgetShowsItsNextStep() throws {
+        let storage = makeStorage()
+        let context = try makeContext()
+        let launch = try publishPickedParentWithSteps(into: context, storage: storage)
+
+        storage.complete(WidgetCompletion(providerWorkspaceID: "notion-workspace", externalTaskID: "slides"))
+
+        let day = WidgetDay(snapshot: storage.snapshot!, at: Date())
+        XCTAssertEqual(day.nowPick?.title, "Rehearse the talk")
+        XCTAssertEqual(day.nowPickPlace, "1 of 1")
+        XCTAssertEqual(launch.status, .notStarted)
+    }
+
+    func testCompletingAPickedParentsLastStepFromAWidgetShowsTheParent() throws {
+        let storage = makeStorage()
+        let context = try makeContext()
+        try publishPickedParentWithSteps(into: context, storage: storage)
+
+        storage.complete(WidgetCompletion(providerWorkspaceID: "notion-workspace", externalTaskID: "slides"))
+        storage.complete(WidgetCompletion(providerWorkspaceID: "notion-workspace", externalTaskID: "rehearse"))
+
+        let day = WidgetDay(snapshot: storage.snapshot!, at: Date())
+        XCTAssertEqual(day.nowPick?.title, "Prepare the launch")
+        XCTAssertEqual(day.nowPickPlace, "1 of 1")
+    }
+
+    func testCompletingALaterStepFirstLeavesTheCurrentStepInPlace() throws {
+        let storage = makeStorage()
+        let context = try makeContext()
+        try publishPickedParentWithSteps(into: context, storage: storage)
+
+        storage.complete(WidgetCompletion(providerWorkspaceID: "notion-workspace", externalTaskID: "rehearse"))
+        storage.complete(WidgetCompletion(providerWorkspaceID: "notion-workspace", externalTaskID: "slides"))
+
+        let day = WidgetDay(snapshot: storage.snapshot!, at: Date())
+        XCTAssertEqual(day.nowPick?.title, "Prepare the launch")
+    }
+
+    func testTheAppApplyingAStepCompletionShowsTheNextStep() throws {
+        let storage = makeStorage()
+        let context = try makeContext()
+        try publishPickedParentWithSteps(into: context, storage: storage)
+
+        storage.complete(WidgetCompletion(providerWorkspaceID: "notion-workspace", externalTaskID: "slides"))
+        try WidgetPublisher.applyPendingCompletions(store: context, storage: storage)
+
+        let day = WidgetDay(snapshot: storage.snapshot!, at: Date())
+        XCTAssertEqual(day.nowPick?.title, "Rehearse the talk")
+    }
+
     // MARK: - Helpers
+
+    /// Publishes a Daily Focus whose one pick, "Prepare the launch", has two undated steps.
+    @discardableResult
+    private func publishPickedParentWithSteps(into context: ModelContext, storage: WidgetStorage) throws -> TaskItem {
+        let launch = insertTask("launch", "Prepare the launch", into: context)
+        for (index, (id, title)) in [("slides", "Draft the slides"), ("rehearse", "Rehearse the talk")].enumerated() {
+            let step = TaskItem(externalTaskID: id, title: title)
+            step.providerWorkspaceId = "notion-workspace"
+            step.parentId = launch.externalTaskID
+            step.parent = launch
+            step.sortIndex = index
+            context.insert(step)
+        }
+        let focus = DailyFocus(day: Calendar.current.startOfDay(for: Date()), storageWorkspaceID: "notion-workspace")
+        focus.picks = [launch.dailyFocusPick]
+        context.insert(focus)
+        try context.save()
+        try WidgetPublisher.publish(store: context, storage: storage)
+        return launch
+    }
 
     private func makeContext() throws -> ModelContext {
         let schema = Schema([TaskItem.self, ProjectItem.self, UserSession.self, DailyFocus.self])

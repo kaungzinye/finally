@@ -13,6 +13,9 @@ struct WidgetTask: Codable, Equatable, Identifiable {
     /// The task's place in today's Daily Focus, starting at 1. A step standing in for a picked
     /// parent takes the parent's place.
     var focusPosition: Int?
+    /// The `id` of the task that takes this one's Daily Focus place once it is done: the picked
+    /// parent's next open step, then the parent itself.
+    var nextFocusTaskID: String?
     var isSubtask = false
     var suggestedDate: Date?
     var hasOpenSubtasks = false
@@ -49,6 +52,23 @@ struct WidgetSnapshot: Codable, Equatable {
     /// Every pick, a deleted one included, so the picks count like the Today tab.
     var focusPickCount: Int
     var tasks: [WidgetTask]
+}
+
+extension WidgetSnapshot {
+    /// Moves a finished task's Daily Focus place to the first open task along its successors.
+    /// The place stays put when no open successor remains.
+    mutating func passFocusPlace(from index: Int) {
+        guard let position = tasks[index].focusPosition else { return }
+        var nextID = tasks[index].nextFocusTaskID
+        while let id = nextID, let next = tasks.firstIndex(where: { $0.id == id }) {
+            if tasks[next].isOpen {
+                tasks[index].focusPosition = nil
+                tasks[next].focusPosition = position
+                return
+            }
+            nextID = tasks[next].nextFocusTaskID
+        }
+    }
 }
 
 /// A task the user finished from a widget, waiting for the app to apply it.
@@ -102,7 +122,8 @@ struct WidgetStorage {
         }
     }
 
-    /// The widget's side of completing a task: record it for the app and show it done.
+    /// The widget's side of completing a task: record it for the app and show it done. A finished
+    /// step hands its Daily Focus place to the next open task in its pick, as the app does.
     func complete(_ completion: WidgetCompletion) {
         if let data = try? JSONEncoder().encode(completion) {
             try? FileManager.default.createDirectory(at: completionsDirectory, withIntermediateDirectories: true)
@@ -112,6 +133,7 @@ struct WidgetStorage {
         for index in snapshot.tasks.indices where snapshot.tasks[index].providerWorkspaceID == completion.providerWorkspaceID
             && snapshot.tasks[index].externalTaskID == completion.externalTaskID {
             snapshot.tasks[index].status = .done
+            snapshot.passFocusPlace(from: index)
         }
         self.snapshot = snapshot
     }

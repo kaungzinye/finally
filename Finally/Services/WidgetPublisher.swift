@@ -5,8 +5,8 @@ import WidgetKit
 #endif
 
 extension WidgetSnapshot {
-    /// The Daily Focus picks from any provider, the selected workspace's open dated tasks, and the
-    /// tasks it finished on their day. Widgets never show an unscheduled task.
+    /// The Daily Focus picks from any provider with their open steps, the selected workspace's open
+    /// dated tasks, and the tasks it finished on their day. Widgets never list an unscheduled task.
     init(
         tasks: [TaskItem],
         focus: DailyFocus?,
@@ -15,17 +15,26 @@ extension WidgetSnapshot {
         calendar: Calendar = .current
     ) {
         var positions: [ObjectIdentifier: Int] = [:]
+        // Each open pick's open steps in order, then the pick, so a widget completion can hand
+        // the pick's place to the next one.
+        var nextInFocus: [ObjectIdentifier: TaskItem] = [:]
+        var inFocus: Set<ObjectIdentifier> = []
         for (index, item) in (focus?.resolvedPicks(among: tasks) ?? []).enumerated() {
             guard let task = item.task else { continue }
-            let shown = task.isOpen ? task.nextActionableSubtask ?? task : task
-            if positions[ObjectIdentifier(shown)] == nil {
-                positions[ObjectIdentifier(shown)] = index + 1
+            let chain = task.isOpen
+                ? task.activeSubtasks.filter(\.isOpen).sorted { $0.sortIndex < $1.sortIndex } + [task]
+                : [task]
+            guard positions[ObjectIdentifier(chain[0])] == nil else { continue }
+            positions[ObjectIdentifier(chain[0])] = index + 1
+            inFocus.formUnion(chain.map(ObjectIdentifier.init))
+            for (current, next) in zip(chain, chain.dropFirst()) {
+                nextInFocus[ObjectIdentifier(current)] = next
             }
         }
         let today = calendar.startOfDay(for: referenceDate)
         func isOn(_ date: Date?) -> Bool { date.map { calendar.startOfDay(for: $0) == today } ?? false }
         let shown = tasks.filter { task in
-            if positions[ObjectIdentifier(task)] != nil { return true }
+            if inFocus.contains(ObjectIdentifier(task)) { return true }
             guard task.belongs(to: workspace), !task.isDeleted else { return false }
             if task.status == .done { return isOn(task.scheduledDay) || isOn(task.deadline) }
             return task.scheduledDay != nil || task.deadline != nil || (task.isSubtask && task.effectiveSuggestedDate != nil)
@@ -35,13 +44,15 @@ extension WidgetSnapshot {
             focusDay: focus?.day,
             focusLimit: focus?.focusLimit ?? DailyFocus.defaultFocusLimit,
             focusPickCount: focus?.picks.count ?? 0,
-            tasks: shown.map { WidgetTask($0, focusPosition: positions[ObjectIdentifier($0)]) }
+            tasks: shown.map {
+                WidgetTask($0, focusPosition: positions[ObjectIdentifier($0)], nextInFocus: nextInFocus[ObjectIdentifier($0)])
+            }
         )
     }
 }
 
 private extension WidgetTask {
-    init(_ task: TaskItem, focusPosition: Int?) {
+    init(_ task: TaskItem, focusPosition: Int?, nextInFocus: TaskItem?) {
         self.init(
             providerWorkspaceID: task.providerWorkspaceId ?? "",
             externalTaskID: task.externalTaskID,
@@ -52,6 +63,7 @@ private extension WidgetTask {
             deadline: task.deadline,
             deadlineHasTime: task.deadlineHasTime,
             focusPosition: focusPosition,
+            nextFocusTaskID: nextInFocus.map { "\($0.providerWorkspaceId ?? ""):\($0.externalTaskID)" },
             isSubtask: task.isSubtask,
             suggestedDate: task.isSubtask ? task.effectiveSuggestedDate : nil,
             hasOpenSubtasks: task.hasOpenSubtasks
