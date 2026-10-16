@@ -64,7 +64,13 @@ appId: com.kaungzinye.finally
 - assertVisible:
     id: "remove 1 week before"
 - takeScreenshot: capture-deadline-detail
-- tapOn: "Cancel"
+- swipe:
+    start: 50%, 15%
+    end: 50%, 95%
+- extendedWaitUntil:
+    visible:
+      id: "tasks-inbox-header"
+    timeout: 5000
 
 # The scheduled day leaves the task without a deadline or reminders.
 - tapOn: "Call the bank"
