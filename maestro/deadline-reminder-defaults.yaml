@@ -46,13 +46,13 @@ appId: com.kaungzinye.finally
       id: "tasks-inbox-header"
     timeout: 5000
 
-# A task captured with a date-only deadline receives the edited defaults, without 1 hour before.
+# A task captured with "due" and a date-only deadline receives the edited defaults, without 1 hour before.
 - tapOn:
     id: "add-task"
 - extendedWaitUntil:
     visible: "Add a task..."
     timeout: 5000
-- inputText: "Pay the rent tomorrow"
+- inputText: "Pay the rent due tomorrow"
 - tapOn:
     id: "send-task"
 - hideKeyboard

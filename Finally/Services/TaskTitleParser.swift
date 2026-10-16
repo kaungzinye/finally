@@ -2,16 +2,18 @@ import Foundation
 
 struct TaskTitleParseResult {
     var cleanTitle: String
-    var detectedDate: Date?
+    var scheduledDay: Date?
+    var deadline: Date?
     var detectedPriority: TaskPriority?
     var detectedProjectName: String?
     var detectedTags: [String]
 }
 
+/// Reads capture text. A bare date phrase ("fri") sets the scheduled day, and the same phrase
+/// after "due" or "by" ("due fri") sets the deadline.
 struct TaskTitleParser {
-    static func parse(_ input: String) -> TaskTitleParseResult {
+    static func parse(_ input: String, now: Date = Date(), calendar: Calendar = .current) -> TaskTitleParseResult {
         var remaining = input
-        var detectedDate: Date? = nil
         var detectedPriority: TaskPriority? = nil
         var detectedProjectName: String? = nil
         var detectedTags: [String] = []
@@ -49,8 +51,9 @@ struct TaskTitleParser {
             remaining.removeSubrange(match)
         }
 
-        // Extract date keywords (case-insensitive)
-        detectedDate = extractDate(from: &remaining)
+        let today = calendar.startOfDay(for: now)
+        let deadline = extractDate(from: &remaining, prefix: #"(?:due|by)\s+"#, today: today, calendar: calendar)
+        let scheduledDay = extractDate(from: &remaining, prefix: "", today: today, calendar: calendar)
 
         // Clean up extra whitespace
         let cleanTitle = remaining
@@ -59,138 +62,96 @@ struct TaskTitleParser {
 
         return TaskTitleParseResult(
             cleanTitle: cleanTitle,
-            detectedDate: detectedDate,
+            scheduledDay: scheduledDay,
+            deadline: deadline,
             detectedPriority: detectedPriority,
             detectedProjectName: detectedProjectName,
             detectedTags: detectedTags
         )
     }
 
-    // MARK: - Date Extraction
+    // MARK: - Date phrases
 
-    private static func extractDate(from text: inout String) -> Date? {
-        let calendar = Calendar.current
-        let today = calendar.startOfDay(for: Date())
-        // "today"
-        if let range = matchWord(in: text, word: "today") {
-            text.removeSubrange(range)
-            return today
-        }
+    /// A date phrase: a regex and the day its capture groups name, relative to today.
+    private struct DatePhrase {
+        let pattern: String
+        let resolve: (_ groups: [String], _ today: Date, _ calendar: Calendar) -> Date?
+    }
 
-        // "tomorrow"
-        if let range = matchWord(in: text, word: "tomorrow") {
-            text.removeSubrange(range)
-            return calendar.date(byAdding: .day, value: 1, to: today)
-        }
+    private static let weekdays = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"]
 
-        // "yesterday"
-        if let range = matchWord(in: text, word: "yesterday") {
-            text.removeSubrange(range)
-            return calendar.date(byAdding: .day, value: -1, to: today)
-        }
+    private static let months = ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"]
 
-        // Day names: "monday" through "sunday"
-        let dayNames = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"]
-        for (index, dayName) in dayNames.enumerated() {
-            if let range = matchWord(in: text, word: dayName) {
+    /// Checked in order. The first phrase found anywhere in the text wins.
+    private static let phrases: [DatePhrase] = [
+        DatePhrase(pattern: "today") { _, today, _ in today },
+        DatePhrase(pattern: "tomorrow") { _, today, calendar in
+            calendar.date(byAdding: .day, value: 1, to: today)
+        },
+        DatePhrase(pattern: "(sunday|monday|tuesday|wednesday|thursday|friday|saturday|sun|mon|tues|tue|wed|thurs|thu|fri|sat)") { groups, today, calendar in
+            guard let index = weekdays.firstIndex(of: String(groups[0].lowercased().prefix(3))) else { return nil }
+            return nextWeekday(index + 1, from: today, calendar: calendar)
+        },
+        DatePhrase(pattern: #"next\s+week"#) { _, today, calendar in
+            nextWeekday(2, from: today, calendar: calendar)
+        },
+        DatePhrase(pattern: #"next\s+month"#) { _, today, calendar in
+            let startOfMonth = calendar.date(from: calendar.dateComponents([.year, .month], from: today))!
+            return calendar.date(byAdding: .month, value: 1, to: startOfMonth)
+        },
+        DatePhrase(pattern: #"in\s+(\d+)\s+(day|week|month)s?"#) { groups, today, calendar in
+            guard let count = Int(groups[0]) else { return nil }
+            switch groups[1].lowercased() {
+            case "day": return calendar.date(byAdding: .day, value: count, to: today)
+            case "week": return calendar.date(byAdding: .day, value: count * 7, to: today)
+            default: return calendar.date(byAdding: .month, value: count, to: today)
+            }
+        },
+        DatePhrase(pattern: #"(january|february|march|april|may|june|july|august|september|october|november|december|jan|feb|mar|apr|jun|jul|aug|sept|sep|oct|nov|dec)\s+(\d{1,2})"#) { groups, today, calendar in
+            guard let month = months.firstIndex(of: String(groups[0].lowercased().prefix(3))), let day = Int(groups[1]) else { return nil }
+            return nextOccurrence(month: month + 1, day: day, onOrAfter: today, calendar: calendar)
+        },
+        DatePhrase(pattern: #"(\d{1,2})/(\d{1,2})"#) { groups, today, calendar in
+            guard let month = Int(groups[0]), let day = Int(groups[1]) else { return nil }
+            return nextOccurrence(month: month, day: day, onOrAfter: today, calendar: calendar)
+        },
+    ]
+
+    /// Removes the first date phrase that follows `prefix` and returns its day.
+    private static func extractDate(from text: inout String, prefix: String, today: Date, calendar: Calendar) -> Date? {
+        for phrase in phrases {
+            let regex = try! NSRegularExpression(pattern: #"\b"# + prefix + "(?:" + phrase.pattern + #")\b"#, options: .caseInsensitive)
+            let whole = NSRange(text.startIndex..., in: text)
+            for match in regex.matches(in: text, range: whole) {
+                let groups = (1..<match.numberOfRanges).compactMap { index in
+                    Range(match.range(at: index), in: text).map { String(text[$0]) }
+                }
+                guard let date = phrase.resolve(groups, today, calendar),
+                      let range = Range(match.range, in: text) else { continue }
                 text.removeSubrange(range)
-                return nextWeekday(index + 1, from: today)
-            }
-            // Also check abbreviated: "mon", "tue", "wed", "thu", "fri", "sat", "sun"
-            let abbrevs = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"]
-            if let range = matchWord(in: text, word: abbrevs[index]) {
-                text.removeSubrange(range)
-                return nextWeekday(index + 1, from: today)
+                return date
             }
         }
-
-        // "next week" → next Monday
-        if let range = matchPhrase(in: text, phrase: "next week") {
-            text.removeSubrange(range)
-            return nextWeekday(2, from: today) // Monday
-        }
-
-        // "next month" → 1st of next month
-        if let range = matchPhrase(in: text, phrase: "next month") {
-            text.removeSubrange(range)
-            return calendar.date(byAdding: .month, value: 1, to: calendar.date(from: calendar.dateComponents([.year, .month], from: today))!)
-        }
-
-        // "in X days/weeks/months"
-        if let match = text.range(of: #"\bin\s+(\d+)\s+(day|days|week|weeks|month|months)\b"#, options: [.regularExpression, .caseInsensitive]) {
-            let matched = String(text[match])
-            if let numMatch = matched.range(of: #"\d+"#, options: .regularExpression) {
-                let num = Int(matched[numMatch]) ?? 0
-                let unit = matched.lowercased()
-                text.removeSubrange(match)
-                if unit.contains("day") {
-                    return calendar.date(byAdding: .day, value: num, to: today)
-                } else if unit.contains("week") {
-                    return calendar.date(byAdding: .day, value: num * 7, to: today)
-                } else if unit.contains("month") {
-                    return calendar.date(byAdding: .month, value: num, to: today)
-                }
-            }
-        }
-
-        // Month day: "jan 15", "january 15", "feb 3", etc.
-        let monthPatterns = [
-            ("jan(?:uary)?", 1), ("feb(?:ruary)?", 2), ("mar(?:ch)?", 3), ("apr(?:il)?", 4),
-            ("may", 5), ("jun(?:e)?", 6), ("jul(?:y)?", 7), ("aug(?:ust)?", 8),
-            ("sep(?:tember)?", 9), ("oct(?:ober)?", 10), ("nov(?:ember)?", 11), ("dec(?:ember)?", 12)
-        ]
-        for (pattern, month) in monthPatterns {
-            let regex = "\\b\(pattern)\\s+(\\d{1,2})\\b"
-            if let match = text.range(of: regex, options: [.regularExpression, .caseInsensitive]) {
-                let matched = String(text[match])
-                if let dayMatch = matched.range(of: #"\d{1,2}$"#, options: .regularExpression) {
-                    let day = Int(matched[dayMatch]) ?? 1
-                    text.removeSubrange(match)
-                    var components = calendar.dateComponents([.year], from: today)
-                    components.month = month
-                    components.day = day
-                    if let date = calendar.date(from: components) {
-                        // If the date is in the past, use next year
-                        return date < today ? calendar.date(byAdding: .year, value: 1, to: date) : date
-                    }
-                }
-            }
-        }
-
-        // M/D format: "1/15", "12/25"
-        if let match = text.range(of: #"\b(\d{1,2})/(\d{1,2})\b"#, options: .regularExpression) {
-            let matched = String(text[match])
-            let parts = matched.split(separator: "/")
-            if parts.count == 2, let month = Int(parts[0]), let day = Int(parts[1]),
-               month >= 1 && month <= 12 && day >= 1 && day <= 31 {
-                text.removeSubrange(match)
-                var components = calendar.dateComponents([.year], from: today)
-                components.month = month
-                components.day = day
-                if let date = calendar.date(from: components) {
-                    return date < today ? calendar.date(byAdding: .year, value: 1, to: date) : date
-                }
-            }
-        }
-
         return nil
     }
 
     // MARK: - Helpers
 
-    private static func matchWord(in text: String, word: String) -> Range<String.Index>? {
-        text.range(of: "\\b\(word)\\b", options: [.regularExpression, .caseInsensitive])
-    }
-
-    private static func matchPhrase(in text: String, phrase: String) -> Range<String.Index>? {
-        text.range(of: "\\b\(phrase)\\b", options: [.regularExpression, .caseInsensitive])
-    }
-
-    private static func nextWeekday(_ weekday: Int, from date: Date) -> Date {
-        let calendar = Calendar.current
+    private static func nextWeekday(_ weekday: Int, from date: Date, calendar: Calendar) -> Date {
         let currentWeekday = calendar.component(.weekday, from: date)
         var daysAhead = weekday - currentWeekday
         if daysAhead <= 0 { daysAhead += 7 }
         return calendar.date(byAdding: .day, value: daysAhead, to: date)!
+    }
+
+    /// The next real calendar day with this month and day, this year or next.
+    private static func nextOccurrence(month: Int, day: Int, onOrAfter today: Date, calendar: Calendar) -> Date? {
+        let year = calendar.component(.year, from: today)
+        for candidateYear in [year, year + 1] {
+            let components = DateComponents(year: candidateYear, month: month, day: day)
+            guard components.isValidDate(in: calendar), let date = calendar.date(from: components) else { continue }
+            if date >= today { return date }
+        }
+        return nil
     }
 }
