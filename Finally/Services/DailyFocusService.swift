@@ -12,6 +12,9 @@ final class DailyFocusService {
 
     private let serverClient: ServerClientFactory
     private var failedReads: Set<PersistentIdentifier> = []
+    /// The last server write queued for each storage workspace and day. A write waits for the one
+    /// before it, so an earlier request never reaches the server after a newer one.
+    private var queuedWrites: [String: Task<Void, Error>] = [:]
     var lastError: String?
 
     func clearError() {
@@ -152,6 +155,26 @@ final class DailyFocusService {
 
     @MainActor
     private func push(_ focus: DailyFocus, workspace: UserSession, store: ModelContext) async throws {
+        let key = "\(focus.storageWorkspaceID)/\(focus.dayKey)"
+        let earlier = queuedWrites[key]
+        let write = Task { @MainActor in
+            _ = await earlier?.result
+            try await self.write(focus, workspace: workspace, store: store)
+        }
+        queuedWrites[key] = write
+        defer {
+            if queuedWrites[key] == write { queuedWrites[key] = nil }
+        }
+        try await withTaskCancellationHandler {
+            try await write.value
+        } onCancel: {
+            write.cancel()
+        }
+    }
+
+    /// Sends the day as it stands when the write starts, so a queued write carries the newest picks.
+    @MainActor
+    private func write(_ focus: DailyFocus, workspace: UserSession, store: ModelContext) async throws {
         let (api, projectID) = try client(for: workspace)
         let providers = Dictionary(
             try store.fetch(FetchDescriptor<UserSession>()).map { ($0.workspaceId, $0.providerIdentity.rawValue) },

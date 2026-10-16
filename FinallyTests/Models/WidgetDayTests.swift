@@ -44,6 +44,31 @@ final class WidgetDayTests: XCTestCase {
         XCTAssertEqual(todayTab.map(\.title), expected)
     }
 
+    func testTheTimelineRedrawsJustAfterEachTimedDeadlineLeftTodayAndAtMidnight() {
+        var invoice = widgetTask("Send the invoice", deadline: at(day: 16, hour: 20, minute: 30))
+        invoice.deadlineHasTime = true
+        var call = widgetTask("Call the bank", deadline: at(day: 16, hour: 17))
+        call.deadlineHasTime = true
+        var lunch = widgetTask("Book lunch", deadline: at(day: 16, hour: 12))
+        lunch.deadlineHasTime = true
+        var release = widgetTask("Ship the release", deadline: at(day: 17, hour: 9))
+        release.deadlineHasTime = true
+        var rent = widgetTask("Pay the rent", deadline: at(day: 16, hour: 18), status: .done)
+        rent.deadlineHasTime = true
+        let brief = widgetTask("Draft the brief", deadline: at(day: 16))
+        let snapshot = WidgetSnapshot(
+            workspaceID: "notion-workspace", focusDay: nil, focusLimit: 3, focusPickCount: 0,
+            tasks: [invoice, call, lunch, release, rent, brief]
+        )
+
+        XCTAssertEqual(snapshot.timelineDates(from: now, calendar: calendar), [
+            now,
+            at(day: 16, hour: 17, second: 1),
+            at(day: 16, hour: 20, minute: 30, second: 1),
+            at(day: 17),
+        ])
+    }
+
     func testPicksFromAnEarlierDayAreNotTodaysFocus() {
         let snapshot = WidgetSnapshot(workspaceID: "notion-workspace", focusDay: at(day: 15), focusLimit: 3, focusPickCount: 1, tasks: [
             widgetTask("Draft the brief", scheduled: at(day: 15), focusPosition: 1),
@@ -198,8 +223,8 @@ final class WidgetDayTests: XCTestCase {
         )
     }
 
-    private func at(day: Int, hour: Int = 0, minute: Int = 0) -> Date {
-        calendar.date(from: DateComponents(year: 2026, month: 10, day: day, hour: hour, minute: minute))!
+    private func at(day: Int, hour: Int = 0, minute: Int = 0, second: Int = 0) -> Date {
+        calendar.date(from: DateComponents(year: 2026, month: 10, day: day, hour: hour, minute: minute, second: second))!
     }
 
     private func widgetTask(

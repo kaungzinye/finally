@@ -55,6 +55,18 @@ struct WidgetSnapshot: Codable, Equatable {
 }
 
 extension WidgetSnapshot {
+    /// The moments the widgets redraw this snapshot: now, one second after each open task's timed
+    /// deadline still to come today so it turns overdue on time, and the next midnight.
+    func timelineDates(from now: Date, calendar: Calendar = .current) -> [Date] {
+        let midnight = calendar.date(byAdding: .day, value: 1, to: calendar.startOfDay(for: now)) ?? now
+        let deadlines = tasks
+            .filter { $0.isOpen && $0.deadlineHasTime }
+            .compactMap(\.deadline)
+            .filter { $0 >= now && $0 < midnight }
+            .map { $0.addingTimeInterval(1) }
+        return [now] + Set(deadlines).sorted() + [midnight]
+    }
+
     /// Moves a finished task's Daily Focus place to the first open task along its successors.
     /// The place stays put when no open successor remains.
     mutating func passFocusPlace(from index: Int) {
