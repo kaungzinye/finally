@@ -136,6 +136,19 @@ final class CaptureDraftTests: XCTestCase {
         XCTAssertNil(draft.deadline)
     }
 
+    func testShortcutPhrasesLeaveTheTitleWhenTheirFieldsArePickedByHand() throws {
+        var draft = CaptureDraft()
+
+        type("Pay rent due fri !!1 #money", into: &draft)
+        draft.pick(deadline: day(2026, 11, 1), hasTime: false)
+        draft.pick(priority: .low)
+        draft.pick(tags: ["errands"])
+        let task = try XCTUnwrap(draft.makeTask(workspaceId: "ws", defaults: .standard))
+
+        XCTAssertEqual(task.title, "Pay rent")
+        XCTAssertEqual(task.deadline, day(2026, 11, 1))
+    }
+
     func testBlankTextMakesNoTask() {
         XCTAssertNil(capture("   "))
     }

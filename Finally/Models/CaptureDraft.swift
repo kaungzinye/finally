@@ -22,7 +22,9 @@ struct CaptureDraft {
     private var fieldsFromText: Set<Field> = []
     /// The fields the user picked by hand, which text no longer sets.
     private var pickedFields: Set<Field> = []
-    private var cleanTitle = ""
+    /// The text with its shortcut phrases removed, or nil when the text holds no shortcut.
+    /// The title drops shortcut phrases whether or not their fields were later picked by hand.
+    private var titleWithoutShortcuts: String?
 
     init(project: ProjectItem? = nil) {
         self.project = project
@@ -32,14 +34,16 @@ struct CaptureDraft {
     /// "@name" can match.
     mutating func readText(projects: [ProjectItem], now: Date = Date(), calendar: Calendar = .current) {
         let parsed = TaskTitleParser.parse(text, now: now, calendar: calendar)
-        cleanTitle = parsed.cleanTitle
+        let namedProject = parsed.detectedProjectName.flatMap { name in
+            projects.first { $0.title.localizedCaseInsensitiveContains(name) }
+        }
+        let holdsShortcut = parsed.scheduledDay != nil || parsed.deadline != nil
+            || parsed.detectedPriority != nil || namedProject != nil || !parsed.detectedTags.isEmpty
+        titleWithoutShortcuts = holdsShortcut ? parsed.cleanTitle : nil
 
         set(\.scheduledDay, to: parsed.scheduledDay, field: .scheduledDay)
         set(\.deadline, to: parsed.deadline, field: .deadline)
         set(\.priority, to: parsed.detectedPriority, field: .priority)
-        let namedProject = parsed.detectedProjectName.flatMap { name in
-            projects.first { $0.title.localizedCaseInsensitiveContains(name) }
-        }
         set(\.project, to: namedProject, field: .project)
 
         guard !pickedFields.contains(.tags) else { return }
@@ -91,7 +95,7 @@ struct CaptureDraft {
     /// The task this draft captures, or nil when it has no title. A new deadline takes the
     /// default deadline reminders. A task with no project lands in the Inbox.
     func makeTask(workspaceId: String?, defaults: DefaultDeadlineReminders) -> TaskItem? {
-        let title = fieldsFromText.isEmpty ? text.trimmingCharacters(in: .whitespaces) : cleanTitle
+        let title = titleWithoutShortcuts ?? text.trimmingCharacters(in: .whitespaces)
         guard !title.isEmpty else { return nil }
 
         let task = TaskItem(externalTaskID: UUID().uuidString, title: title)

@@ -75,10 +75,8 @@ struct TaskConflictReviewView: View {
     }
 
     private func resolve(keepingPhoneEdits: Bool) {
-        task.resolveServerConflict(keepingPhoneEdits: keepingPhoneEdits)
         do {
-            try modelContext.save()
-            provider.clearError()
+            try provider.resolveConflict(for: task, keepingPhoneEdits: keepingPhoneEdits, store: modelContext)
             dismiss()
             if task.isDirty { Task { await provider.submitPendingChangesReportingFailure(for: [task], store: modelContext) } }
         } catch { self.error = error.localizedDescription }
