@@ -335,6 +335,15 @@ final class TaskProviderCoordinator {
         try? await submitPendingChanges(for: tasks, store: store)
     }
 
+    /// Applies the completions recorded from widgets and sends each to the provider workspace
+    /// that owns its task, whichever workspace is selected.
+    @MainActor
+    func submitWidgetCompletions(store: ModelContext, storage: WidgetStorage? = .appGroup) async {
+        let completed = (try? WidgetPublisher.applyPendingCompletions(store: store, storage: storage)) ?? []
+        guard !completed.isEmpty else { return }
+        await submitPendingChangesReportingFailure(for: completed, store: store)
+    }
+
     @MainActor
     func retryPendingChanges(store: ModelContext) async {
         do {
