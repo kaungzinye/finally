@@ -1,0 +1,68 @@
+# The runner launches the in-memory fixture with -tasks-demo first.
+# Task detail saves as the user edits and closes with a swipe down.
+appId: com.kaungzinye.finally
+---
+- extendedWaitUntil:
+    visible: "Tasks"
+    timeout: 10000
+- tapOn:
+    text: "Tasks"
+    index: 0
+- extendedWaitUntil:
+    visible: "Sort the receipts"
+    timeout: 5000
+- tapOn: "Sort the receipts"
+
+# No Cancel or Save, and the chips use the glossary's words.
+- extendedWaitUntil:
+    visible:
+      id: "task-detail-title"
+    timeout: 5000
+- assertNotVisible: "Save"
+- assertNotVisible: "Cancel"
+- assertVisible: "Scheduled"
+- assertVisible: "Deadline"
+- assertVisible: "Add subtask"
+- takeScreenshot: 01-detail-open
+
+# The status chip cycles Not started, In progress, Complete, and back.
+- assertVisible: "Not started"
+- tapOn:
+    id: "status-chip"
+- assertVisible: "In progress"
+- tapOn:
+    id: "status-chip"
+- assertVisible: "Complete"
+- tapOn:
+    id: "status-chip"
+- assertVisible: "Not started"
+- tapOn:
+    id: "status-chip"
+- assertVisible: "In progress"
+- takeScreenshot: 02-status-in-progress
+
+# Edit the title, then swipe the sheet down.
+- tapOn:
+    id: "task-detail-title"
+- eraseText: 40
+- inputText: "Sort the tax receipts"
+- takeScreenshot: 03-title-edited
+- swipe:
+    start: 50%, 15%
+    end: 50%, 95%
+- extendedWaitUntil:
+    visible: "Sort the tax receipts"
+    timeout: 5000
+- assertNotVisible:
+    id: "task-detail-title"
+- takeScreenshot: 04-list-after-close
+
+# Reopen: the edits persisted.
+- tapOn: "Sort the tax receipts"
+- extendedWaitUntil:
+    visible:
+      id: "task-detail-title"
+    timeout: 5000
+- assertVisible: "Sort the tax receipts"
+- assertVisible: "In progress"
+- takeScreenshot: 05-detail-reopened
