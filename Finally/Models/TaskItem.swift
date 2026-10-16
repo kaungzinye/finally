@@ -219,6 +219,18 @@ final class TaskItem {
         return false
     }
 
+    /// A card dropped on a Board column takes that column's status as a dirty edit.
+    /// Dropping it on its own column changes nothing. Dropping it on Complete takes the same
+    /// path as the row ring, so a recurring obligation starts its next cycle. Returns true when it did.
+    @discardableResult
+    func move(to status: TaskStatus) -> Bool {
+        guard status != self.status else { return false }
+        if status == .done { return complete() }
+        self.status = status
+        isDirty = true
+        return false
+    }
+
     @discardableResult
     func complete() -> Bool {
         if recurrence != .none, let deadline {

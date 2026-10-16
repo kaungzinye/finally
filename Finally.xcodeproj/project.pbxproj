@@ -32,6 +32,7 @@
 		33457F14B7B4D6B3BCE08099 /* TasksList.swift in Sources */ = {isa = PBXBuildFile; fileRef = B12204C23AFB16226884D3C7 /* TasksList.swift */; };
 		34F63FDAE9AF83CAA6DCA4AF /* BackendDataFlowIntegrationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8C46663913189E0200BD2F8C /* BackendDataFlowIntegrationTests.swift */; };
 		3809D308E324CDD057440E20 /* TasksListTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A8C8BE82E40BF1889DB28C80 /* TasksListTests.swift */; };
+		39847F1107F9705FC7417F0E /* BoardColumnsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 47A07329C04675C8DE9F5747 /* BoardColumnsTests.swift */; };
 		3ACE76E7D33CE342604A9A8A /* Callout.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8C11FDA883FD1D38F4386188 /* Callout.swift */; };
 		3BE5AC7A6EFBF8F071FBF07B /* ReminderReconciliationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 214A1E081A28F150B4F6987D /* ReminderReconciliationTests.swift */; };
 		3C2153D7726A70A8C8FA36D9 /* FinallyServerWorkspaceConfiguration.swift in Sources */ = {isa = PBXBuildFile; fileRef = 44DC53FF019C668FF0D59C8D /* FinallyServerWorkspaceConfiguration.swift */; };
@@ -71,6 +72,7 @@
 		75C247FB0B0194F59F0C4E73 /* SubtaskScheduler.swift in Sources */ = {isa = PBXBuildFile; fileRef = 886B142AE74239CB20B81B88 /* SubtaskScheduler.swift */; };
 		77385063573A01E5B7085558 /* FinallyWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = F9DF3C707C491B6AAA2B1D1F /* FinallyWidget.swift */; };
 		776D4084A15B1975E371C7D6 /* ServerReminderSyncTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 90D0BBB5B5CF27C014144649 /* ServerReminderSyncTests.swift */; };
+		77996D87DBD797804075B732 /* BoardColumns.swift in Sources */ = {isa = PBXBuildFile; fileRef = 60D930A45E93169DBBC4A762 /* BoardColumns.swift */; };
 		77E5A5E02CC2F6EF149C682F /* FinallyStyle.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4DF65C99D85D8706CD946C4D /* FinallyStyle.swift */; };
 		7AEC7C1206DA184E34E48B01 /* WidgetSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = D43FA92B96F4243548E18E5D /* WidgetSnapshot.swift */; };
 		7B1928F312FA550AEB3106A6 /* PaperChrome.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0587AFE7BA6C571E38D93D08 /* PaperChrome.swift */; };
@@ -205,6 +207,7 @@
 		44DC53FF019C668FF0D59C8D /* FinallyServerWorkspaceConfiguration.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FinallyServerWorkspaceConfiguration.swift; sourceTree = "<group>"; };
 		44FC30A47CA1D9B4F15234D2 /* TaskDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskDetailView.swift; sourceTree = "<group>"; };
 		4752AF695A41F249F8D509DC /* WidgetSnapshotTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetSnapshotTests.swift; sourceTree = "<group>"; };
+		47A07329C04675C8DE9F5747 /* BoardColumnsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BoardColumnsTests.swift; sourceTree = "<group>"; };
 		4D0FC86B67D088170EF867CC /* CaptureDraftTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CaptureDraftTests.swift; sourceTree = "<group>"; };
 		4D283DE85CFFB6238F20D533 /* MockURLProtocol.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MockURLProtocol.swift; sourceTree = "<group>"; };
 		4D6A9D885F54EDA96C38C007 /* Phase6BNotificationServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Phase6BNotificationServiceTests.swift; sourceTree = "<group>"; };
@@ -217,6 +220,7 @@
 		59DCDD8E8EB5F548CA2EC0AE /* SortConfigView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SortConfigView.swift; sourceTree = "<group>"; };
 		5B2D645AEB3121B0F60BDDEB /* TasksView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TasksView.swift; sourceTree = "<group>"; };
 		5DF9E28C5C320BE1EE73448A /* Enums.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Enums.swift; sourceTree = "<group>"; };
+		60D930A45E93169DBBC4A762 /* BoardColumns.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BoardColumns.swift; sourceTree = "<group>"; };
 		6195045508D41FC6C8438C7F /* SyncService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SyncService.swift; sourceTree = "<group>"; };
 		628D2FCDB35AAD3E45C3B77E /* SchemaValidator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SchemaValidator.swift; sourceTree = "<group>"; };
 		62E26D76ABE69007EDD2D951 /* TaskProviderContractTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskProviderContractTests.swift; sourceTree = "<group>"; };
@@ -307,6 +311,7 @@
 		031144B05DE0C81705D83315 /* Models */ = {
 			isa = PBXGroup;
 			children = (
+				60D930A45E93169DBBC4A762 /* BoardColumns.swift */,
 				FE284F0F5D1A8C4A4FC7E85D /* CaptureDraft.swift */,
 				BC96B5D0B933B1D93FA49970 /* DailyFocus.swift */,
 				9D910ABD0BF620F725F4A368 /* DailyFocusDemoFixture.swift */,
@@ -563,6 +568,7 @@
 		D8F84F8D690C3ADFDB18BC2D /* Models */ = {
 			isa = PBXGroup;
 			children = (
+				47A07329C04675C8DE9F5747 /* BoardColumnsTests.swift */,
 				4D0FC86B67D088170EF867CC /* CaptureDraftTests.swift */,
 				E6B474345709AE791A120D5E /* DailyFocusTests.swift */,
 				103C5ECE4EE59941E719538D /* DeadlineReminderTests.swift */,
@@ -714,6 +720,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				34F63FDAE9AF83CAA6DCA4AF /* BackendDataFlowIntegrationTests.swift in Sources */,
+				39847F1107F9705FC7417F0E /* BoardColumnsTests.swift in Sources */,
 				F8EDCF27645FBB12C8BB16A5 /* CaptureDraftTests.swift in Sources */,
 				B89290F5A2A918135DCDD00D /* DailyFocusServiceTests.swift in Sources */,
 				90552E7DF1BCC9AD36EC10B5 /* DailyFocusTests.swift in Sources */,
@@ -777,6 +784,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				5B7346926813879C6FCCC922 /* AppearanceSettingView.swift in Sources */,
+				77996D87DBD797804075B732 /* BoardColumns.swift in Sources */,
 				02CFBD5EFB60B00BD26ED866 /* BoardFilterView.swift in Sources */,
 				3CA4410030B1E74631426C25 /* BoardView.swift in Sources */,
 				3ACE76E7D33CE342604A9A8A /* Callout.swift in Sources */,

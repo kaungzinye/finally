@@ -3,8 +3,9 @@ import Foundation
 import SwiftData
 
 /// Seeds an in-memory store for the `-tasks-demo` launch argument: one Notion workspace with
-/// Inbox tasks, a project holding more than three open tasks, a project with one undated task,
-/// and an empty project.
+/// Inbox tasks, a project holding more than three open tasks, a project with one undated open task
+/// and one complete task, and an empty project. Three Home tasks carry priorities, one is in progress,
+/// and the boiler sits in the window between its scheduled day and its deadline.
 enum TasksDemoFixture {
     static let workspaceID = "demo-tasks-workspace"
 
@@ -36,13 +37,22 @@ enum TasksDemoFixture {
         makeTask("demo-receipts", "Sort the receipts", in: context)
         makeTask("demo-dentist", "Book the dentist", in: context).scheduledDay = day(2)
 
-        makeTask("demo-boiler", "Service the boiler", project: home, in: context).deadline = day(3)
-        makeTask("demo-shelves", "Hang the shelves", project: home, in: context).deadline = day(6)
-        makeTask("demo-paint", "Choose paint colors", project: home, in: context).scheduledDay = day(1)
+        let boiler = makeTask("demo-boiler", "Service the boiler", project: home, in: context)
+        boiler.scheduledDay = day(0)
+        boiler.deadline = day(3)
+        boiler.priority = .high
+        let shelves = makeTask("demo-shelves", "Hang the shelves", project: home, in: context)
+        shelves.deadline = day(6)
+        shelves.status = .inProgress
+        shelves.priority = .medium
+        let paint = makeTask("demo-paint", "Choose paint colors", project: home, in: context)
+        paint.scheduledDay = day(1)
+        paint.priority = .urgent
         makeTask("demo-gutters", "Clear the gutters", project: home, in: context).scheduledDay = day(4)
         makeTask("demo-lamp", "Fix the hall lamp", project: home, in: context)
 
         makeTask("demo-bulbs", "Plant the bulbs", project: garden, in: context)
+        makeTask("demo-lawn", "Mow the lawn", project: garden, in: context).status = .done
     }
 
     @discardableResult
