@@ -194,6 +194,31 @@ final class TaskItem {
 
     // MARK: - Actions
 
+    /// Applies one task detail edit to the task. The task becomes a dirty edit, and its
+    /// scheduled day stays on or before its deadline's day.
+    func edit(calendar: Calendar = .current, _ change: (TaskItem) -> Void) {
+        change(self)
+        validateScheduledDay(calendar: calendar)
+        isDirty = true
+    }
+
+    /// One tap of the status chip: Not started, then In progress, then Complete, then Not
+    /// started again. Reaching Complete takes the same path as the row ring, so a recurring
+    /// obligation starts its next cycle. Returns true when it did.
+    @discardableResult
+    func cycleStatus() -> Bool {
+        switch status {
+        case .notStarted:
+            status = .inProgress
+        case .inProgress:
+            return complete()
+        case .done:
+            status = .notStarted
+        }
+        isDirty = true
+        return false
+    }
+
     @discardableResult
     func complete() -> Bool {
         if recurrence != .none, let deadline {
