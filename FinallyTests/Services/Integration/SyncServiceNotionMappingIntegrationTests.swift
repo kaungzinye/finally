@@ -11,7 +11,7 @@ final class SyncServiceNotionMappingIntegrationTests: XCTestCase {
         let mappings = PropertyMappings(
             taskTitleProperty: "Name",
             taskStatusProperty: "Status",
-            taskDeadlineProperty: "Deadline",
+            taskDeadlineProperty: "Due Date",
             taskPriorityProperty: "Priority",
             taskTagsProperty: "Tags",
             taskProjectProperty: "Project",
@@ -45,7 +45,7 @@ final class SyncServiceNotionMappingIntegrationTests: XCTestCase {
                         title: [NotionRichText(plainText: "Pay electricity")]
                     ),
                     "Status": NotionTestFactory.propertyValue(type: "status", statusName: "In Progress"),
-                    "Deadline": NotionTestFactory.propertyValue(type: "date", dateStart: "2026-03-21"),
+                    "Due Date": NotionTestFactory.propertyValue(type: "date", dateStart: "2026-03-21"),
                     "Priority": NotionTestFactory.propertyValue(type: "select", selectName: "High"),
                     "Tags": NotionTestFactory.propertyValue(type: "multi_select", multiSelectNames: ["Bills", "Home"]),
                     "Project": NotionTestFactory.propertyValue(type: "relation", relationIds: ["proj-1"]),
@@ -87,7 +87,7 @@ final class SyncServiceNotionMappingIntegrationTests: XCTestCase {
                         title: [NotionRichText(plainText: "Unexpected status task")]
                     ),
                     "Status": NotionTestFactory.propertyValue(type: "status", statusName: "Blocked"),
-                    "Deadline": NotionTestFactory.propertyValue(type: "date", dateStart: "2026-03-21"),
+                    "Due Date": NotionTestFactory.propertyValue(type: "date", dateStart: "2026-03-21"),
                 ]
             )
         ]
@@ -119,7 +119,7 @@ final class SyncServiceNotionMappingIntegrationTests: XCTestCase {
                         title: [NotionRichText(plainText: "Timezone check")]
                     ),
                     "Status": NotionTestFactory.propertyValue(type: "status", statusName: "Not Started"),
-                    "Deadline": NotionTestFactory.propertyValue(type: "date", dateStart: "2026-03-21T15:45:00.000Z"),
+                    "Due Date": NotionTestFactory.propertyValue(type: "date", dateStart: "2026-03-21T15:45:00.000Z"),
                 ]
             )
         ]
@@ -137,7 +137,7 @@ final class SyncServiceNotionMappingIntegrationTests: XCTestCase {
                         title: [NotionRichText(plainText: "Timezone check")]
                     ),
                     "Status": NotionTestFactory.propertyValue(type: "status", statusName: "Not Started"),
-                    "Deadline": NotionTestFactory.propertyValue(type: "date", dateStart: nil),
+                    "Due Date": NotionTestFactory.propertyValue(type: "date", dateStart: nil),
                 ]
             )
         ]
@@ -173,7 +173,7 @@ final class SyncServiceNotionMappingIntegrationTests: XCTestCase {
                 properties: [
                     "Name": NotionTestFactory.propertyValue(type: "title", title: [NotionRichText(plainText: "Relation test")]),
                     "Status": NotionTestFactory.propertyValue(type: "status", statusName: "Not Started"),
-                    "Deadline": NotionTestFactory.propertyValue(type: "date", dateStart: "2026-03-21"),
+                    "Due Date": NotionTestFactory.propertyValue(type: "date", dateStart: "2026-03-21"),
                     "Project": NotionTestFactory.propertyValue(type: "relation", relationIds: ["proj-1", "proj-2"]),
                 ]
             )
@@ -188,7 +188,7 @@ final class SyncServiceNotionMappingIntegrationTests: XCTestCase {
                 properties: [
                     "Name": NotionTestFactory.propertyValue(type: "title", title: [NotionRichText(plainText: "Relation test")]),
                     "Status": NotionTestFactory.propertyValue(type: "status", statusName: "Not Started"),
-                    "Deadline": NotionTestFactory.propertyValue(type: "date", dateStart: "2026-03-21"),
+                    "Due Date": NotionTestFactory.propertyValue(type: "date", dateStart: "2026-03-21"),
                     "Project": NotionTestFactory.propertyValue(type: "relation", relationIds: []),
                 ]
             )
@@ -231,7 +231,7 @@ final class SyncServiceNotionMappingIntegrationTests: XCTestCase {
                         title: [NotionRichText(plainText: "Custom done state")]
                     ),
                     "Status": NotionTestFactory.propertyValue(type: "status", statusId: "done-1", statusName: "Verified"),
-                    "Deadline": NotionTestFactory.propertyValue(type: "date", dateStart: "2026-03-21")
+                    "Due Date": NotionTestFactory.propertyValue(type: "date", dateStart: "2026-03-21")
                 ]
             )
         ]
@@ -265,7 +265,7 @@ final class SyncServiceNotionMappingIntegrationTests: XCTestCase {
             NotionTestFactory.makeDatabase(properties: [
                 "Name": NotionTestFactory.schema(type: "title"),
                 "Status": NotionTestFactory.schema(type: "status", statusSchema: statusSchema),
-                "Deadline": NotionTestFactory.schema(type: "date")
+                "Due Date": NotionTestFactory.schema(type: "date")
             ])
         ]
 
@@ -283,7 +283,7 @@ final class SyncServiceNotionMappingIntegrationTests: XCTestCase {
                         title: [NotionRichText(plainText: "Emoji complete")]
                     ),
                     "Status": NotionTestFactory.propertyValue(type: "status", statusName: "✅"),
-                    "Deadline": NotionTestFactory.propertyValue(type: "date", dateStart: "2026-03-21")
+                    "Due Date": NotionTestFactory.propertyValue(type: "date", dateStart: "2026-03-21")
                 ]
             )
         ]
@@ -302,7 +302,7 @@ final class SyncServiceNotionMappingIntegrationTests: XCTestCase {
 
         var mappings = PropertyMappings()
         mappings.taskScheduledDayProperty = "Target"
-        mappings.taskDeadlineProperty = "Deadline"
+        mappings.taskDeadlineProperty = "Due Date"
 
         let session = UserSession(workspaceId: "ws-1", workspaceName: "Workspace", providerIdentity: .notion)
         session.tasksDatabaseId = "tasks-db"
@@ -318,7 +318,7 @@ final class SyncServiceNotionMappingIntegrationTests: XCTestCase {
                         title: [NotionRichText(plainText: "Plan and finish")]
                     ),
                     "Status": NotionTestFactory.propertyValue(type: "status", statusName: "Not started"),
-                    "Deadline": NotionTestFactory.propertyValue(
+                    "Due Date": NotionTestFactory.propertyValue(
                         type: "date",
                         dateStart: "2026-06-01",
                         dateEnd: "2026-06-20"
@@ -355,7 +355,7 @@ final class SyncServiceNotionMappingIntegrationTests: XCTestCase {
                 properties: [
                     "Name": NotionTestFactory.propertyValue(type: "title", title: [NotionRichText(plainText: "Draft outline")]),
                     "Status": NotionTestFactory.propertyValue(type: "status", statusName: "Not started"),
-                    "Deadline": NotionTestFactory.propertyValue(type: "date", dateStart: "2026-06-19"),
+                    "Due Date": NotionTestFactory.propertyValue(type: "date", dateStart: "2026-06-19"),
                     "Parent task": NotionTestFactory.propertyValue(type: "relation", relationIds: ["parent-1"]),
                 ]
             ),
@@ -364,7 +364,7 @@ final class SyncServiceNotionMappingIntegrationTests: XCTestCase {
                 properties: [
                     "Name": NotionTestFactory.propertyValue(type: "title", title: [NotionRichText(plainText: "Ship proposal")]),
                     "Status": NotionTestFactory.propertyValue(type: "status", statusName: "Not started"),
-                    "Deadline": NotionTestFactory.propertyValue(type: "date", dateStart: "2026-06-20"),
+                    "Due Date": NotionTestFactory.propertyValue(type: "date", dateStart: "2026-06-20"),
                 ]
             ),
         ]
@@ -395,7 +395,7 @@ final class SyncServiceNotionMappingIntegrationTests: XCTestCase {
                 properties: [
                     "Name": NotionTestFactory.propertyValue(type: "title", title: [NotionRichText(plainText: "Renew passport")]),
                     "Status": NotionTestFactory.propertyValue(type: "status", statusName: "Not Started"),
-                    "Deadline": NotionTestFactory.propertyValue(type: "date", dateStart: deadline),
+                    "Due Date": NotionTestFactory.propertyValue(type: "date", dateStart: deadline),
                 ]
             )
         }

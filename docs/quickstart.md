@@ -45,7 +45,7 @@
 |----------|------|---------|
 | Name (or any name) | `title` | — |
 | Status | `status` | Groups: To-do (Not started), In progress (In progress), Complete (Done) |
-| Deadline | `date` | — |
+| Due Date | `date` | — |
 
 ### Tasks Database (Recommended Properties)
 
