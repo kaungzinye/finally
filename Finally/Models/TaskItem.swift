@@ -208,11 +208,15 @@ final class TaskItem {
         (isDirty ? [self] : []) + subtasks.filter(\.isDirty).sorted { $0.sortIndex < $1.sortIndex }
     }
 
-    /// Applies one task detail edit to the task. The task becomes a dirty edit, and its
-    /// scheduled day stays on or before its deadline's day.
+    /// Applies one task detail edit to the task. The task becomes a dirty edit. An edit that
+    /// changes the scheduled day or deadline keeps the scheduled day on or before the deadline's
+    /// day. Any other edit leaves a scheduled day the user placed after the deadline alone.
     func edit(calendar: Calendar = .current, _ change: (TaskItem) -> Void) {
+        let datesBefore = (scheduledDay, deadline)
         change(self)
-        validateScheduledDay(calendar: calendar)
+        if datesBefore != (scheduledDay, deadline) {
+            validateScheduledDay(calendar: calendar)
+        }
         isDirty = true
     }
 

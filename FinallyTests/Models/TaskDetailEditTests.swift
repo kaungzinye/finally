@@ -51,6 +51,39 @@ final class TaskDetailEditTests: XCTestCase {
         XCTAssertTrue(task.isDirty)
     }
 
+    func testEdit_TitleLeavesScheduledDayAfterDeadlineAlone() {
+        let task = TaskItem(externalTaskID: "edit-4", title: "Draft")
+        task.deadline = day(20)
+        task.scheduledDay = day(25)
+
+        task.edit(calendar: calendar) { $0.title = "Draft the proposal" }
+
+        XCTAssertEqual(task.scheduledDay, day(25))
+        XCTAssertEqual(task.deadline, day(20))
+        XCTAssertTrue(task.isDirty)
+    }
+
+    func testEdit_PriorityLeavesScheduledDayAfterDeadlineAlone() {
+        let task = TaskItem(externalTaskID: "edit-5", title: "Draft")
+        task.deadline = day(20)
+        task.scheduledDay = day(25)
+
+        task.edit(calendar: calendar) { $0.priority = .high }
+
+        XCTAssertEqual(task.scheduledDay, day(25))
+    }
+
+    func testEdit_DeadlineEditClampsScheduledDayAfterIt() {
+        let task = TaskItem(externalTaskID: "edit-6", title: "Draft")
+        task.deadline = day(20)
+        task.scheduledDay = day(25)
+        let deadline = day(22)
+
+        task.edit(calendar: calendar) { $0.setDeadline(deadline, hasTime: false, defaults: .standard) }
+
+        XCTAssertEqual(task.scheduledDay, day(22))
+    }
+
     func testEdit_ScheduledDayOnDeadlineDayStays() {
         let task = TaskItem(externalTaskID: "edit-3", title: "Draft")
         task.deadline = day(20)
