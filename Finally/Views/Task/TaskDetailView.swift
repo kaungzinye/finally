@@ -76,7 +76,7 @@ struct TaskDetailView: View {
                             HStack(spacing: 10) {
                                 Button {
                                     withAnimation {
-                                        subtask.status = subtask.status == .done ? .notStarted : .done
+                                        subtask.toggleCompletion()
                                         if subtask.status == .done {
                                             SubtaskScheduler.autoLevel(parent: task, completedSubtask: subtask)
                                             NotificationService.shared.rescheduleAllReminders(modelContext: modelContext)

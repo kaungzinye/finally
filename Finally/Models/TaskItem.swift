@@ -233,6 +233,12 @@ final class TaskItem {
         return false
     }
 
+    /// One tap of a step's ring in task detail: an open step completes and a finished one
+    /// reopens, as a dirty edit either way.
+    func toggleCompletion() {
+        move(to: status == .done ? .notStarted : .done)
+    }
+
     /// A card dropped on a Board column takes that column's status as a dirty edit.
     /// Dropping it on its own column changes nothing. Dropping it on Complete takes the same
     /// path as the row ring, so a recurring obligation starts its next cycle. Returns true when it did.

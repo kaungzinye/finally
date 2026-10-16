@@ -12,6 +12,25 @@ final class TaskDetailEditTests: XCTestCase {
         calendar.date(from: DateComponents(year: 2026, month: 6, day: value))!
     }
 
+    func testToggleCompletion_TickedStepBecomesDirtyEdit() {
+        let step = TaskItem(externalTaskID: "step", title: "Draft the outline")
+
+        step.toggleCompletion()
+
+        XCTAssertEqual(step.status, .done)
+        XCTAssertTrue(step.isDirty)
+    }
+
+    func testToggleCompletion_UntickedStepBecomesDirtyEdit() {
+        let step = TaskItem(externalTaskID: "step", title: "Draft the outline")
+        step.status = .done
+
+        step.toggleCompletion()
+
+        XCTAssertEqual(step.status, .notStarted)
+        XCTAssertTrue(step.isDirty)
+    }
+
     func testEdit_TitleBecomesDirtyEdit() {
         let task = TaskItem(externalTaskID: "edit-1", title: "Draft")
 
