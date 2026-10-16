@@ -423,7 +423,7 @@ final class TaskProviderCoordinator {
             .map(\.rawValue)
             .sorted()
             .joined(separator: ", ")
-        return "This provider keeps these fields on this device: \(names)."
+        return "These fields stay on this iPhone only: \(names)."
     }
 
     private func populatedFields(in task: TaskItem) -> Set<CanonicalTaskField> {

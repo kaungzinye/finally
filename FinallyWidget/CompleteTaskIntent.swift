@@ -7,7 +7,7 @@ struct CompleteTaskIntent: AppIntent {
     static let title: LocalizedStringResource = "Complete task"
     static let isDiscoverable = false
 
-    @Parameter(title: "Provider workspace")
+    @Parameter(title: "Workspace")
     var providerWorkspaceID: String
 
     @Parameter(title: "Task")

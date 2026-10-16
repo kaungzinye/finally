@@ -57,11 +57,12 @@ struct UpcomingView: View {
                 // First-load sync: replace content entirely
                 VStack(spacing: 12) {
                     ProgressView()
-                    Text("Syncing your tasks…")
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
+                    Text("Getting your tasks…")
+                        .font(.meta)
+                        .foregroundStyle(Palette.muted)
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .background(Palette.paper)
                 .navigationTitle("Upcoming")
             } else {
                 ScrollViewReader { proxy in
@@ -104,7 +105,7 @@ struct UpcomingView: View {
                 }
                 .paperList()
                 }
-                .navigationTitle(isSelectionMode ? "Select Tasks (\(selectedTasks.count))" : "Upcoming")
+                .navigationTitle(isSelectionMode ? "\(selectedTasks.count) selected" : "Upcoming")
                 .refreshable {
                     try? await taskProvider.synchronize(.launch, store: modelContext)
                 }
@@ -141,10 +142,12 @@ struct UpcomingView: View {
                             Button { showSortConfig = true } label: {
                                 Image(systemName: "arrow.up.arrow.down")
                             }
+                            .accessibilityLabel("Sort")
 
                             Button { showSearch = true } label: {
                                 Image(systemName: "magnifyingglass")
                             }
+                            .accessibilityLabel("Search")
                         }
                     }
                 }
@@ -154,7 +157,7 @@ struct UpcomingView: View {
                     ContentUnavailableView(
                         "No upcoming tasks",
                         systemImage: "calendar",
-                        description: Text("Tasks with deadlines will appear here")
+                        description: Text("Tasks with a deadline show up here.")
                     )
                 }
             }

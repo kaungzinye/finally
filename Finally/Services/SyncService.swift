@@ -14,15 +14,15 @@ enum TaskSyncError: Error, LocalizedError {
     var errorDescription: String? {
         switch self {
         case .permissionDenied:
-            return "You don't have edit access to this database"
+            return "You can't edit this Notion database."
         case .authenticationExpired:
-            return "Your task provider connection has expired. Reconnect it in Settings."
+            return "Your sign-in expired. Reconnect in Settings."
         case .rateLimited:
-            return "Sync is temporarily rate-limited. Try again in a moment."
+            return "Too many changes at once. Try again in a moment."
         case .remoteTaskUnavailable:
-            return "This task is no longer available from its provider. Refresh and try again."
+            return "This task was deleted somewhere else. Pull to refresh and try again."
         case .serviceUnavailable:
-            return "Sync is temporarily unavailable. Try again."
+            return "Finally couldn't save your changes just now. Try again."
         }
     }
 }

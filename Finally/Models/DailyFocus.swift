@@ -18,10 +18,10 @@ enum DailyFocusError: LocalizedError, Equatable {
 
     var errorDescription: String? {
         switch self {
-        case .full(let limit): "Choose a pick to replace. Daily Focus holds \(limit) picks."
-        case .pickMissing: "This pick has changed. Review Daily Focus and try again."
+        case .full(let limit): "Choose a task to replace. Daily Focus holds \(limit) tasks."
+        case .pickMissing: "This task changed in Daily Focus. Look again and retry."
         case .duplicatePick: "This task is already in Daily Focus."
-        case .taskUnavailable: "This task is unavailable. You can drop its focus pick."
+        case .taskUnavailable: "This task is unavailable. You can drop it from Daily Focus."
         case .needsSteps: "Add an unfinished step to this task, then finish breaking it down."
         case .needsNextDay: "Choose Daily Focus for a later day."
         }

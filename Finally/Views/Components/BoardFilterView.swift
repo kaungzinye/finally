@@ -11,60 +11,43 @@ struct BoardFilterView: View {
     var body: some View {
         NavigationStack {
             List {
-                Section("Projects") {
-                    ForEach(projects.scoped(to: sessions.selectedProviderWorkspace), id: \.externalProjectID) { project in
-                        Button {
-                            if filterProjects.contains(project.externalProjectID) {
-                                filterProjects.remove(project.externalProjectID)
-                            } else {
-                                filterProjects.insert(project.externalProjectID)
-                            }
-                        } label: {
-                            HStack {
+                Group {
+                    Section {
+                        ForEach(projects.scoped(to: sessions.selectedProviderWorkspace), id: \.externalProjectID) { project in
+                            CheckRow(isSelected: filterProjects.contains(project.externalProjectID), action: {
+                                toggle(project.externalProjectID, in: &filterProjects)
+                            }) {
                                 if let emoji = project.iconEmoji {
                                     Text(emoji)
                                 }
                                 Text(project.title)
-                                    .foregroundStyle(.primary)
-                                Spacer()
-                                if filterProjects.contains(project.externalProjectID) {
-                                    Image(systemName: "checkmark")
-                                        .foregroundStyle(.tint)
-                                }
                             }
                         }
+                    } header: {
+                        SectionLabel("Projects")
                     }
-                }
 
-                Section("Priority") {
-                    ForEach(TaskPriority.allCases, id: \.self) { priority in
-                        Button {
-                            if filterPriorities.contains(priority.rawValue) {
-                                filterPriorities.remove(priority.rawValue)
-                            } else {
-                                filterPriorities.insert(priority.rawValue)
-                            }
-                        } label: {
-                            HStack {
-                                Image(systemName: priority.icon)
-                                    .foregroundStyle(priority.color)
+                    Section {
+                        ForEach(TaskPriority.allCases, id: \.self) { priority in
+                            CheckRow(isSelected: filterPriorities.contains(priority.rawValue), action: {
+                                toggle(priority.rawValue, in: &filterPriorities)
+                            }) {
+                                PriorityRing(color: priority.color, isDone: false)
                                 Text(priority.rawValue)
-                                    .foregroundStyle(.primary)
-                                Spacer()
-                                if filterPriorities.contains(priority.rawValue) {
-                                    Image(systemName: "checkmark")
-                                        .foregroundStyle(.tint)
-                                }
                             }
                         }
+                    } header: {
+                        SectionLabel("Priority")
                     }
                 }
+                .cardRow()
             }
+            .paperList(background: Palette.sheet)
             .navigationTitle("Filters")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
-                    Button("Clear All") {
+                    Button("Clear") {
                         filterProjects.removeAll()
                         filterPriorities.removeAll()
                     }
@@ -76,5 +59,14 @@ struct BoardFilterView: View {
             }
         }
         .presentationDetents([.medium])
+        .paperSheet()
+    }
+
+    private func toggle(_ value: String, in set: inout Set<String>) {
+        if set.contains(value) {
+            set.remove(value)
+        } else {
+            set.insert(value)
+        }
     }
 }

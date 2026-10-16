@@ -51,21 +51,26 @@ struct DailyFocusPickerView: View {
     var body: some View {
         NavigationStack {
             List {
-                Section {
-                    Picker("Task provider workspace", selection: Binding(
-                        get: { sourceWorkspaceID ?? focus.storageWorkspaceID },
-                        set: { sourceWorkspaceID = $0 }
-                    )) {
-                        ForEach(sessions, id: \.workspaceId) { workspace in
-                            Text(workspace.workspaceName).tag(workspace.workspaceId)
+                if sessions.count > 1 {
+                    Section {
+                        ChoiceChips(
+                            choices: sessions.map(\.workspaceId),
+                            selection: Binding(
+                                get: { sourceWorkspaceID ?? focus.storageWorkspaceID },
+                                set: { sourceWorkspaceID = $0 }
+                            )
+                        ) { id in
+                            sessions.first { $0.workspaceId == id }?.workspaceName ?? id
                         }
+                        .accessibilityIdentifier("daily-focus-source-workspace")
+                        .paperRow()
+                    } header: {
+                        SectionLabel("Workspace")
                     }
-                    .pickerStyle(.menu)
-                    .accessibilityIdentifier("daily-focus-source-workspace")
-                    .cardRow()
                 }
                 if let errorMessage {
-                    Text(errorMessage).foregroundStyle(.red)
+                    Callout(message: errorMessage)
+                        .paperRow()
                 }
                 if !todayCandidates.isEmpty {
                     Section {
@@ -82,14 +87,14 @@ struct DailyFocusPickerView: View {
                     }
                 }
             }
-            .paperList()
+            .paperList(background: Palette.sheet)
             .searchable(text: $searchText, prompt: "Search tasks")
             .safeAreaInset(edge: .bottom) {
                 if candidates.isEmpty {
                     ContentUnavailableView(
                         "Nothing to pick",
                         systemImage: "scope",
-                        description: Text(searchText.isEmpty ? "Choose an open task or an actionable step in this provider workspace." : "Try another search.")
+                        description: Text(searchText.isEmpty ? "Open tasks and next steps in this workspace show up here." : "Try another search.")
                     )
                 }
             }
@@ -97,33 +102,39 @@ struct DailyFocusPickerView: View {
             .navigationBarTitleDisplayMode(.inline)
             .sheet(item: $replacementTask) { task in
                 NavigationStack {
-                    List(focus.resolvedPicks(among: allTasks)) { item in
-                        Button {
-                            do {
-                                try focus.pick(task, replacing: item.pick)
-                                onPick(task)
-                                replacementTask = nil
-                                dismiss()
-                            } catch {
-                                errorMessage = error.localizedDescription
-                                replacementTask = nil
+                    List {
+                        Section {
+                            ForEach(focus.resolvedPicks(among: allTasks)) { item in
+                                Button {
+                                    do {
+                                        try focus.pick(task, replacing: item.pick)
+                                        onPick(task)
+                                        replacementTask = nil
+                                        dismiss()
+                                    } catch {
+                                        errorMessage = error.localizedDescription
+                                        replacementTask = nil
+                                    }
+                                } label: {
+                                    Label(item.task?.title ?? "Deleted", systemImage: "arrow.left.arrow.right")
+                                        .foregroundStyle(Palette.ink)
+                                }
+                                .cardRow()
                             }
-                        } label: {
-                            Label(item.task?.title ?? "Deleted", systemImage: "arrow.left.arrow.right")
+                        } header: {
+                            SectionNote("Make room for \(task.title). The task you replace keeps its dates.")
                         }
                     }
+                    .paperList(background: Palette.sheet)
                     .navigationTitle("Choose a task to replace")
                     .navigationBarTitleDisplayMode(.inline)
-                    .safeAreaInset(edge: .top) {
-                        Text("Make room for \(task.title). The task you replace keeps its dates.")
-                            .font(.subheadline).foregroundStyle(.secondary).padding()
-                    }
                     .toolbar {
                         ToolbarItem(placement: .cancellationAction) {
                             Button("Cancel") { replacementTask = nil }
                         }
                     }
                 }
+                .paperSheet()
             }
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
@@ -131,6 +142,7 @@ struct DailyFocusPickerView: View {
                 }
             }
         }
+        .paperSheet()
     }
 
     private func pick(_ task: TaskItem) {

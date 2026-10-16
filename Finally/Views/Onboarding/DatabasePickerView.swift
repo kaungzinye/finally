@@ -21,26 +21,28 @@ struct DatabasePickerView: View {
     var body: some View {
         NavigationStack {
             List {
+                Group {
                 if isLoading {
                     Section {
                         HStack {
                             ProgressView()
-                            Text("Loading databases...")
+                            Text("Finding your databases…")
+                                .foregroundStyle(Palette.muted)
                                 .padding(.leading, 8)
                         }
                     }
                 } else if let errorMessage {
                     Section {
                         Text(errorMessage)
-                            .foregroundStyle(.red)
-                        Button("Retry") {
+                            .foregroundStyle(Palette.urgent)
+                        Button("Try again") {
                             Task { await loadDatabases() }
                         }
                     }
                 } else if databases.isEmpty {
                     Section {
-                        Text("No databases found. You may need to share pages with this integration in Notion.")
-                            .foregroundStyle(.secondary)
+                        Text("Finally can't see any databases yet. Share your tasks database with Finally in Notion.")
+                            .foregroundStyle(Palette.muted)
                         Button {
                             Task {
                                 let success = await authService.startOAuthFlow(modelContext: modelContext)
@@ -49,83 +51,63 @@ struct DatabasePickerView: View {
                                 }
                             }
                         } label: {
-                            Label("Update Notion Permissions", systemImage: "arrow.triangle.2.circlepath")
+                            Label("Update Notion permissions", systemImage: "arrow.triangle.2.circlepath")
                         }
                         .disabled(authService.isAuthenticating)
                         if let message = authService.errorMessage {
                             Text(message)
-                                .foregroundStyle(.red)
+                                .foregroundStyle(Palette.urgent)
                         }
                     }
                 } else {
-                    Section("Tasks Database (Required)") {
+                    Section {
                         ForEach(databases, id: \.id) { db in
-                            Button {
-                                selectedTasksDb = db.id
-                            } label: {
-                                HStack {
-                                    Text(db.title?.first?.plainText ?? "Untitled")
-                                    Spacer()
-                                    if selectedTasksDb == db.id {
-                                        Image(systemName: "checkmark")
-                                            .foregroundStyle(.primary)
-                                    }
-                                }
+                            CheckRow(isSelected: selectedTasksDb == db.id, action: { selectedTasksDb = db.id }) {
+                                Text(db.title?.first?.plainText ?? "Untitled")
                             }
                         }
+                    } header: {
+                        SectionLabel("Tasks database")
                     }
 
-                    Section("Projects Database (Optional)") {
-                        Button {
-                            selectedProjectsDb = nil
-                        } label: {
-                            HStack {
-                                Text("None")
-                                Spacer()
-                                if selectedProjectsDb == nil {
-                                    Image(systemName: "checkmark")
-                                        .foregroundStyle(.primary)
-                                }
-                            }
+                    Section {
+                        CheckRow(isSelected: selectedProjectsDb == nil, action: { selectedProjectsDb = nil }) {
+                            Text("None")
                         }
-
                         ForEach(databases, id: \.id) { db in
-                            Button {
-                                selectedProjectsDb = db.id
-                            } label: {
-                                HStack {
-                                    Text(db.title?.first?.plainText ?? "Untitled")
-                                    Spacer()
-                                    if selectedProjectsDb == db.id {
-                                        Image(systemName: "checkmark")
-                                            .foregroundStyle(.primary)
-                                    }
-                                }
+                            CheckRow(isSelected: selectedProjectsDb == db.id, action: { selectedProjectsDb = db.id }) {
+                                Text(db.title?.first?.plainText ?? "Untitled")
                             }
                         }
+                    } header: {
+                        SectionLabel("Projects database, if you have one")
                     }
 
                     if !validationErrors.isEmpty {
-                        Section("Schema Issues") {
+                        Section {
                             ForEach(validationErrors, id: \.propertyName) { issue in
                                 VStack(alignment: .leading, spacing: 4) {
                                     HStack {
                                         Image(systemName: "exclamationmark.triangle.fill")
-                                            .foregroundStyle(.orange)
+                                            .foregroundStyle(Palette.high)
                                         Text(issue.propertyName)
                                             .fontWeight(.medium)
                                     }
                                     Text(issue.message)
-                                        .font(.caption)
-                                        .foregroundStyle(.secondary)
+                                        .font(.meta)
+                                        .foregroundStyle(Palette.muted)
                                 }
                             }
+                        } header: {
+                            SectionLabel("Changes to make in Notion")
                         }
                     }
                 }
+                }
+                .cardRow()
             }
             .paperList()
-            .navigationTitle("Select Databases")
+            .navigationTitle("Choose databases")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
@@ -135,7 +117,7 @@ struct DatabasePickerView: View {
                     .disabled(selectedTasksDb == nil || isLoading || isValidating || authService.isAuthenticating)
                 }
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Task Providers", action: onChooseProvider)
+                    Button("Back", action: onChooseProvider)
                         .disabled(isValidating || authService.isAuthenticating)
                         .accessibilityIdentifier("choose-task-provider")
                 }

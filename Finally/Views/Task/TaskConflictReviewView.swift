@@ -10,27 +10,33 @@ struct TaskConflictReviewView: View {
     var body: some View {
         NavigationStack {
             List {
-                Section("Your phone edit") { values(task.serverMutation) }
-                if let accepted = task.conflictingServerMutation {
-                    Section("Accepted server state") { values(accepted) }
-                }
-                if task.serverTaskMissing {
-                    Section("Server task deleted") {
-                        Text("Your phone edit is saved. Choose how to recover it.")
-                        Button("Save as a new task") { recoverMissing(saveAsNew: true) }
-                        Button("Discard this phone edit", role: .destructive) { recoverMissing(saveAsNew: false) }
+                Group {
+                    Section { values(task.serverMutation) } header: { SectionLabel("On this iPhone") }
+                    if let accepted = task.conflictingServerMutation {
+                        Section { values(accepted) } header: { SectionLabel("On your server") }
                     }
-                } else {
-                    Section {
-                        Text("Choose the task state to keep. Other server changes stay intact.")
-                        Button("Keep my phone edits") { resolve(keepingPhoneEdits: true) }
-                        Button("Use accepted server state") { resolve(keepingPhoneEdits: false) }
+                    if task.serverTaskMissing {
+                        Section {
+                            Text("Your edit on this iPhone is safe. Choose what to do with it.")
+                            Button("Save it as a new task") { recoverMissing(saveAsNew: true) }
+                            Button("Discard this edit", role: .destructive) { recoverMissing(saveAsNew: false) }
+                        } header: {
+                            SectionLabel("Deleted on your server")
+                        }
+                    } else {
+                        Section {
+                            Text("Choose which version to keep. Other changes on the server stay as they are.")
+                            Button("Keep this iPhone's version") { resolve(keepingPhoneEdits: true) }
+                            Button("Use the server's version") { resolve(keepingPhoneEdits: false) }
+                        }
                     }
+                    if let error { Section { Text(error) } }
                 }
-                if let error { Section { Text(error).foregroundStyle(Palette.ink) } }
+                .foregroundStyle(Palette.ink)
+                .cardRow()
             }
             .paperList()
-            .navigationTitle("Review conflict")
+            .navigationTitle("Choose a version")
             .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Close") { dismiss() } } }
         }
     }
@@ -38,11 +44,11 @@ struct TaskConflictReviewView: View {
     @ViewBuilder
     private func values(_ mutation: FinallyServerTaskMutation) -> some View {
         LabeledContent("Task", value: mutation.title)
-        LabeledContent("State", value: mutation.isCompleted ? "Done" : "Open")
-        LabeledContent("Scheduled", value: mutation.scheduledDay?.formatted(date: .abbreviated, time: .omitted) ?? "Unset")
-        LabeledContent("Deadline", value: mutation.deadline?.formatted(date: .abbreviated, time: .shortened) ?? "Unset")
-        LabeledContent("Priority", value: mutation.priority?.rawValue ?? "Unset")
-        if task.isDeleted { Text("Your phone edit deletes this task.") }
+        LabeledContent("Status", value: mutation.isCompleted ? "Done" : "Open")
+        LabeledContent("Scheduled", value: mutation.scheduledDay?.formatted(date: .abbreviated, time: .omitted) ?? "None")
+        LabeledContent("Deadline", value: mutation.deadline?.formatted(date: .abbreviated, time: .shortened) ?? "None")
+        LabeledContent("Priority", value: mutation.priority?.rawValue ?? "None")
+        if task.isDeleted { Text("This iPhone deleted the task.") }
     }
 
     private func recoverMissing(saveAsNew: Bool) {

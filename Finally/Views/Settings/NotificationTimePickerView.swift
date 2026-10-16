@@ -1,68 +1,81 @@
 import SwiftUI
 import SwiftData
 
-/// Displays a time picker for the default notification time used when scheduling
-/// reminders on date-only tasks (tasks without a specific time component).
-/// Stores the selection as minutes from midnight in UserDefaults.
+/// Picks the default reminder time, the time of day date-level deadline reminders fire.
+/// Stores the choice as minutes from midnight.
 struct NotificationTimePickerView: View {
     @AppStorage(AppConstants.defaultReminderTimeMinutesKey) private var minutesFromMidnight: Int = AppConstants.defaultReminderTimeMinutes
     @Environment(\.modelContext) private var modelContext
 
-    /// Converts stored minutes-from-midnight to a Date for the DatePicker.
-    private var selectedTime: Binding<Date> {
+    private static let hours = Array(5...22)
+    private static let minutes = [0, 15, 30, 45]
+
+    private var hour: Binding<Int> {
         Binding(
-            get: {
-                var comps = Calendar.current.dateComponents([.year, .month, .day], from: Date())
-                comps.hour = minutesFromMidnight / 60
-                comps.minute = minutesFromMidnight % 60
-                comps.second = 0
-                return Calendar.current.date(from: comps) ?? Date()
-            },
-            set: { newDate in
-                let comps = Calendar.current.dateComponents([.hour, .minute], from: newDate)
-                let newMinutes = (comps.hour ?? 9) * 60 + (comps.minute ?? 0)
-                minutesFromMidnight = newMinutes
-                // Reschedule all date-only reminders to reflect the new default time
-                NotificationService.shared.rescheduleAllReminders(modelContext: modelContext)
-            }
+            get: { minutesFromMidnight / 60 },
+            set: { save(hour: $0, minute: minutesFromMidnight % 60) }
+        )
+    }
+
+    private var minute: Binding<Int> {
+        Binding(
+            get: { minutesFromMidnight % 60 },
+            set: { save(hour: minutesFromMidnight / 60, minute: $0) }
         )
     }
 
     var body: some View {
-        Form {
-            Section {
-                DatePicker(
-                    "Default time",
-                    selection: selectedTime,
-                    displayedComponents: .hourAndMinute
-                )
-                .datePickerStyle(.wheel)
-                .labelsHidden()
-            } header: {
-                Text("Default Reminder Time")
-            } footer: {
-                Text("Reminders on tasks without a specific time will fire at this time on the deadline. Changing this reschedules existing reminders.")
-                    .font(.footnote)
+        List {
+            Group {
+                Section {
+                    ChoiceChips(choices: Self.hours, selection: hour) { Self.hourLabel($0) }
+                        .padding(.vertical, 8)
+                } header: {
+                    SectionLabel("Hour")
+                }
+
+                Section {
+                    ChoiceChips(choices: Self.minutes, selection: minute) { String(format: ":%02d", $0) }
+                        .padding(.vertical, 8)
+                } header: {
+                    SectionLabel("Minute")
+                } footer: {
+                    SectionNote("Reminders on a deadline without a time fire at \(DefaultReminderTimeLabel.text(minutesFromMidnight)). Changing it moves the reminders you already have.")
+                }
             }
+            .cardRow()
         }
-        .navigationTitle("Default Reminder Time")
+        .paperList()
+        .navigationTitle("Default reminder time")
         .navigationBarTitleDisplayMode(.inline)
+    }
+
+    private func save(hour: Int, minute: Int) {
+        minutesFromMidnight = hour * 60 + minute
+        NotificationService.shared.rescheduleAllReminders(modelContext: modelContext)
+    }
+
+    private static func hourLabel(_ hour: Int) -> String {
+        DefaultReminderTimeLabel.date(minutesFromMidnight: hour * 60)
+            .formatted(.dateTime.hour())
     }
 }
 
-/// Small inline label showing the currently configured reminder time — used in SettingsView row.
+/// The configured default reminder time, for the Settings row.
 struct DefaultReminderTimeLabel: View {
     @AppStorage(AppConstants.defaultReminderTimeMinutesKey) private var minutesFromMidnight: Int = AppConstants.defaultReminderTimeMinutes
 
     var body: some View {
-        Text(formattedTime)
+        Text(Self.text(minutesFromMidnight))
     }
 
-    private var formattedTime: String {
-        var comps = Calendar.current.dateComponents([.year, .month, .day], from: Date())
-        comps.hour = minutesFromMidnight / 60
-        comps.minute = minutesFromMidnight % 60
-        guard let date = Calendar.current.date(from: comps) else { return "9:00 AM" }
-        return date.formatted(date: .omitted, time: .shortened)
+    static func text(_ minutesFromMidnight: Int) -> String {
+        date(minutesFromMidnight: minutesFromMidnight).formatted(date: .omitted, time: .shortened)
+    }
+
+    static func date(minutesFromMidnight: Int) -> Date {
+        Calendar.current.date(
+            bySettingHour: minutesFromMidnight / 60, minute: minutesFromMidnight % 60, second: 0, of: Date()
+        ) ?? Date()
     }
 }

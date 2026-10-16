@@ -33,7 +33,7 @@ struct BoardView: View {
             if taskProvider.isSyncing && allTasks.isEmpty {
                 VStack(spacing: 12) {
                     ProgressView()
-                    Text("Syncing your tasks…")
+                    Text("Getting your tasks…")
                         .font(.meta)
                         .foregroundStyle(Palette.muted)
                 }

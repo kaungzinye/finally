@@ -157,30 +157,37 @@ struct InlineTaskCreator: View {
                     Image(systemName: "calendar")
                         .foregroundStyle(draft.deadline != nil ? Palette.ink : Palette.muted)
                 }
+                .accessibilityLabel("Deadline")
                 Button { showScheduledDayPicker = true } label: {
                     Image(systemName: "scope")
                         .foregroundStyle(draft.scheduledDay != nil ? Palette.ink : Palette.muted)
                 }
+                .accessibilityLabel("Scheduled")
                 Button { showPriorityPicker = true } label: {
                     Image(systemName: "flag")
                         .foregroundStyle(draft.priority?.color ?? Palette.muted)
                 }
+                .accessibilityLabel("Priority")
                 Button { showTagPicker = true } label: {
                     Image(systemName: "tag")
                         .foregroundStyle(!draft.tags.isEmpty ? Palette.ink : Palette.muted)
                 }
+                .accessibilityLabel("Tags")
                 Button { showProjectPicker = true } label: {
                     Image(systemName: "folder")
                         .foregroundStyle(draft.project != nil ? Palette.ink : Palette.muted)
                 }
+                .accessibilityLabel("Project")
                 Button { showParentPicker = true } label: {
                     Image(systemName: "list.bullet.indent")
                         .foregroundStyle(draft.parentTask != nil ? Palette.ink : Palette.muted)
                 }
+                .accessibilityLabel("Parent task")
                 Button { showRecurrencePicker = true } label: {
                     Image(systemName: "repeat")
                         .foregroundStyle(draft.recurrence != .none ? Palette.ink : Palette.muted)
                 }
+                .accessibilityLabel("Repeat")
                 Spacer()
                 Button {
                     createTask()
@@ -215,10 +222,10 @@ struct InlineTaskCreator: View {
             isFocused = true
         }
         .sheet(isPresented: $showDatePicker) {
-            DatePickerSheet(selectedDate: $draft.deadline, hasTime: $draft.deadlineHasTime)
+            DatePickerSheet(deadline: $draft.deadline, hasTime: $draft.deadlineHasTime)
         }
         .sheet(isPresented: $showScheduledDayPicker) {
-            DatePickerSheet(selectedDate: $draft.scheduledDay)
+            DatePickerSheet(scheduledDay: $draft.scheduledDay)
         }
         .sheet(isPresented: $showPriorityPicker) {
             PriorityPicker(selection: $draft.priority)

@@ -20,57 +20,49 @@ struct ProjectPicker: View {
     var body: some View {
         NavigationStack {
             List {
-                Section {
-                    HStack {
-                        Image(systemName: "magnifyingglass")
-                            .foregroundStyle(.secondary)
-                        TextField("Search projects", text: $query)
-                            .textInputAutocapitalization(.words)
-                            .autocorrectionDisabled()
-                    }
-                }
-
-                Button {
-                    selection = nil
-                    dismiss()
-                } label: {
-                    HStack {
-                        Image(systemName: "tray")
-                            .foregroundStyle(.secondary)
-                        Text("Inbox (No Project)")
-                        Spacer()
-                        if selection == nil {
-                            Image(systemName: "checkmark")
-                                .foregroundStyle(.primary)
-                        }
-                    }
-                }
-
-                ForEach(filteredProjects) { project in
-                    Button {
-                        selection = project
-                        dismiss()
-                    } label: {
+                Group {
+                    Section {
                         HStack {
-                            if let emoji = project.iconEmoji {
-                                Text(emoji)
-                            } else {
-                                Image(systemName: "folder")
-                                    .foregroundStyle(.secondary)
-                            }
-                            Text(project.title)
-                            Spacer()
-                            if selection?.externalProjectID == project.externalProjectID {
-                                Image(systemName: "checkmark")
-                                    .foregroundStyle(.primary)
+                            Image(systemName: "magnifyingglass")
+                                .foregroundStyle(Palette.muted)
+                            TextField("Search projects", text: $query)
+                                .textInputAutocapitalization(.words)
+                                .autocorrectionDisabled()
+                        }
+                    }
+
+                    Section {
+                        CheckRow(isSelected: selection == nil, action: { choose(nil) }) {
+                            Image(systemName: "tray")
+                                .foregroundStyle(Palette.muted)
+                            Text("Inbox")
+                        }
+
+                        ForEach(filteredProjects) { project in
+                            CheckRow(isSelected: selection?.externalProjectID == project.externalProjectID, action: { choose(project) }) {
+                                if let emoji = project.iconEmoji {
+                                    Text(emoji)
+                                } else {
+                                    Image(systemName: "folder")
+                                        .foregroundStyle(Palette.muted)
+                                }
+                                Text(project.title)
                             }
                         }
                     }
                 }
+                .cardRow()
             }
+            .paperList(background: Palette.sheet)
             .navigationTitle("Project")
             .navigationBarTitleDisplayMode(.inline)
         }
         .presentationDetents([.medium])
+        .paperSheet()
+    }
+
+    private func choose(_ project: ProjectItem?) {
+        selection = project
+        dismiss()
     }
 }

@@ -26,6 +26,15 @@ struct FinallyApp: App {
             .font: UIFont.rounded(.headline, weight: .semibold),
             .foregroundColor: UIColor(Palette.ink),
         ]
+        // Color carries priority, deadlines, and warnings, so a count badge draws in ink.
+        let tabBar = UITabBarAppearance()
+        tabBar.configureWithDefaultBackground()
+        for item in [tabBar.stackedLayoutAppearance, tabBar.inlineLayoutAppearance, tabBar.compactInlineLayoutAppearance] {
+            item.normal.badgeBackgroundColor = UIColor(Palette.ink)
+            item.normal.badgeTextAttributes = [.foregroundColor: UIColor(Palette.onInk)]
+        }
+        UITabBar.appearance().standardAppearance = tabBar
+        UITabBar.appearance().scrollEdgeAppearance = tabBar
     }
 
     var body: some Scene {

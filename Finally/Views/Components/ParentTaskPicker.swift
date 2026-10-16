@@ -28,61 +28,53 @@ struct ParentTaskPicker: View {
     var body: some View {
         NavigationStack {
             List {
-                if let selected = selection {
-                    Section {
-                        HStack {
-                            Text(selected.title)
-                                .foregroundStyle(.primary)
-                            Spacer()
-                            Button {
-                                selection = nil
-                            } label: {
-                                Image(systemName: "xmark.circle.fill")
-                                    .foregroundStyle(.secondary)
-                            }
-                            .buttonStyle(.plain)
-                        }
-                    } header: {
-                        Text("Selected Parent")
-                    }
-                }
-
-                Section {
-                    ForEach(filteredTasks, id: \.externalTaskID) { task in
-                        Button {
-                            selection = task
-                            dismiss()
-                        } label: {
+                Group {
+                    if let selected = selection {
+                        Section {
                             HStack {
+                                Text(selected.title)
+                                    .foregroundStyle(Palette.ink)
+                                Spacer()
+                                Button {
+                                    selection = nil
+                                } label: {
+                                    Image(systemName: "xmark")
+                                        .foregroundStyle(Palette.muted)
+                                }
+                                .buttonStyle(.plain)
+                                .accessibilityLabel("Remove parent task")
+                            }
+                        } header: {
+                            SectionLabel("Parent task")
+                        }
+                    }
+
+                    Section {
+                        ForEach(filteredTasks, id: \.externalTaskID) { task in
+                            CheckRow(isSelected: selection?.externalTaskID == task.externalTaskID, action: {
+                                selection = task
+                                dismiss()
+                            }) {
                                 VStack(alignment: .leading, spacing: 2) {
                                     Text(task.title)
-                                        .foregroundStyle(.primary)
                                         .lineLimit(1)
                                     if let project = task.project {
-                                        HStack(spacing: 4) {
-                                            if let emoji = project.iconEmoji {
-                                                Text(emoji).font(.caption2)
-                                            }
-                                            Text(project.title)
-                                                .font(.caption2)
-                                                .foregroundStyle(.secondary)
-                                        }
+                                        Text([project.iconEmoji, project.title].compactMap { $0 }.joined(separator: " "))
+                                            .font(.meta)
+                                            .foregroundStyle(Palette.muted)
                                     }
-                                }
-                                Spacer()
-                                if selection?.externalTaskID == task.externalTaskID {
-                                    Image(systemName: "checkmark")
-                                        .foregroundStyle(.tint)
                                 }
                             }
                         }
+                    } header: {
+                        SectionLabel("Tasks")
                     }
-                } header: {
-                    Text("Tasks")
                 }
+                .cardRow()
             }
-            .searchable(text: $searchText, prompt: "Search tasks...")
-            .navigationTitle("Link to Parent")
+            .paperList(background: Palette.sheet)
+            .searchable(text: $searchText, prompt: "Search tasks")
+            .navigationTitle("Parent task")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
@@ -91,5 +83,6 @@ struct ParentTaskPicker: View {
             }
         }
         .presentationDetents([.medium, .large])
+        .paperSheet()
     }
 }

@@ -4,12 +4,13 @@ import SwiftUI
 
 extension View {
     /// Cards on paper: inset groups over the paper background, with every row at least 48 points.
+    /// The bottom margin lets the last row scroll clear of the floating add button.
     func paperList(background: Color = Palette.paper) -> some View {
         listStyle(.insetGrouped)
             .scrollContentBackground(.hidden)
             .background(background)
             .environment(\.defaultMinListRowHeight, 48)
-            .contentMargins(.bottom, 72, for: .scrollContent)
+            .contentMargins(.bottom, 96, for: .scrollContent)
     }
 
     /// A list row drawn on a cream card.
@@ -67,6 +68,22 @@ extension SectionLabel where Trailing == EmptyView {
     }
 }
 
+/// A short note under a group, in muted rounded type.
+struct SectionNote: View {
+    let text: String
+
+    init(_ text: String) {
+        self.text = text
+    }
+
+    var body: some View {
+        Text(text)
+            .font(.meta)
+            .foregroundStyle(Palette.muted)
+            .textCase(nil)
+    }
+}
+
 // MARK: - Buttons
 
 /// The primary action: a capsule of ink with paper-colored text.
@@ -85,6 +102,103 @@ struct InkButtonStyle: ButtonStyle {
 
 extension ButtonStyle where Self == InkButtonStyle {
     static var ink: InkButtonStyle { InkButtonStyle() }
+}
+
+// MARK: - Sheets
+
+extension View {
+    /// A sheet on the warm sheet paper.
+    func paperSheet() -> some View {
+        presentationBackground(Palette.sheet)
+    }
+}
+
+// MARK: - Choices
+
+/// A chip that is on or off, such as a filter that narrows a list.
+struct FilterChip: View {
+    let title: String
+    @Binding var isOn: Bool
+
+    var body: some View {
+        Button {
+            withAnimation(.snappy) { isOn.toggle() }
+        } label: {
+            HStack(spacing: 6) {
+                if isOn {
+                    Image(systemName: "checkmark")
+                        .imageScale(.small)
+                }
+                Text(title)
+            }
+            .font(.chip)
+            .lineLimit(1)
+            .fixedSize()
+            .foregroundStyle(isOn ? Palette.onInk : Palette.ink)
+            .padding(.horizontal, 12)
+            .frame(minHeight: 38)
+            .background(isOn ? Palette.ink : Palette.wash, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+            .contentShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+        }
+        .buttonStyle(.plain)
+        .accessibilityAddTraits(isOn ? .isSelected : [])
+    }
+}
+
+/// One choice out of a few, as a row of chips. The chosen chip fills with ink.
+struct ChoiceChips<Value: Hashable>: View {
+    let choices: [Value]
+    @Binding var selection: Value
+    let title: (Value) -> String
+
+    var body: some View {
+        FlowLayout(spacing: 8) {
+            ForEach(choices, id: \.self) { choice in
+                let isSelected = choice == selection
+                Button {
+                    withAnimation(.snappy) { selection = choice }
+                } label: {
+                    Text(title(choice))
+                        .font(.chip)
+                        .lineLimit(1)
+                        .fixedSize()
+                        .foregroundStyle(isSelected ? Palette.onInk : Palette.ink)
+                        .padding(.horizontal, 12)
+                        .frame(minWidth: 38, minHeight: 34)
+                        .background(isSelected ? Palette.ink : Palette.wash, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                        .contentShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                }
+                .buttonStyle(.plain)
+                .accessibilityAddTraits(isSelected ? .isSelected : [])
+            }
+        }
+    }
+}
+
+/// A list row that chooses one value: its label, then an ink checkmark when chosen.
+struct CheckRow<Label: View>: View {
+    let isSelected: Bool
+    let action: () -> Void
+    @ViewBuilder var label: Label
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 12) {
+                label
+                Spacer(minLength: 8)
+                if isSelected {
+                    Image(systemName: "checkmark")
+                        .font(.body.weight(.semibold))
+                        .foregroundStyle(Palette.ink)
+                }
+            }
+            .foregroundStyle(Palette.ink)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityAddTraits(isSelected ? .isSelected : [])
+        .cardRow()
+    }
 }
 
 // MARK: - Flow layout

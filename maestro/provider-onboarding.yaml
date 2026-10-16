@@ -6,7 +6,7 @@ appId: com.kaungzinye.finally
     timeout: 10000
 - tapOn:
     id: "connect-server-provider"
-- assertVisible: "Connect Server"
+- assertVisible: "Connect a server"
 - tapOn:
     id: "server-address"
 - inputText: "https://127.0.0.1:9443"
@@ -23,7 +23,7 @@ appId: com.kaungzinye.finally
     visible:
       id: "finally-server-connection-error"
     timeout: 15000
-- assertVisible: "Find Workspaces"
+- assertVisible: "Find workspaces"
 - tapOn:
     id: "BackButton"
 - tapOn:

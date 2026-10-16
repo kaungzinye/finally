@@ -12,57 +12,46 @@ struct RecurrencePicker: View {
     var body: some View {
         NavigationStack {
             List {
-                // Quick presets
-                Section("Presets") {
-                    ForEach(Recurrence.presetCases, id: \.self) { recurrence in
-                        Button {
-                            selection = recurrence
-                            dismiss()
-                        } label: {
-                            HStack {
+                Group {
+                    Section {
+                        ForEach(Recurrence.presetCases, id: \.self) { recurrence in
+                            CheckRow(isSelected: selection == recurrence, action: {
+                                selection = recurrence
+                                dismiss()
+                            }) {
                                 Image(systemName: recurrence.icon)
-                                    .foregroundStyle(recurrence == .none ? Color.secondary : Color.primary)
+                                    .foregroundStyle(Palette.muted)
                                     .frame(width: 24)
-                                Text(recurrence.rawValue)
-                                Spacer()
-                                if selection == recurrence {
-                                    Image(systemName: "checkmark")
-                                        .foregroundStyle(.tint)
-                                }
+                                Text(recurrence == .none ? "Doesn't repeat" : recurrence.rawValue)
                             }
                         }
                     }
-                }
 
-                // Custom section
-                Section("Custom") {
-                    if selection == .custom, let rule = customRule?.wrappedValue {
-                        // Show current custom rule summary
-                        HStack {
-                            Image(systemName: "repeat")
-                                .foregroundStyle(.tint)
-                                .frame(width: 24)
-                            Text(rule.summary)
-                                .foregroundStyle(.primary)
-                            Spacer()
-                            Image(systemName: "checkmark")
-                                .foregroundStyle(.tint)
+                    Section {
+                        if selection == .custom, let rule = customRule?.wrappedValue {
+                            CheckRow(isSelected: true, action: {}) {
+                                Image(systemName: "repeat")
+                                    .foregroundStyle(Palette.muted)
+                                    .frame(width: 24)
+                                Text(rule.summary)
+                            }
                         }
-                    }
 
-                    Button {
-                        editingRule = customRule?.wrappedValue ?? RecurrenceRule.defaultForDate(contextDate)
-                        showCustomEditor = true
-                    } label: {
-                        HStack {
-                            Image(systemName: "slider.horizontal.3")
-                                .frame(width: 24)
-                            Text(selection == .custom ? "Edit custom pattern..." : "Create custom pattern...")
+                        Button {
+                            editingRule = customRule?.wrappedValue ?? RecurrenceRule.defaultForDate(contextDate)
+                            showCustomEditor = true
+                        } label: {
+                            Label(selection == .custom ? "Change your own pattern" : "Make your own pattern", systemImage: "slider.horizontal.3")
+                                .foregroundStyle(Palette.ink)
                         }
+                    } header: {
+                        SectionLabel("Your own")
                     }
                 }
+                .cardRow()
             }
-            .navigationTitle("Recurrence")
+            .paperList(background: Palette.sheet)
+            .navigationTitle("Repeat")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
@@ -71,6 +60,7 @@ struct RecurrencePicker: View {
             }
         }
         .presentationDetents([.medium, .large])
+        .paperSheet()
         .sheet(isPresented: $showCustomEditor) {
             CustomRecurrenceEditor(
                 rule: $editingRule,
@@ -85,7 +75,7 @@ struct RecurrencePicker: View {
     }
 }
 
-// MARK: - Custom Recurrence Editor (Google Calendar-style)
+// MARK: - Custom recurrence editor
 
 struct CustomRecurrenceEditor: View {
     @Binding var rule: RecurrenceRule
@@ -93,137 +83,89 @@ struct CustomRecurrenceEditor: View {
     var onSave: (RecurrenceRule) -> Void
     @Environment(\.dismiss) private var dismiss
 
-    private let weekdayLabels = ["S", "M", "T", "W", "T", "F", "S"]
     // Calendar weekday indices: 1=Sun, 2=Mon, ..., 7=Sat
+    private static let weekdays = Array(1...7)
+    private static let ordinals = [1, 2, 3, 4, -1]
 
     var body: some View {
         NavigationStack {
             List {
-                // Repeat every N [units]
-                Section {
-                    HStack {
-                        Text("Repeat every")
-                        Stepper(value: $rule.interval, in: 1...99) {
+                Group {
+                    Section {
+                        HStack(spacing: 12) {
+                            Text("Every")
+                                .foregroundStyle(Palette.ink)
+                            stepButton("minus", label: "Fewer") { rule.interval = max(1, rule.interval - 1) }
+                                .disabled(rule.interval <= 1)
                             Text("\(rule.interval)")
-                                .fontWeight(.semibold)
-                                .frame(minWidth: 24, alignment: .center)
+                                .font(.action)
+                                .foregroundStyle(Palette.ink)
+                                .frame(minWidth: 28)
+                                .accessibilityLabel("Every \(rule.interval)")
+                            stepButton("plus", label: "More") { rule.interval = min(99, rule.interval + 1) }
+                                .disabled(rule.interval >= 99)
+                            Spacer()
                         }
-                    }
-
-                    Picker("Frequency", selection: $rule.frequency) {
-                        ForEach(RecurrenceRule.Frequency.allCases, id: \.self) { freq in
-                            Text(rule.interval == 1 ? freq.singularLabel : freq.pluralLabel)
-                                .tag(freq)
+                        ChoiceChips(choices: RecurrenceRule.Frequency.allCases, selection: $rule.frequency) {
+                            rule.interval == 1 ? $0.singularLabel : $0.pluralLabel
                         }
-                    }
-                    .pickerStyle(.segmented)
-                }
-
-                // Day-of-week selector (weekly only)
-                if rule.frequency == .weekly {
-                    Section("Repeat on") {
-                        HStack(spacing: 8) {
-                            ForEach(1...7, id: \.self) { day in
-                                Button {
-                                    if rule.weekdays.contains(day) {
-                                        rule.weekdays.remove(day)
-                                    } else {
-                                        rule.weekdays.insert(day)
-                                    }
-                                } label: {
-                                    Text(weekdayLabels[day - 1])
-                                        .font(.subheadline.weight(.medium))
-                                        .frame(width: 36, height: 36)
-                                        .background(
-                                            rule.weekdays.contains(day)
-                                                ? Palette.ink
-                                                : Palette.wash
-                                        )
-                                        .foregroundStyle(
-                                            rule.weekdays.contains(day) ? Palette.onInk : Palette.ink
-                                        )
-                                        .clipShape(Circle())
-                                }
-                                .buttonStyle(.plain)
-                            }
-                        }
-                        .frame(maxWidth: .infinity, alignment: .center)
                         .padding(.vertical, 4)
+                    } header: {
+                        SectionLabel("Repeat")
                     }
-                }
 
-                // Monthly mode selector
-                if rule.frequency == .monthly {
-                    Section("Repeat on") {
-                        let dayOfMonth = contextDate.map { Calendar.current.component(.day, from: $0) } ?? 1
+                    if rule.frequency == .weekly {
+                        Section {
+                            HStack(spacing: 8) {
+                                ForEach(Self.weekdays, id: \.self) { day in
+                                    weekdayButton(day)
+                                }
+                            }
+                            .frame(maxWidth: .infinity, alignment: .center)
+                            .padding(.vertical, 4)
+                        } header: {
+                            SectionLabel("On")
+                        }
+                    }
 
-                        Button {
-                            rule.monthlyMode = .dayOfMonth
-                        } label: {
-                            HStack {
+                    if rule.frequency == .monthly {
+                        Section {
+                            let dayOfMonth = contextDate.map { Calendar.current.component(.day, from: $0) } ?? 1
+
+                            CheckRow(isSelected: rule.monthlyMode == .dayOfMonth, action: { rule.monthlyMode = .dayOfMonth }) {
                                 Text("Day \(dayOfMonth) of every month")
-                                Spacer()
-                                if rule.monthlyMode == .dayOfMonth {
-                                    Image(systemName: "checkmark")
-                                        .foregroundStyle(.tint)
+                            }
+
+                            CheckRow(isSelected: rule.monthlyMode == .nthWeekday, action: chooseNthWeekday) {
+                                Text("The \(RecurrenceRule.ordinalName(rule.nthWeekdayOrdinal)) \(RecurrenceRule.fullDayName(rule.nthWeekdayDay))")
+                            }
+
+                            if rule.monthlyMode == .nthWeekday {
+                                ChoiceChips(choices: Self.ordinals, selection: $rule.nthWeekdayOrdinal) {
+                                    $0 == -1 ? "Last" : RecurrenceRule.ordinalName($0)
                                 }
-                            }
-                        }
-
-                        Button {
-                            rule.monthlyMode = .nthWeekday
-                            if let date = contextDate {
-                                let cal = Calendar.current
-                                rule.nthWeekdayOrdinal = cal.component(.weekdayOrdinal, from: date)
-                                rule.nthWeekdayDay = cal.component(.weekday, from: date)
-                            }
-                        } label: {
-                            HStack {
-                                let ordinal = RecurrenceRule.ordinalName(rule.nthWeekdayOrdinal)
-                                let day = RecurrenceRule.fullDayName(rule.nthWeekdayDay)
-                                Text("The \(ordinal) \(day)")
-                                Spacer()
-                                if rule.monthlyMode == .nthWeekday {
-                                    Image(systemName: "checkmark")
-                                        .foregroundStyle(.tint)
+                                .padding(.vertical, 4)
+                                ChoiceChips(choices: Self.weekdays, selection: $rule.nthWeekdayDay) {
+                                    RecurrenceRule.shortDayName($0) ?? ""
                                 }
+                                .padding(.vertical, 4)
                             }
-                        }
-
-                        if rule.monthlyMode == .nthWeekday {
-                            Picker("Ordinal", selection: $rule.nthWeekdayOrdinal) {
-                                Text("1st").tag(1)
-                                Text("2nd").tag(2)
-                                Text("3rd").tag(3)
-                                Text("4th").tag(4)
-                                Text("Last").tag(-1)
-                            }
-                            .pickerStyle(.segmented)
-
-                            Picker("Day", selection: $rule.nthWeekdayDay) {
-                                Text("Sun").tag(1)
-                                Text("Mon").tag(2)
-                                Text("Tue").tag(3)
-                                Text("Wed").tag(4)
-                                Text("Thu").tag(5)
-                                Text("Fri").tag(6)
-                                Text("Sat").tag(7)
-                            }
+                        } header: {
+                            SectionLabel("On")
                         }
                     }
-                }
 
-                // Summary preview
-                Section("Preview") {
-                    HStack {
-                        Image(systemName: "repeat")
-                            .foregroundStyle(.tint)
-                        Text(rule.summary)
-                            .foregroundStyle(.primary)
+                    Section {
+                        Label(rule.summary, systemImage: "repeat")
+                            .foregroundStyle(Palette.ink)
+                    } header: {
+                        SectionLabel("Repeats")
                     }
                 }
+                .cardRow()
             }
-            .navigationTitle("Custom Recurrence")
+            .paperList(background: Palette.sheet)
+            .navigationTitle("Your own pattern")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
@@ -238,5 +180,48 @@ struct CustomRecurrenceEditor: View {
             }
         }
         .presentationDetents([.medium, .large])
+        .paperSheet()
+    }
+
+    private func chooseNthWeekday() {
+        rule.monthlyMode = .nthWeekday
+        if let date = contextDate {
+            let calendar = Calendar.current
+            rule.nthWeekdayOrdinal = calendar.component(.weekdayOrdinal, from: date)
+            rule.nthWeekdayDay = calendar.component(.weekday, from: date)
+        }
+    }
+
+    private func stepButton(_ symbol: String, label: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Image(systemName: symbol)
+                .font(.chip)
+                .foregroundStyle(Palette.ink)
+                .frame(width: 38, height: 34)
+                .background(Palette.wash, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(label)
+    }
+
+    private func weekdayButton(_ day: Int) -> some View {
+        let isOn = rule.weekdays.contains(day)
+        return Button {
+            if isOn {
+                rule.weekdays.remove(day)
+            } else {
+                rule.weekdays.insert(day)
+            }
+        } label: {
+            Text(String(RecurrenceRule.shortDayName(day)?.prefix(1) ?? ""))
+                .font(.chip)
+                .frame(width: 36, height: 36)
+                .background(isOn ? Palette.ink : Palette.wash, in: Circle())
+                .foregroundStyle(isOn ? Palette.onInk : Palette.ink)
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(RecurrenceRule.fullDayName(day))
+        .accessibilityAddTraits(isOn ? .isSelected : [])
     }
 }

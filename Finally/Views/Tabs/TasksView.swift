@@ -286,33 +286,3 @@ private struct LayoutSwitch: View {
         .accessibilityAddTraits(isSelected ? .isSelected : [])
     }
 }
-
-/// A chip that narrows a list while it is on.
-private struct FilterChip: View {
-    let title: String
-    @Binding var isOn: Bool
-
-    var body: some View {
-        Button {
-            withAnimation(.snappy) { isOn.toggle() }
-        } label: {
-            HStack(spacing: 6) {
-                if isOn {
-                    Image(systemName: "checkmark")
-                        .imageScale(.small)
-                }
-                Text(title)
-            }
-            .font(.chip)
-            .lineLimit(1)
-            .fixedSize()
-            .foregroundStyle(isOn ? Palette.onInk : Palette.ink)
-            .padding(.horizontal, 12)
-            .frame(minHeight: 38)
-            .background(isOn ? Palette.ink : Palette.wash, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
-            .contentShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-        }
-        .buttonStyle(.plain)
-        .accessibilityAddTraits(isOn ? .isSelected : [])
-    }
-}

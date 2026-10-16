@@ -97,7 +97,7 @@ struct DailyFocusSection: View {
         .accessibilityIdentifier("daily-focus-add-pick")
         .cardRow()
         if !focus.picks.isEmpty {
-            Button("Edit picks", action: onEditPicks)
+            Button("Edit", action: onEditPicks)
                 .accessibilityIdentifier("daily-focus-edit-picks")
                 .cardRow()
             if let onReviewDay {
@@ -132,7 +132,7 @@ struct DailyFocusSection: View {
     }
 }
 
-/// The pick to work on now, drawn larger than the rest with an ink edge.
+/// The task to work on now, drawn larger than the rest with its own Done button.
 private struct CurrentPickCard: View {
     @Bindable var task: TaskItem
     let onOpen: () -> Void
@@ -157,18 +157,14 @@ private struct CurrentPickCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            HStack(alignment: .firstTextBaseline, spacing: 8) {
+            HStack(alignment: .center, spacing: 12) {
+                PriorityRing(color: task.priority?.color ?? Palette.low, isDone: false)
+                    .accessibilityLabel(task.priority.map { "\($0.rawValue) priority" } ?? "No priority")
                 Text(task.title)
                     .font(.cardTitle)
                     .foregroundStyle(Palette.ink)
                     .lineLimit(3)
                     .frame(maxWidth: .infinity, alignment: .leading)
-                if let priority = task.priority {
-                    Image(systemName: priority.icon)
-                        .font(.meta)
-                        .foregroundStyle(priority.color)
-                        .accessibilityLabel(priority.rawValue)
-                }
             }
 
             if !details.isEmpty {
@@ -186,11 +182,7 @@ private struct CurrentPickCard: View {
         .padding(.vertical, 14)
         .contentShape(Rectangle())
         .onTapGesture(perform: onOpen)
-        .listRowBackground(
-            ContainerRelativeShape()
-                .fill(Palette.card)
-                .strokeBorder(Palette.ink.opacity(0.55), lineWidth: 1.5)
-        )
+        .cardRow()
     }
 
     private func complete() {
@@ -232,8 +224,8 @@ struct DailyFocusEditorView: View {
                     onChange()
                 }
             }
-            .paperList()
-            .navigationTitle("Edit picks")
+            .paperList(background: Palette.sheet)
+            .navigationTitle(DailyFocusHeading.text(focusLimit: focus.focusLimit))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) { EditButton() }
@@ -242,5 +234,6 @@ struct DailyFocusEditorView: View {
                 }
             }
         }
+        .paperSheet()
     }
 }

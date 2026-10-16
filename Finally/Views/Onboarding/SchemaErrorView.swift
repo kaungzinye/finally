@@ -7,52 +7,53 @@ struct SchemaErrorView: View {
     var body: some View {
         NavigationStack {
             List {
-                Section {
-                    VStack(alignment: .leading, spacing: 8) {
-                        Label("Schema Issues Found", systemImage: "exclamationmark.triangle.fill")
-                            .font(.headline)
-                            .foregroundStyle(Palette.high)
-                        Text("Your Notion database is missing some required properties. Please add them in Notion and try again.")
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
+                Group {
+                    Section {
+                        VStack(alignment: .leading, spacing: 8) {
+                            Label("Your database needs a few changes", systemImage: "exclamationmark.triangle.fill")
+                                .font(.headline)
+                                .foregroundStyle(Palette.ink)
+                            Text("Make these changes in Notion, then check again.")
+                                .font(.subheadline)
+                                .foregroundStyle(Palette.muted)
+                        }
+                        .padding(.vertical, 4)
                     }
-                    .padding(.vertical, 4)
-                }
 
-                Section("Required Changes") {
-                    ForEach(issues, id: \.propertyName) { issue in
-                        VStack(alignment: .leading, spacing: 6) {
-                            HStack {
-                                Image(systemName: "xmark.circle.fill")
-                                    .foregroundStyle(Palette.urgent)
-                                Text(issue.propertyName)
-                                    .fontWeight(.semibold)
-                                Text("(\(issue.expectedType))")
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
+                    Section {
+                        ForEach(issues, id: \.propertyName) { issue in
+                            VStack(alignment: .leading, spacing: 6) {
+                                HStack {
+                                    Image(systemName: "xmark.circle.fill")
+                                        .foregroundStyle(Palette.urgent)
+                                    Text(issue.propertyName)
+                                        .fontWeight(.semibold)
+                                        .foregroundStyle(Palette.ink)
+                                    Text(issue.expectedType)
+                                        .font(.meta)
+                                        .foregroundStyle(Palette.muted)
+                                }
+                                Text(issue.message)
+                                    .font(.callout)
+                                    .foregroundStyle(Palette.muted)
                             }
-                            Text(issue.message)
-                                .font(.callout)
-                                .foregroundStyle(.secondary)
+                            .padding(.vertical, 2)
                         }
-                        .padding(.vertical, 2)
+                    } header: {
+                        SectionLabel("Changes to make")
                     }
                 }
+                .cardRow()
 
                 Section {
-                    Button {
-                        onRetry()
-                    } label: {
-                        HStack {
-                            Spacer()
-                            Text("Re-validate")
-                                .fontWeight(.medium)
-                            Spacer()
-                        }
-                    }
+                    Button("Check again", action: onRetry)
+                        .buttonStyle(.ink)
+                        .listRowBackground(Color.clear)
+                        .listRowInsets(EdgeInsets())
                 }
             }
-            .navigationTitle("Setup Required")
+            .paperList()
+            .navigationTitle("Set up your database")
             .navigationBarTitleDisplayMode(.inline)
         }
     }
