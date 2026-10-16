@@ -42,4 +42,37 @@ final class TaskDetailEditTests: XCTestCase {
         XCTAssertEqual(task.scheduledDay, day(20))
         XCTAssertTrue(task.isDirty)
     }
+
+    func testPendingEdits_CleanParentWithAnAddedStepSubmitsTheStep() {
+        let parent = TaskItem(externalTaskID: "parent", title: "Prepare the launch")
+        let step = TaskItem(externalTaskID: "step", title: "Draft the slides")
+        step.parentId = parent.externalTaskID
+        step.parent = parent
+        step.isDirty = true
+        parent.subtasks.append(step)
+        let clean = TaskItem(externalTaskID: "clean", title: "Book the venue")
+        clean.parentId = parent.externalTaskID
+        clean.parent = parent
+        parent.subtasks.append(clean)
+
+        XCTAssertEqual(parent.pendingEdits.map(\.externalTaskID), ["step"])
+    }
+
+    func testPendingEdits_DirtyParentSubmitsWithItsDirtySteps() {
+        let parent = TaskItem(externalTaskID: "parent", title: "Prepare the launch")
+        parent.edit(calendar: calendar) { $0.title = "Prepare the product launch" }
+        let step = TaskItem(externalTaskID: "step", title: "Draft the slides")
+        step.parentId = parent.externalTaskID
+        step.parent = parent
+        step.isDirty = true
+        parent.subtasks.append(step)
+
+        XCTAssertEqual(parent.pendingEdits.map(\.externalTaskID), ["parent", "step"])
+    }
+
+    func testPendingEdits_CleanTaskSubmitsNothing() {
+        let task = TaskItem(externalTaskID: "clean", title: "Draft")
+
+        XCTAssertEqual(task.pendingEdits, [])
+    }
 }

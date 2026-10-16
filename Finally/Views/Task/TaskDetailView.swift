@@ -292,14 +292,14 @@ struct TaskDetailView: View {
         NotificationService.shared.rescheduleAllReminders(modelContext: modelContext)
     }
 
-    /// Closing the sheet submits the task's dirty edit. A failed submit leaves the edit dirty
-    /// for the next sync.
+    /// Closing the sheet submits the task's dirty edit and its dirty steps. A failed submit
+    /// leaves the edits dirty for the next sync.
     private func submitPendingEdits() {
-        guard task.isDirty else { return }
-        let task = task
+        let edits = task.pendingEdits
+        guard !edits.isEmpty else { return }
         let store = modelContext
         let provider = taskProvider
-        Task { await provider.submitPendingChangesReportingFailure(for: [task], store: store) }
+        Task { await provider.submitPendingChangesReportingFailure(for: edits, store: store) }
     }
 
     private func formattedPlanningDate(_ date: Date, hasTime: Bool) -> String {

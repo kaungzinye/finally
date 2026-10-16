@@ -202,6 +202,12 @@ final class TaskItem {
 
     // MARK: - Actions
 
+    /// The dirty edits task detail submits on close: the task when dirty, then its dirty steps,
+    /// such as a step added under a clean parent.
+    var pendingEdits: [TaskItem] {
+        (isDirty ? [self] : []) + subtasks.filter(\.isDirty).sorted { $0.sortIndex < $1.sortIndex }
+    }
+
     /// Applies one task detail edit to the task. The task becomes a dirty edit, and its
     /// scheduled day stays on or before its deadline's day.
     func edit(calendar: Calendar = .current, _ change: (TaskItem) -> Void) {

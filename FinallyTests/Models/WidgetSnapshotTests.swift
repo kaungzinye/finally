@@ -98,6 +98,7 @@ final class WidgetSnapshotTests: XCTestCase {
     func testTheSnapshotSurvivesAppGroupStorage() {
         let storage = makeStorage()
         let snapshot = WidgetSnapshot(
+            workspaceID: "notion-workspace",
             focusDay: at(day: 16),
             focusLimit: 3,
             focusPickCount: 2,

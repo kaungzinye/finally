@@ -79,7 +79,7 @@ struct FinallyWidgetEntryView: View {
 }
 
 extension WidgetSnapshot {
-    static let empty = WidgetSnapshot(focusDay: nil, focusLimit: AppConstants.defaultFocusLimit, focusPickCount: 0, tasks: [])
+    static let empty = WidgetSnapshot(workspaceID: "", focusDay: nil, focusLimit: AppConstants.defaultFocusLimit, focusPickCount: 0, tasks: [])
 
     /// What the widget gallery shows.
     static func sample(at date: Date) -> WidgetSnapshot {
@@ -96,7 +96,7 @@ extension WidgetSnapshot {
                 status: status, scheduledDay: today, deadline: deadline, focusPosition: focusPosition
             )
         }
-        return WidgetSnapshot(focusDay: today, focusLimit: 3, focusPickCount: 3, tasks: [
+        return WidgetSnapshot(workspaceID: "sample", focusDay: today, focusLimit: 3, focusPickCount: 3, tasks: [
             task("Draft the brief", priority: .high, deadline: today, status: .done, focusPosition: 1),
             task("Call the bank", priority: .medium, focusPosition: 2),
             task("Review the contract", focusPosition: 3),
