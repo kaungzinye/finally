@@ -22,18 +22,20 @@ struct WidgetDay {
             ? snapshot.tasks.filter { $0.focusPosition != nil }.sorted { $0.focusPosition! < $1.focusPosition! }
             : []
         let pickIDs = Set(picks.map(\.id))
-        let otherTasks = Today.members(of: snapshot.tasks, at: date, calendar: calendar) { pickIDs.contains($0.id) }
+        // Picks span workspaces. Everything else matches the Today tab's selected workspace.
+        let scoped = snapshot.tasks.filter { $0.providerWorkspaceID == snapshot.workspaceID }
+        let otherTasks = Today.members(of: scoped, at: date, calendar: calendar) { pickIDs.contains($0.id) }
         self.picks = picks
         self.otherTasks = otherTasks
 
         let today = calendar.startOfDay(for: date)
         let lastDay = calendar.date(byAdding: .day, value: 7, to: today) ?? today
         let todayIDs = pickIDs.union(otherTasks.map(\.task.id))
-        finishedToday = snapshot.tasks.filter { task in
+        finishedToday = scoped.filter { task in
             guard !task.isOpen, !pickIDs.contains(task.id) else { return false }
             return [task.scheduledDay, task.deadline].contains { $0.map { calendar.isDate($0, inSameDayAs: date) } ?? false }
         }
-        comingUp = snapshot.tasks
+        comingUp = scoped
             .compactMap { task -> (task: WidgetTask, day: Date)? in
                 guard task.isOpen, !task.isSubtask, !todayIDs.contains(task.id) else { return nil }
                 let days = [task.scheduledDay, task.deadline].compactMap { $0.map(calendar.startOfDay) }

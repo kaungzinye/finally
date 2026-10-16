@@ -31,6 +31,7 @@ extension WidgetSnapshot {
             return task.scheduledDay != nil || task.deadline != nil || (task.isSubtask && task.effectiveSuggestedDate != nil)
         }
         self.init(
+            workspaceID: workspace?.workspaceId ?? "",
             focusDay: focus?.day,
             focusLimit: focus?.focusLimit ?? DailyFocus.defaultFocusLimit,
             focusPickCount: focus?.picks.count ?? 0,

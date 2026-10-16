@@ -41,6 +41,8 @@ extension WidgetTask: TodayTask {
 /// The presentation snapshot of the selected provider workspace. The app writes it to app-group
 /// storage after every local change and sync, and every widget draws from it.
 struct WidgetSnapshot: Codable, Equatable {
+    /// The selected provider workspace. Every list but the Daily Focus picks holds only its tasks.
+    var workspaceID: String
     /// The day the Daily Focus picks belong to.
     var focusDay: Date?
     var focusLimit: Int

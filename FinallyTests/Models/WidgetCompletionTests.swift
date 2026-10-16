@@ -6,7 +6,7 @@ final class WidgetCompletionTests: XCTestCase {
     func testCompletingFromAWidgetRecordsTheCompletionAndShowsTheTaskDone() {
         let storage = makeStorage()
         let today = Calendar.current.startOfDay(for: Date())
-        storage.snapshot = WidgetSnapshot(focusDay: today, focusLimit: 3, focusPickCount: 2, tasks: [
+        storage.snapshot = WidgetSnapshot(workspaceID: "notion-workspace", focusDay: today, focusLimit: 3, focusPickCount: 2, tasks: [
             widgetTask("brief", "Draft the brief", focusPosition: 1),
             widgetTask("release", "Ship the release", focusPosition: 2),
         ])
