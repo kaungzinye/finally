@@ -1,10 +1,11 @@
 import SwiftUI
 import SwiftData
 
+/// The sheet that opens from any task row. Every edit applies to the task as the user makes
+/// it, and closing the sheet submits the dirty edit to its provider.
 struct TaskDetailView: View {
     @Bindable var task: TaskItem
     @Environment(\.modelContext) private var modelContext
-    @Environment(\.dismiss) private var dismiss
     @Environment(TaskProviderCoordinator.self) private var taskProvider
 
     @State private var showDatePicker = false
@@ -16,15 +17,8 @@ struct TaskDetailView: View {
     @State private var showRemindMeAt = false
     @State private var newSubtaskTitle = ""
 
-    @State private var editedTitle: String = ""
-    @State private var editedDeadline: Date?
-    @State private var editedScheduledDay: Date?
-    @State private var editedDeadlineHasTime = false
-    @State private var editedPriority: TaskPriority?
-    @State private var editedTags: [String] = []
-    @State private var editedProject: ProjectItem?
-    @State private var editedRecurrence: Recurrence = .none
-    @State private var editedCustomRule: RecurrenceRule?
+    /// The deadline picker's time toggle. The deadline changes when the picker commits a date.
+    @State private var deadlinePickerHasTime = false
     @State private var syncErrorMessage: String?
 
     var body: some View {
@@ -41,25 +35,14 @@ struct TaskDetailView: View {
                 }
 
                 Group {
-                    TextField("Task name", text: $editedTitle, axis: .vertical)
+                    TextField("Task name", text: edit(\.title), axis: .vertical)
                         .font(.system(.title, design: .rounded, weight: .bold))
                         .foregroundStyle(Palette.ink)
                         .padding(.top, 4)
-
-                    Picker("Status", selection: Binding(
-                        get: { task.status },
-                        set: { newStatus in
-                            task.status = newStatus
-                            task.isDirty = true
-                        }
-                    )) {
-                        ForEach(TaskStatus.allCases, id: \.self) { status in
-                            Text(status.rawValue).tag(status)
-                        }
-                    }
-                    .pickerStyle(.segmented)
+                        .accessibilityIdentifier("task-detail-title")
 
                     FlowLayout(spacing: 8) {
+                        StatusChip(task: task)
                         fieldChips
                     }
                     .padding(.top, 8)
@@ -71,7 +54,7 @@ struct TaskDetailView: View {
                 ReminderSection(task: task) { showRemindMeAt = true }
                     .cardRow()
 
-                // Sub-tasks (only for non-subtask tasks)
+                // Subtasks (only for non-subtask tasks)
                 if !task.isSubtask {
                     Group {
                     Section {
@@ -135,7 +118,7 @@ struct TaskDetailView: View {
                         HStack {
                             Image(systemName: "plus")
                                 .foregroundStyle(Palette.muted)
-                            TextField("Add sub-task...", text: $newSubtaskTitle)
+                            TextField("Add subtask", text: $newSubtaskTitle)
                                 .onSubmit {
                                     addSubtask()
                                 }
@@ -149,51 +132,23 @@ struct TaskDetailView: View {
             }
             .paperList(background: Palette.sheet)
             .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Save") {
-                        Task {
-                            await saveChanges()
-                            if syncErrorMessage == nil {
-                                dismiss()
-                            }
-                        }
-                    }
-                    .disabled(syncErrorMessage != nil)
-                }
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") {
-                        dismiss()
-                    }
-                }
-            }
         }
         .presentationBackground(Palette.sheet)
-        .onAppear {
-            editedTitle = task.title
-            editedDeadline = task.deadline
-            editedScheduledDay = task.scheduledDay
-            editedDeadlineHasTime = task.deadlineHasTime
-            editedPriority = task.priority
-            editedTags = task.tags
-            editedProject = task.project
-            editedRecurrence = task.recurrence
-            editedCustomRule = task.customRecurrenceRule
-        }
+        .onDisappear(perform: submitPendingEdits)
         .sheet(isPresented: $showDatePicker) {
-            DatePickerSheet(selectedDate: $editedDeadline, hasTime: $editedDeadlineHasTime)
+            DatePickerSheet(selectedDate: deadlineBinding, hasTime: $deadlinePickerHasTime)
         }
         .sheet(isPresented: $showScheduledDayPicker) {
-            DatePickerSheet(selectedDate: $editedScheduledDay)
+            DatePickerSheet(selectedDate: scheduledDayBinding)
         }
         .sheet(isPresented: $showPriorityPicker) {
-            PriorityPicker(selection: $editedPriority)
+            PriorityPicker(selection: edit(\.priority))
         }
         .sheet(isPresented: $showTagPicker) {
-            TagPicker(selectedTags: $editedTags)
+            TagPicker(selectedTags: edit(\.tags))
         }
         .sheet(isPresented: $showProjectPicker) {
-            ProjectPicker(selection: $editedProject)
+            ProjectPicker(selection: edit(\.project))
         }
         .sheet(isPresented: $showRemindMeAt) {
             RemindMeAtSheet { date in
@@ -204,9 +159,9 @@ struct TaskDetailView: View {
         }
         .sheet(isPresented: $showRecurrencePicker) {
             RecurrencePicker(
-                selection: $editedRecurrence,
-                customRule: $editedCustomRule,
-                contextDate: editedDeadline
+                selection: edit(\.recurrence),
+                customRule: edit(\.customRecurrenceRule),
+                contextDate: task.deadline
             )
         }
     }
@@ -214,38 +169,43 @@ struct TaskDetailView: View {
     @ViewBuilder
     private var fieldChips: some View {
         ChipView(
-            label: editedScheduledDay.map { formattedPlanningDate($0, hasTime: false) } ?? "Scheduled",
+            label: task.scheduledDay.map { formattedPlanningDate($0, hasTime: false) } ?? "Scheduled",
             icon: "scope",
-            isPlaceholder: editedScheduledDay == nil
+            isPlaceholder: task.scheduledDay == nil
         ) { showScheduledDayPicker = true }
+        .accessibilityLabel(task.scheduledDay.map { "Scheduled \(formattedPlanningDate($0, hasTime: false))" } ?? "Scheduled")
 
         ChipView(
-            label: editedDeadline.map { "Due \(formattedPlanningDate($0, hasTime: editedDeadlineHasTime))" } ?? "Deadline",
+            label: task.deadline.map { formattedPlanningDate($0, hasTime: task.deadlineHasTime) } ?? "Deadline",
             icon: "calendar",
-            isPlaceholder: editedDeadline == nil
-        ) { showDatePicker = true }
+            isPlaceholder: task.deadline == nil
+        ) {
+            deadlinePickerHasTime = task.deadlineHasTime
+            showDatePicker = true
+        }
+        .accessibilityLabel(task.deadline.map { "Deadline \(formattedPlanningDate($0, hasTime: task.deadlineHasTime))" } ?? "Deadline")
 
         ChipView(
-            label: editedPriority?.rawValue ?? "Priority",
+            label: task.priority?.rawValue ?? "Priority",
             icon: "flag",
-            color: editedPriority?.color ?? Palette.ink,
-            isPlaceholder: editedPriority == nil
+            color: task.priority?.color ?? Palette.ink,
+            isPlaceholder: task.priority == nil
         ) { showPriorityPicker = true }
 
-        ChipView(label: editedProject?.title ?? "Inbox", icon: "folder") { showProjectPicker = true }
+        ChipView(label: task.project?.title ?? "Inbox", icon: "folder") { showProjectPicker = true }
 
         ChipView(
-            label: editedTags.isEmpty ? "Tags" : editedTags.joined(separator: ", "),
+            label: task.tags.isEmpty ? "Tags" : task.tags.joined(separator: ", "),
             icon: "tag",
-            isPlaceholder: editedTags.isEmpty
+            isPlaceholder: task.tags.isEmpty
         ) { showTagPicker = true }
 
         ChipView(
-            label: editedRecurrence == .custom
-                ? (editedCustomRule?.summary ?? "Custom")
-                : (editedRecurrence == .none ? "Repeat" : editedRecurrence.rawValue),
+            label: task.recurrence == .custom
+                ? (task.customRecurrenceRule?.summary ?? "Custom")
+                : (task.recurrence == .none ? "Repeat" : task.recurrence.rawValue),
             icon: "repeat",
-            isPlaceholder: editedRecurrence == .none
+            isPlaceholder: task.recurrence == .none
         ) { showRecurrencePicker = true }
     }
 
@@ -293,35 +253,52 @@ struct TaskDetailView: View {
         NotificationService.shared.rescheduleAllReminders(modelContext: modelContext)
     }
 
-    private func saveChanges() async {
-        let deadlineChanged = task.deadline != editedDeadline
-        let scheduledDayChanged = task.scheduledDay != editedScheduledDay
+    // MARK: - Autosave
 
-        task.title = editedTitle
-        task.setDeadline(editedDeadline, hasTime: editedDeadlineHasTime, defaults: .current())
-        task.scheduledDay = editedScheduledDay
-        task.validateScheduledDay()
-        task.priority = editedPriority
-        task.tags = editedTags
-        task.project = editedProject
-        task.recurrence = editedRecurrence
-        task.customRecurrenceRule = editedCustomRule
-        task.isDirty = true
+    /// A binding that writes straight to the task as a task detail edit.
+    private func edit<Value>(_ field: ReferenceWritableKeyPath<TaskItem, Value>) -> Binding<Value> {
+        Binding(
+            get: { task[keyPath: field] },
+            set: { value in task.edit { $0[keyPath: field] = value } }
+        )
+    }
 
-        // Reschedule reminders if deadline changed
-        if deadlineChanged || scheduledDayChanged {
-            NotificationService.shared.rescheduleAllReminders(modelContext: modelContext)
-            // Redistribute subtask dates if parent deadline changed
-            if task.hasSubtasks {
-                SubtaskScheduler.distributeSubtaskDates(parent: task)
+    private var scheduledDayBinding: Binding<Date?> {
+        Binding(
+            get: { task.scheduledDay },
+            set: { day in
+                task.edit { $0.scheduledDay = day }
+                planningDatesChanged()
             }
-        }
+        )
+    }
 
-        do {
-            try await taskProvider.submitPendingChanges(for: [task], store: modelContext)
-        } catch {
-            syncErrorMessage = error.localizedDescription
+    private var deadlineBinding: Binding<Date?> {
+        Binding(
+            get: { task.deadline },
+            set: { deadline in
+                task.edit { $0.setDeadline(deadline, hasTime: deadlinePickerHasTime, defaults: .current()) }
+                planningDatesChanged()
+            }
+        )
+    }
+
+    /// Reminders follow the deadline, and subtask dates spread across the scheduled window.
+    private func planningDatesChanged() {
+        if task.hasSubtasks {
+            SubtaskScheduler.distributeSubtaskDates(parent: task)
         }
+        NotificationService.shared.rescheduleAllReminders(modelContext: modelContext)
+    }
+
+    /// Closing the sheet submits the task's dirty edit. A failed submit leaves the edit dirty
+    /// for the next sync.
+    private func submitPendingEdits() {
+        guard task.isDirty else { return }
+        let task = task
+        let store = modelContext
+        let provider = taskProvider
+        Task { await provider.submitPendingChangesReportingFailure(for: [task], store: store) }
     }
 
     private func formattedPlanningDate(_ date: Date, hasTime: Bool) -> String {
