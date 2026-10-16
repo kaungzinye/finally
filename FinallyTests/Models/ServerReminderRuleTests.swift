@@ -151,4 +151,15 @@ final class ServerReminderRuleTests: XCTestCase {
         XCTAssertEqual(Set([reminder.notificationId(for: first), reminder.notificationId(for: second),
                             reminder.notificationId(for: otherWorkspace)]).count, 3)
     }
+
+    func testExactRulesSharingAnInstantStayDistinct() throws {
+        let at = "2026-10-20T15:00:00.000Z"
+        let first = try decode(#"{"id":"\#(UUID().uuidString)","kind":"exact","at":"\#(at)"}"#)
+        let second = try decode(#"{"id":"\#(UUID().uuidString)","kind":"exact","at":"\#(at)"}"#)
+        let task = TaskItem(externalTaskID: "1", title: "Proposal")
+        task.providerWorkspaceId = "server"
+
+        XCTAssertEqual(first.fireDate(for: task), second.fireDate(for: task))
+        XCTAssertNotEqual(first.notificationId(for: task), second.notificationId(for: task))
+    }
 }
