@@ -264,6 +264,32 @@ final class DailyFocusServiceTests: XCTestCase {
         XCTAssertEqual(api.dailyFocus[MockFinallyServerAPIClient.dailyFocusKey(projectID: 42, day: focus.dayKey)]?.picks, [])
     }
 
+    func testRetryWaitsForTheTodaySaveSoTheServerKeepsTheNewerPicks() async throws {
+        let api = MockFinallyServerAPIClient()
+        let context = try makeInMemoryContext()
+        let server = makeServerWorkspace()
+        context.insert(server)
+        let service = DailyFocusService(serverClient: { _ in api })
+        let focus = try await service.dailyFocus(for: day, workspace: server, store: context)
+        let gate = WriteGate()
+        api.dailyFocusWriteGate = { await gate.holdFirstWrite() }
+        try focus.add(DailyFocusPick(providerWorkspaceID: server.workspaceId, externalTaskID: "17"))
+        let todaySave = Task { try await service.save(focus, workspace: server, store: context) }
+        while !gate.isHolding { await Task.yield() }
+
+        try focus.add(DailyFocusPick(providerWorkspaceID: server.workspaceId, externalTaskID: "18"))
+        try context.save()
+        let retry = Task { await service.retryPendingChanges(store: context) }
+        for _ in 0..<50 { await Task.yield() }
+        gate.release()
+        try await todaySave.value
+        await retry.value
+
+        let key = MockFinallyServerAPIClient.dailyFocusKey(projectID: 42, day: focus.dayKey)
+        XCTAssertEqual(api.dailyFocus[key]?.picks.map(\.externalTaskID), ["17", "18"])
+        XCTAssertFalse(focus.isDirty)
+    }
+
     func testRetryRepeatsFailedServerReadsUntilTheySucceed() async throws {
         let api = MockFinallyServerAPIClient()
         let context = try makeInMemoryContext()
@@ -342,5 +368,25 @@ final class DailyFocusServiceTests: XCTestCase {
         let configuration = ModelConfiguration(isStoredInMemoryOnly: true)
         let container = try ModelContainer(for: schema, configurations: [configuration])
         return ModelContext(container)
+    }
+}
+
+/// Holds the first Daily Focus write on its way to the server until the test releases it.
+@MainActor
+private final class WriteGate {
+    private var writes = 0
+    private var held: CheckedContinuation<Void, Never>?
+
+    var isHolding: Bool { held != nil }
+
+    func holdFirstWrite() async {
+        writes += 1
+        guard writes == 1 else { return }
+        await withCheckedContinuation { held = $0 }
+    }
+
+    func release() {
+        held?.resume()
+        held = nil
     }
 }

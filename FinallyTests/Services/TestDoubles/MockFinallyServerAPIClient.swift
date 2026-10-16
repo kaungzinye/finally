@@ -17,6 +17,8 @@ final class MockFinallyServerAPIClient: FinallyServerAPIClient {
     private(set) var dailyFocusOperations: [String] = []
     var dailyFocusReadHook: (@MainActor () async -> Void)?
     var dailyFocusWriteHook: (@MainActor () async -> Void)?
+    /// Runs before a write reaches the stored record, standing in for a request still on its way.
+    var dailyFocusWriteGate: (@MainActor () async -> Void)?
 
     func login(username: String, password: String) async throws -> String {
         loginRequests += 1
@@ -125,6 +127,7 @@ final class MockFinallyServerAPIClient: FinallyServerAPIClient {
     ) async throws -> FinallyServerDailyFocus {
         dailyFocusOperations.append("write")
         if let error { throw error }
+        await dailyFocusWriteGate?()
         let record = FinallyServerDailyFocus(
             projectID: projectID,
             day: day,
