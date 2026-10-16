@@ -12,8 +12,8 @@ struct DayEntry: TimelineEntry {
     }
 }
 
-/// Reads the snapshot the app writes. The timeline adds an entry at the next midnight so Today
-/// rolls over without the app.
+/// Reads the snapshot the app writes. The timeline adds an entry after each timed deadline left
+/// today and at the next midnight, so deadlines turn overdue and Today rolls over without the app.
 struct DayProvider: TimelineProvider {
     func placeholder(in context: Context) -> DayEntry {
         DayEntry(snapshot: .sample(at: .now), at: .now)
@@ -25,12 +25,9 @@ struct DayProvider: TimelineProvider {
     }
 
     func getTimeline(in context: Context, completion: @escaping (Timeline<DayEntry>) -> Void) {
-        let now = Date()
-        let calendar = Calendar.current
-        let midnight = calendar.date(byAdding: .day, value: 1, to: calendar.startOfDay(for: now)) ?? now
         let snapshot = storedSnapshot
         completion(Timeline(
-            entries: [DayEntry(snapshot: snapshot, at: now), DayEntry(snapshot: snapshot, at: midnight)],
+            entries: snapshot.timelineDates(from: Date()).map { DayEntry(snapshot: snapshot, at: $0) },
             policy: .atEnd
         ))
     }
