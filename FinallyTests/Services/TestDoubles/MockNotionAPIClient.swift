@@ -16,6 +16,8 @@ final class MockNotionAPIClient: NotionAPIClient {
     var archivedPageIds: [String] = []
     var createPageErrors: [Error] = []
     var updatePageErrors: [Error] = []
+    /// Runs while an update request waits, before it returns.
+    var updatePageHook: (() -> Void)?
 
     func retrieveDatabase(id: String) async throws -> NotionDatabase {
         if !retrieveDatabaseQueue.isEmpty {
@@ -51,6 +53,7 @@ final class MockNotionAPIClient: NotionAPIClient {
             throw updatePageErrors.removeFirst()
         }
         updatedPages.append((pageId: pageId, properties: properties))
+        updatePageHook?()
         return NotionPage(
             id: pageId,
             lastEditedTime: "2026-03-13T00:00:00.000Z",

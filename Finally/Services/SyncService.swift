@@ -241,7 +241,11 @@ final class SyncService {
         } else {
             _ = try await api.updatePage(pageId: task.externalTaskID, properties: properties)
         }
-        task.isDirty = false
+        // An edit made while the request waited is not in what Notion received, so it stays
+        // dirty for the next push.
+        let unchangedDuringRequest = NSDictionary(dictionary: properties)
+            .isEqual(to: buildNotionProperties(for: task, mappings: mappings))
+        task.isDirty = task.isDeleted || !unchangedDuringRequest
         task.lastSyncedAt = Date()
         try modelContext.save()
     }
