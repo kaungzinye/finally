@@ -110,7 +110,7 @@ final class ServerReminderSyncTests: XCTestCase {
         task.isDirty = true
         try await adapter.synchronize(.push, workspace: workspace, store: store)
 
-        XCTAssertEqual(api.mutations.last?.changedFields, ["due_date", "reminder_rules"])
+        XCTAssertEqual(api.mutations.last?.changedFields, ["due_date", "deadline_has_time", "reminder_rules"])
         XCTAssertEqual(api.tasks["1"]?.reminders, task.taskReminders)
         XCTAssertEqual(task.deadlineReminderOffsets, [.morningOf, .daysBefore(1), .weeksBefore(1)])
         XCTAssertFalse(task.isDirty)

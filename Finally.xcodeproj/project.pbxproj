@@ -113,6 +113,7 @@
 		B89290F5A2A918135DCDD00D /* DailyFocusServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4DBCF7ABA6666B3B50A24B37 /* DailyFocusServiceTests.swift */; };
 		BC9AB62253E540AFDD7EA8B5 /* DailyFocusHeading.swift in Sources */ = {isa = PBXBuildFile; fileRef = 34F6D7F2BE4279044D2B4131 /* DailyFocusHeading.swift */; };
 		BCC9C4338B5DC147BCB445A9 /* DailyFocusPickerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 194B2A1A615910ADA6920C26 /* DailyFocusPickerView.swift */; };
+		BCF477EDCA2E593838BDF868 /* FinallyServerTaskSnapshotTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B6B7CB537D93F0A3DF07ED4 /* FinallyServerTaskSnapshotTests.swift */; };
 		BF566334AA73E647D972DF69 /* Today.swift in Sources */ = {isa = PBXBuildFile; fileRef = 881BE845BBC337EEB8F00A12 /* Today.swift */; };
 		C0379921229816BF7E3D44E2 /* KeychainHelper.swift in Sources */ = {isa = PBXBuildFile; fileRef = 19D6396C60EC66DD7C32ED4D /* KeychainHelper.swift */; };
 		C7C32C1C2B40907D50C60ECF /* TaskTitleParserTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F26626B6FB31DD409097277B /* TaskTitleParserTests.swift */; };
@@ -210,6 +211,7 @@
 		44FC30A47CA1D9B4F15234D2 /* TaskDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskDetailView.swift; sourceTree = "<group>"; };
 		4752AF695A41F249F8D509DC /* WidgetSnapshotTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetSnapshotTests.swift; sourceTree = "<group>"; };
 		47A07329C04675C8DE9F5747 /* BoardColumnsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BoardColumnsTests.swift; sourceTree = "<group>"; };
+		4B6B7CB537D93F0A3DF07ED4 /* FinallyServerTaskSnapshotTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FinallyServerTaskSnapshotTests.swift; sourceTree = "<group>"; };
 		4D0FC86B67D088170EF867CC /* CaptureDraftTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CaptureDraftTests.swift; sourceTree = "<group>"; };
 		4D283DE85CFFB6238F20D533 /* MockURLProtocol.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MockURLProtocol.swift; sourceTree = "<group>"; };
 		4D6A9D885F54EDA96C38C007 /* Phase6BNotificationServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Phase6BNotificationServiceTests.swift; sourceTree = "<group>"; };
@@ -548,6 +550,7 @@
 		D8605D98B3B21B2C43207CAC /* Unit */ = {
 			isa = PBXGroup;
 			children = (
+				4B6B7CB537D93F0A3DF07ED4 /* FinallyServerTaskSnapshotTests.swift */,
 				3C603D9DD83AEBE3EBCFE5F8 /* NotificationServiceUnitTests.swift */,
 				6BE4BD53E8A06D86F228E95E /* NotionDataShapeUnitTests.swift */,
 				4D6A9D885F54EDA96C38C007 /* Phase6BNotificationServiceTests.swift */,
@@ -735,6 +738,7 @@
 				DCA78CA7E0DC752FFBA0F504 /* E2EConfig.swift in Sources */,
 				0C436DEF3924CF4AA7AC8B8C /* E2ETestBase.swift in Sources */,
 				0D561E416FA10BC468BB204E /* FinallyServerConnectionIntegrationTests.swift in Sources */,
+				BCF477EDCA2E593838BDF868 /* FinallyServerTaskSnapshotTests.swift in Sources */,
 				5D38206DAB3C2F743DAF14E9 /* MockFinallyServerAPIClient.swift in Sources */,
 				D684A2A1AEB4D0DD228DF4E2 /* MockNotificationScheduler.swift in Sources */,
 				EE23D4C64F30E93498271399 /* MockNotionAPIClient.swift in Sources */,

@@ -1,6 +1,6 @@
 # Task reminder rules
 
-Finally Server persists `deadline_has_time` and `reminder_rules` on each task. Conditional task writes synchronize these fields alongside the task revision. Deadline precision shares the `due_date` field's conflict ownership. Reminder rules have their own field ownership.
+Finally Server persists `deadline_has_time` and `reminder_rules` on each task. Conditional task writes synchronize these fields alongside the task revision. Deadline precision shares the `due_date` field's conflict ownership, and a phone deadline edit sends `due_date` and `deadline_has_time` together. Reminder rules have their own field ownership.
 
 ## Rule shapes
 
