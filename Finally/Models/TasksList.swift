@@ -41,7 +41,7 @@ struct TasksList {
     }
 
     /// Earlier deadline first, then earlier scheduled day. A missing date sorts last.
-    private static func isNearer(_ a: TaskItem, _ b: TaskItem) -> Bool {
+    static func isNearer(_ a: TaskItem, _ b: TaskItem) -> Bool {
         if a.deadline != b.deadline { return a.deadline ?? .distantFuture < b.deadline ?? .distantFuture }
         if a.scheduledDay != b.scheduledDay { return a.scheduledDay ?? .distantFuture < b.scheduledDay ?? .distantFuture }
         return a.title.localizedCompare(b.title) == .orderedAscending
