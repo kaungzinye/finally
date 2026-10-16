@@ -30,6 +30,9 @@ struct TodayView: View {
         }.sorted { $0.day < $1.day }
     }
 
+    /// No save or sheet is in flight, so Today can move to another day.
+    private var isIdle: Bool { !isSaving && replanningFocus == nil && !showPicker && !showEditor }
+
     private var otherTasks: [Today.Member<TaskItem>] {
         let scoped = tasks.scoped(to: workspace)
         guard let dailyFocus else { return Today.members(of: scoped, at: Date()) }
@@ -89,12 +92,19 @@ struct TodayView: View {
             .disabled(isSaving)
             .task(id: loadID) { await load() }
             .onChange(of: scenePhase) { _, phase in
-                if phase == .active && !isSaving && replanningFocus == nil && !showPicker && !showEditor {
+                if phase == .active && isIdle {
                     day = Calendar.current.startOfDay(for: Date())
                     Task { await load() }
                 }
             }
+            // Midnight passing while the app stays open moves Today to the new day.
+            .onReceive(NotificationCenter.default.publisher(for: UIApplication.significantTimeChangeNotification)) { _ in
+                if isIdle {
+                    day = Calendar.current.startOfDay(for: Date())
+                }
+            }
             .refreshable {
+                day = Calendar.current.startOfDay(for: Date())
                 try? await taskProvider.synchronize(.launch, store: modelContext)
                 await load()
             }
