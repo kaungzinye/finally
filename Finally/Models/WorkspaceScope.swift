@@ -37,3 +37,10 @@ extension Sequence where Element == ProjectItem {
         filter { $0.belongs(to: workspace) }
     }
 }
+
+extension Sequence where Element == ProjectItem {
+    /// The projects a task may join: those in the task's own provider workspace.
+    func available(to task: TaskItem) -> [ProjectItem] {
+        filter { $0.providerWorkspaceId == task.providerWorkspaceId }
+    }
+}

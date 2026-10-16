@@ -125,6 +125,7 @@
 		D5423739046AE1DC495CD241 /* ParentTaskPicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = CCE5F29F716D6CB80D87B657 /* ParentTaskPicker.swift */; };
 		D684A2A1AEB4D0DD228DF4E2 /* MockNotificationScheduler.swift in Sources */ = {isa = PBXBuildFile; fileRef = B3D49B256E36F33AAD2C9991 /* MockNotificationScheduler.swift */; };
 		D6D0544538223C2E6CF6F0E6 /* ProjectPicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = 832612E5901E80295CD69C97 /* ProjectPicker.swift */; };
+		D6D4EBDDADC01AD8FA155465 /* WorkspaceScopeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 404267B4A6D1B3F254772113 /* WorkspaceScopeTests.swift */; };
 		D71410F4BEF4D1538E8D6A5D /* NotionWorkspaceConfiguration.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6AB16B5D414051565B4B4B2B /* NotionWorkspaceConfiguration.swift */; };
 		D8706E906584CA988076A65F /* TasksDemoFixture.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8379C4A99FB2D717844E53B8 /* TasksDemoFixture.swift */; };
 		D97C60EE3542CFC75F712AA4 /* UpcomingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A9A54018F6182362CEAB38B7 /* UpcomingView.swift */; };
@@ -202,6 +203,7 @@
 		3C603D9DD83AEBE3EBCFE5F8 /* NotificationServiceUnitTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationServiceUnitTests.swift; sourceTree = "<group>"; };
 		3C9598E213C06616575B315C /* ModelContainer+Shared.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "ModelContainer+Shared.swift"; sourceTree = "<group>"; };
 		3F2D02477CFFC7AB499C2C11 /* WidgetPublisher.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetPublisher.swift; sourceTree = "<group>"; };
+		404267B4A6D1B3F254772113 /* WorkspaceScopeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkspaceScopeTests.swift; sourceTree = "<group>"; };
 		41C4DB95518E923875AD69F5 /* WidgetCompletionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetCompletionTests.swift; sourceTree = "<group>"; };
 		42B3711F01223345C22AC39D /* SyncServiceNotionMappingIntegrationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SyncServiceNotionMappingIntegrationTests.swift; sourceTree = "<group>"; };
 		432E1F70246CCDDAE110402D /* FinallyServerConnectionIntegrationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FinallyServerConnectionIntegrationTests.swift; sourceTree = "<group>"; };
@@ -592,6 +594,7 @@
 				41C4DB95518E923875AD69F5 /* WidgetCompletionTests.swift */,
 				F3F43A0781142BD781B31CE4 /* WidgetDayTests.swift */,
 				4752AF695A41F249F8D509DC /* WidgetSnapshotTests.swift */,
+				404267B4A6D1B3F254772113 /* WorkspaceScopeTests.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -769,6 +772,7 @@
 				59E66E52132F634459982366 /* WidgetCompletionTests.swift in Sources */,
 				EAAF54985B0838DA9647E794 /* WidgetDayTests.swift in Sources */,
 				A11E76C94700690226719446 /* WidgetSnapshotTests.swift in Sources */,
+				D6D4EBDDADC01AD8FA155465 /* WorkspaceScopeTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

@@ -148,7 +148,7 @@ struct TaskDetailView: View {
             TagPicker(selectedTags: edit(\.tags))
         }
         .sheet(isPresented: $showProjectPicker) {
-            ProjectPicker(selection: edit(\.project))
+            ProjectPicker(selection: edit(\.project), task: task)
         }
         .sheet(isPresented: $showRemindMeAt) {
             RemindMeAtSheet { date in
