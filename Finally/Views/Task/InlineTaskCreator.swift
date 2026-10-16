@@ -335,12 +335,12 @@ struct InlineTaskCreator: View {
         let result = TaskTitleParser.parse(text)
 
         // Auto-populate date if not manually set
-        if let detected = result.detectedDate, !nlpDetectedDate, deadline == nil {
-            deadline = detected
+        if let detected = result.scheduledDay, !nlpDetectedDate, scheduledDay == nil {
+            scheduledDay = detected
             nlpDetectedDate = true
-        } else if result.detectedDate == nil && nlpDetectedDate {
+        } else if result.scheduledDay == nil && nlpDetectedDate {
             // User removed the date keyword
-            deadline = nil
+            scheduledDay = nil
             nlpDetectedDate = false
         }
 
