@@ -61,12 +61,55 @@ appId: com.kaungzinye.finally
 # The switch hosts the Board in place of the list.
 - tapOn:
     id: "tasks-layout-board"
-- assertVisible: "To Do"
+- assertVisible:
+    id: "board-status-notStarted"
+- assertVisible:
+    text: "Not started"
+    childOf:
+      id: "board-status-notStarted"
+- assertVisible:
+    text: "In progress"
+    childOf:
+      id: "board-status-inProgress"
+- assertVisible:
+    text: "Complete"
+    childOf:
+      id: "board-status-complete"
 - assertVisible: "Service the boiler"
 - assertNotVisible: "Sort"
 - assertNotVisible:
     id: "tasks-filter-unscheduled"
 - takeScreenshot: 07-board
+
+# The status bar reaches every column.
+- tapOn:
+    id: "board-status-inProgress"
+- assertVisible:
+    text: "Hang the shelves"
+    childOf:
+      id: "board-column-inProgress"
+- tapOn:
+    id: "board-status-complete"
+- assertVisible:
+    text: "Mow the lawn"
+    childOf:
+      id: "board-column-complete"
+- takeScreenshot: 08-board-complete
+
+# A card's status chip moves it to the next column.
+- tapOn:
+    id: "board-status-notStarted"
+- tapOn:
+    id: "status-chip"
+    childOf:
+      id: "board-card-demo-boiler"
+- tapOn:
+    id: "board-status-inProgress"
+- assertVisible:
+    text: "Service the boiler"
+    childOf:
+      id: "board-column-inProgress"
+- takeScreenshot: 09-board-moved
 - tapOn:
     id: "tasks-layout-list"
 - assertVisible:
@@ -75,7 +118,7 @@ appId: com.kaungzinye.finally
 - tapOn: "Search"
 - inputText: "lamp"
 - assertVisible: "Fix the hall lamp"
-- takeScreenshot: 08-search
+- takeScreenshot: 10-search
 - tapOn: "Fix the hall lamp"
 - assertVisible: "Scheduled"
-- takeScreenshot: 09-search-detail
+- takeScreenshot: 11-search-detail
