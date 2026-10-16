@@ -74,7 +74,7 @@ appId: com.kaungzinye.finally
 - tapOn:
     id: "daily-focus-review-day"
 - tapOn:
-    text: "Drop focus pick"
+    id: "daily-focus-drop-pick"
     index: 0
 - tapOn: "Done"
 - assertVisible: "0 of 2 done"

@@ -63,10 +63,11 @@ struct TodayView: View {
                         } label: {
                             Label("Replan \(focus.day.formatted(.dateTime.weekday(.wide)))", systemImage: "arrow.triangle.branch")
                         }
+                        .foregroundStyle(Palette.ink)
                         .accessibilityIdentifier("daily-focus-unfinished-day")
                         .cardRow()
                     } footer: {
-                        Text("Choose what happens to each unfinished pick.")
+                        SectionNote("Choose what happens to each unfinished task.")
                     }
                 }
                 if !otherTasks.isEmpty {

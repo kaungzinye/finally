@@ -32,33 +32,39 @@ struct DailyFocusReplanningView: View {
     var body: some View {
         NavigationStack {
             List {
-                if let errorMessage { Text(errorMessage).foregroundStyle(.red) }
+                if let errorMessage {
+                    Callout(message: errorMessage)
+                        .paperRow()
+                }
                 if unfinished.isEmpty {
-                    ContentUnavailableView("Day reviewed", systemImage: "checkmark.seal", description: Text("Each unfinished pick has a decision."))
+                    ContentUnavailableView("Day reviewed", systemImage: "checkmark.seal", description: Text("Every unfinished task has a decision."))
+                        .paperRow()
                 }
                 ForEach(unfinished) { item in
                     Section {
                         if let task = item.task {
-                            Button("Keep for \(nextDay.formatted(date: .abbreviated, time: .omitted))") {
+                            Button("Keep for \(nextDay.formatted(.dateTime.weekday(.wide)))") {
                                 prepareKeep(item.pick)
                             }
-                            Button("Break down") { breakdownTask = task }
+                            Button("Break it down") { breakdownTask = task }
                             Button("Schedule") {
                                 scheduleDay = max(nextDay, task.scheduledDay ?? nextDay)
                                 scheduleTask = task
                             }
                             Button("Defer") { decide(item, .deferTask) }
                         }
-                        Button("Drop focus pick") { decide(item, .drop) }
+                        Button("Drop") { decide(item, .drop) }
                             .accessibilityIdentifier("daily-focus-drop-pick")
                     } header: {
-                        Text(item.task?.title ?? "Deleted")
+                        SectionLabel(item.task?.title ?? "Deleted")
                     } footer: {
-                        Text("Drop keeps the task and its dates. Defer clears its scheduled day. Schedule sets its scheduled day.")
+                        SectionNote("Drop keeps the task and its dates. Defer clears its scheduled day. Schedule picks a new one.")
                     }
+                    .foregroundStyle(Palette.ink)
+                    .cardRow()
                 }
             }
-            .paperList()
+            .paperList(background: Palette.sheet)
             .navigationTitle("Review the day")
             .navigationBarTitleDisplayMode(.inline)
             .disabled(isSaving)
@@ -70,14 +76,23 @@ struct DailyFocusReplanningView: View {
             .sheet(isPresented: Binding(get: { keepPick != nil }, set: { if !$0 { keepPick = nil } })) {
                 if let nextFocus, let keepPick {
                     NavigationStack {
-                        List(nextFocus.resolvedPicks(among: tasks)) { item in
-                            Button(item.task?.title ?? "Deleted") {
-                                let source = ResolvedDailyFocusPick(pick: keepPick, task: tasks.first { $0.dailyFocusPick == keepPick && !$0.isDeleted })
-                                decide(source, .keep, nextFocus: nextFocus, displacing: item.pick)
-                                self.keepPick = nil
+                        List {
+                            Section {
+                                ForEach(nextFocus.resolvedPicks(among: tasks)) { item in
+                                    Button(item.task?.title ?? "Deleted") {
+                                        let source = ResolvedDailyFocusPick(pick: keepPick, task: tasks.first { $0.dailyFocusPick == keepPick && !$0.isDeleted })
+                                        decide(source, .keep, nextFocus: nextFocus, displacing: item.pick)
+                                        self.keepPick = nil
+                                    }
+                                    .foregroundStyle(Palette.ink)
+                                    .cardRow()
+                                }
+                            } header: {
+                                SectionNote("\(nextDay.formatted(.dateTime.weekday(.wide))) is full. The task you replace keeps its dates.")
                             }
                         }
-                        .navigationTitle("Choose a pick to replace")
+                        .paperList(background: Palette.sheet)
+                        .navigationTitle("Choose a task to replace")
                         .navigationBarTitleDisplayMode(.inline)
                         .toolbar {
                             ToolbarItem(placement: .cancellationAction) {
@@ -85,15 +100,22 @@ struct DailyFocusReplanningView: View {
                             }
                         }
                     }
+                    .paperSheet()
                 }
             }
             .sheet(item: $scheduleTask) { task in
                 NavigationStack {
-                    Form {
+                    VStack(alignment: .leading, spacing: 12) {
                         DatePicker("Scheduled", selection: $scheduleDay, in: Calendar.current.startOfDay(for: Date())..., displayedComponents: .date)
-                        Text("The task's deadline stays fixed.").foregroundStyle(.secondary)
+                            .datePickerStyle(.graphical)
+                            .tint(Palette.ink)
+                        SectionNote("The deadline stays where it is.")
+                        Spacer(minLength: 0)
                     }
-                    .navigationTitle("Schedule task")
+                    .padding(.horizontal, 20)
+                    .background(Palette.sheet)
+                    .navigationTitle("Schedule")
+                    .navigationBarTitleDisplayMode(.inline)
                     .toolbar {
                         ToolbarItem(placement: .cancellationAction) {
                             Button("Cancel") { scheduleTask = nil }
@@ -106,22 +128,39 @@ struct DailyFocusReplanningView: View {
                         }
                     }
                 }
+                .paperSheet()
             }
             .sheet(item: $breakdownTask) { task in
                 NavigationStack {
                     List {
-                        Text("Create unfinished steps for this task, then finish the decision.")
-                        Button("Edit task and steps") { showTaskDetail = true }
-                        ForEach(task.activeSubtasks) { step in
-                            Label(step.title, systemImage: step.status == .done ? "checkmark.circle" : "circle")
+                        Section {
+                            Button("Edit the task and its steps") { showTaskDetail = true }
+                            ForEach(task.activeSubtasks) { step in
+                                HStack(spacing: 12) {
+                                    PriorityRing(color: step.priority?.color ?? Palette.low, isDone: step.status == .done, diameter: 18)
+                                    Text(step.title)
+                                }
+                            }
+                        } header: {
+                            SectionNote("Add the unfinished steps, then finish here.")
                         }
-                        Button("Finish breaking down") {
-                            decide(ResolvedDailyFocusPick(pick: task.dailyFocusPick, task: task), .breakDown)
-                            breakdownTask = nil
+                        .foregroundStyle(Palette.ink)
+                        .cardRow()
+
+                        Section {
+                            Button("Finish breaking down") {
+                                decide(ResolvedDailyFocusPick(pick: task.dailyFocusPick, task: task), .breakDown)
+                                breakdownTask = nil
+                            }
+                            .buttonStyle(.ink)
+                            .disabled(task.nextActionableSubtask == nil)
+                            .listRowBackground(Color.clear)
+                            .listRowInsets(EdgeInsets())
                         }
-                        .disabled(task.nextActionableSubtask == nil)
                     }
-                    .navigationTitle("Break down")
+                    .paperList(background: Palette.sheet)
+                    .navigationTitle("Break it down")
+                    .navigationBarTitleDisplayMode(.inline)
                     .toolbar {
                         ToolbarItem(placement: .cancellationAction) {
                             Button("Cancel") { breakdownTask = nil }
@@ -129,8 +168,10 @@ struct DailyFocusReplanningView: View {
                     }
                     .sheet(isPresented: $showTaskDetail) { TaskDetailView(task: task) }
                 }
+                .paperSheet()
             }
         }
+        .paperSheet()
     }
 
     private func prepareKeep(_ pick: DailyFocusPick) {
