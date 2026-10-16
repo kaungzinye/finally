@@ -7,10 +7,6 @@ struct ProviderConnectView: View {
     @Environment(\.modelContext) private var modelContext
     @State private var errorMessage: String?
 
-    private var savedWorkspaces: [UserSession] {
-        sessions.filter { ProviderSessionRoute.resolve(selectedWorkspace: $0) == .tasks }
-    }
-
     var body: some View {
         NavigationStack {
             ScrollView {
@@ -31,10 +27,10 @@ struct ProviderConnectView: View {
                     }
 
                     if let errorMessage { Callout(message: errorMessage) }
-                    if !savedWorkspaces.isEmpty {
+                    if !sessions.isEmpty {
                         VStack(alignment: .leading, spacing: 16) {
                             SectionLabel("Your workspaces")
-                            ForEach(savedWorkspaces, id: \.id) { workspace in
+                            ForEach(sessions, id: \.id) { workspace in
                                 Button {
                                     do {
                                         sessions.forEach { $0.isSelected = $0.id == workspace.id }
@@ -46,7 +42,9 @@ struct ProviderConnectView: View {
                                 } label: {
                                     providerLabel(
                                         workspace.workspaceName,
-                                        detail: "Open this workspace.",
+                                        detail: ProviderSessionRoute.resolve(selectedWorkspace: workspace) == .databaseSetup
+                                            ? "Finish choosing your tasks database."
+                                            : "Open this workspace.",
                                         symbol: workspace.providerIdentity == .finallyServer ? "server.rack" : "building.2"
                                     )
                                 }
