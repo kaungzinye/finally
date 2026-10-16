@@ -2,4 +2,11 @@ appId: com.kaungzinye.finally
 ---
 - launchApp:
     clearState: true
+- extendedWaitUntil:
+    visible: "Choose where your tasks live."
+    timeout: 10000
+- takeScreenshot: welcome
+- tapOn:
+    id: "connect-notion-provider"
 - assertVisible: "Connect to Notion"
+- takeScreenshot: notion-connect
