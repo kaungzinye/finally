@@ -8,22 +8,7 @@ struct InlineTaskCreator: View {
     @Query(filter: #Predicate<TaskItem> { $0.isDeleted == false }) private var allTasks: [TaskItem]
     @Query private var sessions: [UserSession]
 
-    @State private var taskTitle = ""
-    @State private var deadline: Date?
-    @State private var scheduledDay: Date?
-    @State private var deadlineHasTime = false
-    @State private var priority: TaskPriority?
-    @State private var tags: [String] = []
-    @State private var project: ProjectItem?
-    @State private var recurrence: Recurrence = .none
-    @State private var customRecurrenceRule: RecurrenceRule?
-    @State private var parentTask: TaskItem?
-
-    // NLP auto-detection tracking
-    @State private var nlpDetectedDate = false
-    @State private var nlpDetectedPriority = false
-    @State private var nlpDetectedProject = false
-    @State private var nlpDetectedTags = false
+    @State private var draft = CaptureDraft()
     @State private var projectSuggestions: [ProjectItem] = []
     @State private var tagSuggestions: [String] = []
     @State private var showProjectSuggestions = false
@@ -59,12 +44,12 @@ struct InlineTaskCreator: View {
             }
 
             // Text field
-            TextField("Add a task...", text: $taskTitle)
+            TextField("Add a task...", text: $draft.text)
                 .textFieldStyle(.plain)
                 .focused($isFocused)
                 .padding(.horizontal, 16)
-                .onChange(of: taskTitle) { _, newValue in
-                    handleNLPParsing(newValue)
+                .onChange(of: draft.text) { _, newValue in
+                    draft.readText(projects: selectedProjects)
                     updateSuggestions(newValue)
                 }
 
@@ -118,46 +103,46 @@ struct InlineTaskCreator: View {
             if hasSelections {
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: 6) {
-                        if let deadline {
+                        if let deadline = draft.deadline {
                             ChipView(
-                                label: formatPlanningDate(deadline, hasTime: deadlineHasTime),
+                                label: "Deadline \(formatPlanningDate(deadline, hasTime: draft.deadlineHasTime))",
                                 icon: "calendar"
                             ) { showDatePicker = true }
                         }
-                        if let scheduledDay {
+                        if let scheduledDay = draft.scheduledDay {
                             ChipView(
                                 label: "Scheduled \(formatPlanningDate(scheduledDay, hasTime: false))",
                                 icon: "scope"
                             ) { showScheduledDayPicker = true }
                         }
-                        if let priority {
+                        if let priority = draft.priority {
                             ChipView(
                                 label: priority.rawValue,
                                 icon: priority.icon,
                                 color: priority.color
                             ) { showPriorityPicker = true }
                         }
-                        if !tags.isEmpty {
+                        if !draft.tags.isEmpty {
                             ChipView(
-                                label: "\(tags.count) tag\(tags.count == 1 ? "" : "s")",
+                                label: "\(draft.tags.count) tag\(draft.tags.count == 1 ? "" : "s")",
                                 icon: "tag"
                             ) { showTagPicker = true }
                         }
-                        if let project {
+                        if let project = draft.project {
                             ChipView(
                                 label: project.title,
                                 icon: "folder"
                             ) { showProjectPicker = true }
                         }
-                        if let parentTask {
+                        if let parentTask = draft.parentTask {
                             ChipView(
                                 label: "↳ \(parentTask.title)",
                                 icon: "list.bullet.indent"
                             ) { showParentPicker = true }
                         }
-                        if recurrence != .none {
+                        if draft.recurrence != .none {
                             ChipView(
-                                label: recurrence == .custom ? (customRecurrenceRule?.summary ?? "Custom") : recurrence.rawValue,
+                                label: draft.recurrence == .custom ? (draft.customRecurrenceRule?.summary ?? "Custom") : draft.recurrence.rawValue,
                                 icon: "repeat"
                             ) { showRecurrencePicker = true }
                         }
@@ -170,31 +155,31 @@ struct InlineTaskCreator: View {
             HStack(spacing: 18) {
                 Button { showDatePicker = true } label: {
                     Image(systemName: "calendar")
-                        .foregroundStyle(deadline != nil ? Palette.ink : Palette.muted)
+                        .foregroundStyle(draft.deadline != nil ? Palette.ink : Palette.muted)
                 }
                 Button { showScheduledDayPicker = true } label: {
                     Image(systemName: "scope")
-                        .foregroundStyle(scheduledDay != nil ? Palette.ink : Palette.muted)
+                        .foregroundStyle(draft.scheduledDay != nil ? Palette.ink : Palette.muted)
                 }
                 Button { showPriorityPicker = true } label: {
                     Image(systemName: "flag")
-                        .foregroundStyle(priority?.color ?? Palette.muted)
+                        .foregroundStyle(draft.priority?.color ?? Palette.muted)
                 }
                 Button { showTagPicker = true } label: {
                     Image(systemName: "tag")
-                        .foregroundStyle(!tags.isEmpty ? Palette.ink : Palette.muted)
+                        .foregroundStyle(!draft.tags.isEmpty ? Palette.ink : Palette.muted)
                 }
                 Button { showProjectPicker = true } label: {
                     Image(systemName: "folder")
-                        .foregroundStyle(project != nil ? Palette.ink : Palette.muted)
+                        .foregroundStyle(draft.project != nil ? Palette.ink : Palette.muted)
                 }
                 Button { showParentPicker = true } label: {
                     Image(systemName: "list.bullet.indent")
-                        .foregroundStyle(parentTask != nil ? Palette.ink : Palette.muted)
+                        .foregroundStyle(draft.parentTask != nil ? Palette.ink : Palette.muted)
                 }
                 Button { showRecurrencePicker = true } label: {
                     Image(systemName: "repeat")
-                        .foregroundStyle(recurrence != .none ? Palette.ink : Palette.muted)
+                        .foregroundStyle(draft.recurrence != .none ? Palette.ink : Palette.muted)
                 }
                 Spacer()
                 Button {
@@ -202,9 +187,9 @@ struct InlineTaskCreator: View {
                 } label: {
                     Image(systemName: "arrow.up.circle.fill")
                         .font(.title)
-                        .foregroundStyle(taskTitle.isEmpty ? Palette.hairline : Palette.ink)
+                        .foregroundStyle(draft.text.isEmpty ? Palette.hairline : Palette.ink)
                 }
-                .disabled(taskTitle.trimmingCharacters(in: .whitespaces).isEmpty || syncErrorMessage != nil)
+                .disabled(draft.text.trimmingCharacters(in: .whitespaces).isEmpty || syncErrorMessage != nil)
                 .accessibilityLabel("Add task")
                 .accessibilityIdentifier("send-task")
             }
@@ -224,76 +209,49 @@ struct InlineTaskCreator: View {
                 .mask(alignment: .top) { Rectangle().frame(height: 24) }
         }
         .onAppear {
-            if project == nil, let presetProject {
-                project = presetProject
+            if draft.project == nil, let presetProject {
+                draft.project = presetProject
             }
             isFocused = true
         }
         .sheet(isPresented: $showDatePicker) {
-            DatePickerSheet(selectedDate: $deadline, hasTime: $deadlineHasTime)
+            DatePickerSheet(selectedDate: $draft.deadline, hasTime: $draft.deadlineHasTime)
         }
         .sheet(isPresented: $showScheduledDayPicker) {
-            DatePickerSheet(selectedDate: $scheduledDay)
+            DatePickerSheet(selectedDate: $draft.scheduledDay)
         }
         .sheet(isPresented: $showPriorityPicker) {
-            PriorityPicker(selection: $priority)
+            PriorityPicker(selection: $draft.priority)
         }
         .sheet(isPresented: $showTagPicker) {
-            TagPicker(selectedTags: $tags)
+            TagPicker(selectedTags: $draft.tags)
         }
         .sheet(isPresented: $showProjectPicker) {
-            ProjectPicker(selection: $project)
+            ProjectPicker(selection: $draft.project)
         }
         .sheet(isPresented: $showRecurrencePicker) {
             RecurrencePicker(
-                selection: $recurrence,
-                customRule: $customRecurrenceRule,
-                contextDate: deadline
+                selection: $draft.recurrence,
+                customRule: $draft.customRecurrenceRule,
+                contextDate: draft.deadline
             )
         }
         .sheet(isPresented: $showParentPicker) {
-            ParentTaskPicker(selection: $parentTask)
+            ParentTaskPicker(selection: $draft.parentTask)
         }
     }
 
     private var hasSelections: Bool {
-        deadline != nil || scheduledDay != nil || priority != nil || !tags.isEmpty || project != nil || recurrence != .none || parentTask != nil
+        draft.deadline != nil || draft.scheduledDay != nil || draft.priority != nil || !draft.tags.isEmpty || draft.project != nil || draft.recurrence != .none || draft.parentTask != nil
     }
 
     private func createTask() {
-        // Use NLP clean title (strips detected tokens) if NLP detected anything
-        let hasNLPDetections = nlpDetectedDate || nlpDetectedPriority || nlpDetectedProject || nlpDetectedTags
-        let title: String
-        if hasNLPDetections {
-            let parsed = TaskTitleParser.parse(taskTitle)
-            title = parsed.cleanTitle
-        } else {
-            title = taskTitle.trimmingCharacters(in: .whitespaces)
-        }
-        guard !title.isEmpty else { return }
-
-        let task = TaskItem(externalTaskID: UUID().uuidString, title: title)
-        let selectedWorkspace = try? modelContext.selectedProviderWorkspace()
-        task.providerWorkspaceId = selectedWorkspace?.workspaceId
-        task.setDeadline(deadline, hasTime: deadlineHasTime, defaults: .current())
-        task.scheduledDay = scheduledDay
-        task.validateScheduledDay()
-        task.priority = priority
-        task.tags = tags
-        task.project = project
-        task.recurrence = recurrence
-        task.customRecurrenceRule = customRecurrenceRule
-        task.isDirty = true
-
-        if let parent = parentTask {
-            task.parentId = parent.externalTaskID
-            task.parent = parent
-            task.sortIndex = parent.subtasks.count
-        }
+        let workspaceId = (try? modelContext.selectedProviderWorkspace())?.workspaceId
+        guard let task = draft.makeTask(workspaceId: workspaceId, defaults: .current()) else { return }
 
         modelContext.insert(task)
 
-        if let parent = parentTask {
+        if let parent = draft.parentTask {
             SubtaskScheduler.distributeSubtaskDates(parent: parent)
         }
 
@@ -310,68 +268,9 @@ struct InlineTaskCreator: View {
             }
         }
 
-        // Reset for next task
-        taskTitle = ""
-        deadline = nil
-        scheduledDay = nil
-        deadlineHasTime = false
-        priority = nil
-        tags = []
-        if presetProject == nil { project = nil }
-        recurrence = .none
-        parentTask = nil
-        customRecurrenceRule = nil
-        nlpDetectedDate = false
-        nlpDetectedPriority = false
-        nlpDetectedProject = false
-        nlpDetectedTags = false
+        draft = CaptureDraft(project: presetProject)
         showProjectSuggestions = false
         showTagSuggestions = false
-    }
-
-    // MARK: - NLP Parsing
-
-    private func handleNLPParsing(_ text: String) {
-        let result = TaskTitleParser.parse(text)
-
-        // Auto-populate date if not manually set
-        if let detected = result.detectedDate, !nlpDetectedDate, deadline == nil {
-            deadline = detected
-            nlpDetectedDate = true
-        } else if result.detectedDate == nil && nlpDetectedDate {
-            // User removed the date keyword
-            deadline = nil
-            nlpDetectedDate = false
-        }
-
-        // Auto-populate priority
-        if let detected = result.detectedPriority, !nlpDetectedPriority, priority == nil {
-            priority = detected
-            nlpDetectedPriority = true
-        } else if result.detectedPriority == nil && nlpDetectedPriority {
-            priority = nil
-            nlpDetectedPriority = false
-        }
-
-        // Auto-populate project from name
-        if let name = result.detectedProjectName, !nlpDetectedProject, project == nil {
-            if let matched = selectedProjects.first(where: { $0.title.localizedCaseInsensitiveContains(name) }) {
-                project = matched
-                nlpDetectedProject = true
-            }
-        } else if result.detectedProjectName == nil && nlpDetectedProject {
-            project = nil
-            nlpDetectedProject = false
-        }
-
-        // Auto-populate tags
-        if !result.detectedTags.isEmpty && !nlpDetectedTags && tags.isEmpty {
-            tags = result.detectedTags
-            nlpDetectedTags = true
-        } else if result.detectedTags.isEmpty && nlpDetectedTags {
-            tags = []
-            nlpDetectedTags = false
-        }
     }
 
     private func formatPlanningDate(_ date: Date, hasTime: Bool) -> String {
@@ -418,21 +317,19 @@ struct InlineTaskCreator: View {
     }
 
     private func selectProjectSuggestion(_ proj: ProjectItem) {
-        project = proj
+        draft.pick(project: proj)
         // Remove @query from title
-        if let atIndex = taskTitle.lastIndex(of: "@") {
-            taskTitle = String(taskTitle[..<atIndex]).trimmingCharacters(in: .whitespaces)
+        if let atIndex = draft.text.lastIndex(of: "@") {
+            draft.text = String(draft.text[..<atIndex]).trimmingCharacters(in: .whitespaces)
         }
         showProjectSuggestions = false
     }
 
     private func selectTagSuggestion(_ tag: String) {
-        if !tags.contains(tag) {
-            tags.append(tag)
-        }
+        draft.pick(tag: tag)
         // Remove #query from title
-        if let hashIndex = taskTitle.lastIndex(of: "#") {
-            taskTitle = String(taskTitle[..<hashIndex]).trimmingCharacters(in: .whitespaces)
+        if let hashIndex = draft.text.lastIndex(of: "#") {
+            draft.text = String(draft.text[..<hashIndex]).trimmingCharacters(in: .whitespaces)
         }
         showTagSuggestions = false
     }
