@@ -15,7 +15,7 @@ A deadline reminder counts down to the task's deadline:
 { "id": "…", "kind": "deadline", "offset": "hourBefore" }
 ```
 
-`daysBefore` takes a `value` from 1 to 30. `weeksBefore` takes a `value` from 1 to 12. `morningOf` and `hourBefore` carry no `value`. A task holds at most one rule with the same offset and value.
+`daysBefore` takes a `value` from 1 to 30. `weeksBefore` takes a `value` from 1 to 12. `morningOf` and `hourBefore` carry no `value`. A task holds at most one deadline rule with the same offset and value. Exact rules may share an instant, since each has its own UUID.
 
 An exact reminder fires once at a fixed instant:
 
