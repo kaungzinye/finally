@@ -340,7 +340,7 @@ final class SyncService {
                 print("[Sync] Task '\(title)' NO STATUS FOUND. Property key: '\(mappings.taskStatusProperty)', available keys: \(Array(page.properties.keys))")
             }
 
-            // The Notion "Due Date" property stores the deadline.
+            // The mapped Notion deadline property stores the deadline.
             if let dateProp = page.properties[mappings.taskDeadlineProperty],
                let dateStr = dateProp.date?.start {
                 if let endStr = dateProp.date?.end {

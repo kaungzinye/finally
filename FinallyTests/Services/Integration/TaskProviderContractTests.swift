@@ -489,7 +489,7 @@ final class TaskProviderContractTests: XCTestCase {
                                     type: "status",
                                     statusName: "In Progress"
                                 ),
-                                "Due Date": NotionTestFactory.propertyValue(type: "date", dateStart: nil),
+                                "Deadline": NotionTestFactory.propertyValue(type: "date", dateStart: nil),
                             ]
                         )
                     ]

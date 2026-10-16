@@ -9,16 +9,16 @@ final class BackendDataFlowIntegrationTests: XCTestCase {
             NotionTestFactory.makeDatabase(properties: [
                 "Name": NotionTestFactory.schema(type: "title"),
                 "Status": NotionTestFactory.schema(type: "status"),
-                "Due Date": NotionTestFactory.schema(type: "date"),
+                "Deadline": NotionTestFactory.schema(type: "date"),
             ]),
             NotionTestFactory.makeDatabase(properties: [
                 "Name": NotionTestFactory.schema(type: "title"),
-                "Due Date": NotionTestFactory.schema(type: "date"),
+                "Deadline": NotionTestFactory.schema(type: "date"),
             ]),
             NotionTestFactory.makeDatabase(properties: [
                 "Name": NotionTestFactory.schema(type: "title"),
                 "Status": NotionTestFactory.schema(type: "status"),
-                "Due Date": NotionTestFactory.schema(type: "rich_text"),
+                "Deadline": NotionTestFactory.schema(type: "rich_text"),
             ]),
         ]
 
@@ -33,7 +33,7 @@ final class BackendDataFlowIntegrationTests: XCTestCase {
 
         let (third, _) = try await validator.validateTasksDatabase(id: "tasks-db")
         XCTAssertFalse(third.isValid)
-        XCTAssertTrue(third.issues.contains { $0.propertyName == "Due Date" && $0.expectedType == "date" })
+        XCTAssertTrue(third.issues.contains { $0.propertyName == "Deadline" && $0.expectedType == "date" })
     }
 
     func testPushDirtyChangesFlow_CreatesThenUpdatesAndSendsRequiredProperties() async throws {
@@ -98,7 +98,7 @@ final class BackendDataFlowIntegrationTests: XCTestCase {
         try await syncService.pushDirtyChanges(session: session, modelContext: context)
 
         let properties = try XCTUnwrap(mock.createdPages.first?.properties)
-        let due = try XCTUnwrap(properties["Due Date"] as? [String: Any])
+        let due = try XCTUnwrap(properties["Deadline"] as? [String: Any])
         let dueValue = try XCTUnwrap(due["date"] as? [String: String])
         let target = try XCTUnwrap(properties["Target"] as? [String: Any])
         let targetValue = try XCTUnwrap(target["date"] as? [String: String])
@@ -217,7 +217,7 @@ final class BackendDataFlowIntegrationTests: XCTestCase {
                         title: [NotionRichText(plainText: "New title")]
                     ),
                     "Status": NotionTestFactory.propertyValue(type: "status", statusName: "In Progress"),
-                    "Due Date": NotionTestFactory.propertyValue(type: "date", dateStart: "2026-03-30"),
+                    "Deadline": NotionTestFactory.propertyValue(type: "date", dateStart: "2026-03-30"),
                 ]
             )
         ]
@@ -308,7 +308,7 @@ final class BackendDataFlowIntegrationTests: XCTestCase {
                         title: [NotionRichText(plainText: "Remote changed title")]
                     ),
                     "Status": NotionTestFactory.propertyValue(type: "status", statusName: "Complete"),
-                    "Due Date": NotionTestFactory.propertyValue(type: "date", dateStart: "2026-03-22"),
+                    "Deadline": NotionTestFactory.propertyValue(type: "date", dateStart: "2026-03-22"),
                 ]
             )
         ]
@@ -350,7 +350,7 @@ final class BackendDataFlowIntegrationTests: XCTestCase {
             NotionTestFactory.makeDatabase(properties: [
                 "Name": NotionTestFactory.schema(type: "title"),
                 "Status": NotionTestFactory.schema(type: "status", statusSchema: statusSchema),
-                "Due Date": NotionTestFactory.schema(type: "date")
+                "Deadline": NotionTestFactory.schema(type: "date")
             ])
         ]
 

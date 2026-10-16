@@ -68,7 +68,7 @@ Request:
     }
   },
   "sorts": [
-    { "property": "Due Date", "direction": "ascending" }
+    { "property": "Deadline", "direction": "ascending" }
   ],
   "page_size": 100,
   "start_cursor": "string"            // For pagination
@@ -99,7 +99,7 @@ Request:
   "properties": {
     "Name": { "title": [{ "text": { "content": "Task title" } }] },
     "Status": { "status": { "name": "Not started" } },
-    "Due Date": { "date": { "start": "2026-03-15" } },
+    "Deadline": { "date": { "start": "2026-03-15" } },
     "Priority": { "select": { "name": "High" } },
     "Tags": { "multi_select": [{ "name": "Tag1" }, { "name": "Tag2" }] },
     "Project": { "relation": [{ "id": "project-page-id" }] },
@@ -117,7 +117,7 @@ Request:
 {
   "properties": {
     "Status": { "status": { "name": "Not started" } },
-    "Due Date": { "date": { "start": "2026-03-20" } }
+    "Deadline": { "date": { "start": "2026-03-20" } }
   }
 }
 ```

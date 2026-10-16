@@ -8,7 +8,7 @@ final class SchemaValidatorUnitTests: XCTestCase {
             NotionTestFactory.makeDatabase(properties: [
                 "Name": NotionTestFactory.schema(type: "title"),
                 "Status": NotionTestFactory.schema(type: "status"),
-                "Due Date": NotionTestFactory.schema(type: "date"),
+                "Deadline": NotionTestFactory.schema(type: "date"),
                 "Priority": NotionTestFactory.schema(type: "select"),
                 "Tags": NotionTestFactory.schema(type: "multi_select"),
                 "Project": NotionTestFactory.schema(type: "relation"),
@@ -21,7 +21,7 @@ final class SchemaValidatorUnitTests: XCTestCase {
 
         XCTAssertTrue(result.isValid)
         XCTAssertEqual(mappings.taskStatusProperty, "Status")
-        XCTAssertEqual(mappings.taskDeadlineProperty, "Due Date")
+        XCTAssertEqual(mappings.taskDeadlineProperty, "Deadline")
         XCTAssertEqual(mappings.taskPriorityProperty, "Priority")
         XCTAssertEqual(mappings.taskTagsProperty, "Tags")
         XCTAssertEqual(mappings.taskProjectProperty, "Project")
@@ -47,7 +47,7 @@ final class SchemaValidatorUnitTests: XCTestCase {
             NotionTestFactory.makeDatabase(properties: [
                 "Name": NotionTestFactory.schema(type: "title"),
                 "Status": NotionTestFactory.schema(type: "status", statusSchema: statusSchema),
-                "Due Date": NotionTestFactory.schema(type: "date")
+                "Deadline": NotionTestFactory.schema(type: "date")
             ])
         ]
 
@@ -65,7 +65,7 @@ final class SchemaValidatorUnitTests: XCTestCase {
             NotionTestFactory.makeDatabase(properties: [
                 "Name": NotionTestFactory.schema(type: "title"),
                 "Status": NotionTestFactory.schema(type: "rich_text"),
-                "Due Date": NotionTestFactory.schema(type: "date"),
+                "Deadline": NotionTestFactory.schema(type: "date"),
             ])
         ]
 
@@ -83,7 +83,7 @@ final class SchemaValidatorUnitTests: XCTestCase {
                 "Name": NotionTestFactory.schema(type: "title"),
                 "Status": NotionTestFactory.schema(type: "select"),
                 "Workflow State": NotionTestFactory.schema(type: "status"),
-                "Due Date": NotionTestFactory.schema(type: "date"),
+                "Deadline": NotionTestFactory.schema(type: "date"),
             ])
         ]
 
@@ -101,7 +101,7 @@ final class SchemaValidatorUnitTests: XCTestCase {
             NotionTestFactory.makeDatabase(properties: [
                 "Name": NotionTestFactory.schema(type: "title"),
                 "State": NotionTestFactory.schema(type: "status"),
-                "Due Date": NotionTestFactory.schema(type: "date"),
+                "Deadline": NotionTestFactory.schema(type: "date"),
             ])
         ]
 
@@ -112,13 +112,48 @@ final class SchemaValidatorUnitTests: XCTestCase {
         XCTAssertTrue(result.issues.contains { $0.propertyName == "Status" && $0.expectedType == "status" })
     }
 
+    func testValidateTasksDatabase_MapsThePropertyNamedDeadlineAmongOtherDates() async throws {
+        let mock = MockNotionAPIClient()
+        mock.retrieveDatabaseQueue = [
+            NotionTestFactory.makeDatabase(properties: [
+                "Name": NotionTestFactory.schema(type: "title"),
+                "Status": NotionTestFactory.schema(type: "status"),
+                "Deadline": NotionTestFactory.schema(type: "date"),
+                "Created": NotionTestFactory.schema(type: "date"),
+            ])
+        ]
+
+        let validator = SchemaValidator(api: mock)
+        let (result, mappings) = try await validator.validateTasksDatabase(id: "tasks-db")
+
+        XCTAssertTrue(result.isValid)
+        XCTAssertEqual(mappings.taskDeadlineProperty, "Deadline")
+        XCTAssertEqual(result.ambiguousDeadlineCandidates, [])
+    }
+
+    func testValidateTasksDatabase_WithoutADateProperty_AsksForADeadlineProperty() async throws {
+        let mock = MockNotionAPIClient()
+        mock.retrieveDatabaseQueue = [
+            NotionTestFactory.makeDatabase(properties: [
+                "Name": NotionTestFactory.schema(type: "title"),
+                "Status": NotionTestFactory.schema(type: "status"),
+            ])
+        ]
+
+        let validator = SchemaValidator(api: mock)
+        let (result, _) = try await validator.validateTasksDatabase(id: "tasks-db")
+
+        XCTAssertEqual(result.issues.map(\.propertyName), ["Deadline"])
+        XCTAssertEqual(result.issues.first?.message, "Add a date property named Deadline.")
+    }
+
     func testValidateTasksDatabase_WhenDeadlineTypeIsWrong_ReturnsExplicitMismatchError() async throws {
         let mock = MockNotionAPIClient()
         mock.retrieveDatabaseQueue = [
             NotionTestFactory.makeDatabase(properties: [
                 "Name": NotionTestFactory.schema(type: "title"),
                 "Status": NotionTestFactory.schema(type: "status"),
-                "Due Date": NotionTestFactory.schema(type: "rich_text"),
+                "Deadline": NotionTestFactory.schema(type: "rich_text"),
                 "Start": NotionTestFactory.schema(type: "date"),
             ])
         ]
@@ -127,10 +162,10 @@ final class SchemaValidatorUnitTests: XCTestCase {
         let (result, _) = try await validator.validateTasksDatabase(id: "tasks-db")
 
         XCTAssertFalse(result.isValid)
-        XCTAssertTrue(result.issues.contains { $0.propertyName == "Due Date" && $0.expectedType == "date" })
+        XCTAssertTrue(result.issues.contains { $0.propertyName == "Deadline" && $0.expectedType == "date" })
     }
 
-    func testValidateTasksDatabase_WhenMultipleDateFieldsAndNoDueName_ReturnsAmbiguousCandidates() async throws {
+    func testValidateTasksDatabase_WhenMultipleDateFieldsAndNoDeadlineName_ReturnsAmbiguousCandidates() async throws {
         let mock = MockNotionAPIClient()
         mock.retrieveDatabaseQueue = [
             NotionTestFactory.makeDatabase(properties: [

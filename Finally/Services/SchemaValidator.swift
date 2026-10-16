@@ -59,14 +59,14 @@ final class SchemaValidator {
         }
 
         // Required Notion date property for the deadline
-        if let explicitDueProp = property(named: "Due Date", in: database.properties) {
-            if explicitDueProp.value.type == "date" {
-                mappings.taskDeadlineProperty = explicitDueProp.key
+        if let deadlineProp = property(named: "Deadline", in: database.properties) {
+            if deadlineProp.value.type == "date" {
+                mappings.taskDeadlineProperty = deadlineProp.key
             } else {
                 result.issues.append(.init(
-                    propertyName: explicitDueProp.key,
+                    propertyName: deadlineProp.key,
                     expectedType: "date",
-                    message: "Property '\(explicitDueProp.key)' should be type date, found \(explicitDueProp.value.type)."
+                    message: "Make \(deadlineProp.key) a date property. It is \(deadlineProp.value.type) right now."
                 ))
             }
         } else {
@@ -76,9 +76,8 @@ final class SchemaValidator {
             if dateProps.count == 1 {
                 mappings.taskDeadlineProperty = dateProps.first!.key
             } else if dateProps.count > 1 {
-            // Multiple date properties — will need user selection
-            // Default to common names
-                if let match = dateProps.first(where: { $0.key.lowercased().contains("due") }) {
+            // Several date properties: a name that reads as a deadline wins.
+                if let match = dateProps.first(where: { ["deadline", "due"].contains(where: $0.key.lowercased().contains) }) {
                     mappings.taskDeadlineProperty = match.key
                 } else {
                     mappings.taskDeadlineProperty = dateProps.first!.key
@@ -86,9 +85,9 @@ final class SchemaValidator {
                 }
             } else {
                 result.issues.append(.init(
-                    propertyName: "Due Date",
+                    propertyName: "Deadline",
                     expectedType: "date",
-                    message: "Add a Date property named 'Due Date' for task deadlines"
+                    message: "Add a date property named Deadline."
                 ))
             }
         }
