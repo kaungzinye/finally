@@ -182,10 +182,13 @@ final class TaskItem {
         return start.addingTimeInterval(totalInterval * fraction)
     }
 
-    func validateScheduledDay() {
+    /// A scheduled day may fall on its deadline's day. One that falls after it moves back to
+    /// the deadline's day.
+    func validateScheduledDay(calendar: Calendar = .current) {
         guard let scheduledDay, let deadline else { return }
-        if scheduledDay >= deadline {
-            self.scheduledDay = Calendar.current.date(byAdding: .day, value: -1, to: deadline)
+        let deadlineDay = calendar.startOfDay(for: deadline)
+        if calendar.startOfDay(for: scheduledDay) > deadlineDay {
+            self.scheduledDay = deadlineDay
         }
     }
 
