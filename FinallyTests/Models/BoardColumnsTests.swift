@@ -58,6 +58,16 @@ final class BoardColumnsTests: XCTestCase {
         XCTAssertEqual(board.columns[0].tasks.map(\.externalTaskID), ["urgent-home"])
     }
 
+    func testADroppedCardResolvesWithinTheBoardsWorkspace() {
+        makeTask("1", "Server task", workspace: "server-workspace")
+        let own = makeTask("1", "Notion task")
+
+        let board = BoardColumns(tasks: allTasks(), workspace: workspace)
+
+        XCTAssertTrue(board.card(withID: "1") === own)
+        XCTAssertNil(board.card(withID: "missing"))
+    }
+
     // MARK: - Helpers
 
     private func day(_ offset: Int) -> Date {

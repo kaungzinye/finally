@@ -152,8 +152,6 @@ struct FinallyApp: App {
         let token = KeychainHelper.readNotionToken()
         let serverCredentials = KeychainFinallyServerCredentialStore()
         let context = ModelContext(appContainer)
-        try? WidgetPublisher.applyPendingCompletions(store: context)
-        NotificationService.shared.rescheduleAllReminders(modelContext: context)
         let sessions = (try? context.fetch(FetchDescriptor<UserSession>())) ?? []
         let usableSessions = sessions.filter { session in
             switch session.providerIdentity {
@@ -170,6 +168,8 @@ struct FinallyApp: App {
 
         sessionRoute = .resolve(selectedWorkspace: selectedSession)
         isLoading = false
+        await taskProvider.submitWidgetCompletions(store: context)
+        NotificationService.shared.rescheduleAllReminders(modelContext: context)
 
         if sessionRoute == .tasks, let selectedSession {
             try? await taskProvider.synchronize(.launch, workspace: selectedSession, store: context)
@@ -204,7 +204,7 @@ struct FinallyApp: App {
 
     private func runIncrementalSyncIfPossible() async {
         let context = ModelContext(appContainer)
-        try? WidgetPublisher.applyPendingCompletions(store: context)
+        await taskProvider.submitWidgetCompletions(store: context)
         NotificationService.shared.rescheduleAllReminders(modelContext: context)
         guard sessionRoute == .tasks else { return }
         guard let session = try? context.selectedProviderWorkspace() else { return }

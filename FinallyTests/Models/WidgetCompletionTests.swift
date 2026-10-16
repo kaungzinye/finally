@@ -13,7 +13,7 @@ final class WidgetCompletionTests: XCTestCase {
 
         storage.complete(WidgetCompletion(providerWorkspaceID: "notion-workspace", externalTaskID: "brief"))
 
-        XCTAssertEqual(storage.pendingCompletions, [
+        XCTAssertEqual(storage.pendingCompletions.map(\.completion), [
             WidgetCompletion(providerWorkspaceID: "notion-workspace", externalTaskID: "brief"),
         ])
         let day = WidgetDay(snapshot: storage.snapshot!, at: Date())
@@ -40,7 +40,7 @@ final class WidgetCompletionTests: XCTestCase {
         XCTAssertTrue(brief.isDirty)
         XCTAssertEqual(release.status, .notStarted)
         XCTAssertFalse(release.isDirty)
-        XCTAssertEqual(storage.pendingCompletions, [])
+        XCTAssertTrue(storage.pendingCompletions.isEmpty)
         let day = WidgetDay(snapshot: storage.snapshot!, at: Date())
         XCTAssertEqual(day.openPicks.map(\.title), ["Ship the release"])
     }
@@ -58,7 +58,38 @@ final class WidgetCompletionTests: XCTestCase {
 
         XCTAssertEqual(applied, [])
         XCTAssertFalse(rent.isDirty)
-        XCTAssertEqual(storage.pendingCompletions, [])
+        XCTAssertTrue(storage.pendingCompletions.isEmpty)
+    }
+
+    func testACompletionTheWidgetRecordsWhileTheAppAppliesStaysPending() {
+        let app = makeStorage()
+        let widget = WidgetStorage(defaults: app.defaults, completionsDirectory: app.completionsDirectory)
+        app.complete(WidgetCompletion(providerWorkspaceID: "notion-workspace", externalTaskID: "brief"))
+
+        let read = app.pendingCompletions
+        widget.complete(WidgetCompletion(providerWorkspaceID: "notion-workspace", externalTaskID: "release"))
+        app.removePendingCompletions(read)
+
+        XCTAssertEqual(app.pendingCompletions.map(\.completion), [
+            WidgetCompletion(providerWorkspaceID: "notion-workspace", externalTaskID: "release"),
+        ])
+    }
+
+    func testRepeatedTapsCompleteARecurringObligationOnce() throws {
+        let storage = makeStorage()
+        let context = try makeContext()
+        let rent = insertTask("rent", "Pay the rent", into: context)
+        let deadline = Calendar.current.startOfDay(for: Date().addingTimeInterval(10 * 86_400))
+        rent.deadline = deadline
+        rent.recurrence = .monthly
+        try context.save()
+
+        storage.complete(WidgetCompletion(providerWorkspaceID: "notion-workspace", externalTaskID: "rent"))
+        storage.complete(WidgetCompletion(providerWorkspaceID: "notion-workspace", externalTaskID: "rent"))
+        try WidgetPublisher.applyPendingCompletions(store: context, storage: storage)
+
+        XCTAssertEqual(rent.deadline, Calendar.current.date(byAdding: .month, value: 1, to: deadline))
+        XCTAssertTrue(storage.pendingCompletions.isEmpty)
     }
 
     // MARK: - Helpers
@@ -93,7 +124,11 @@ final class WidgetCompletionTests: XCTestCase {
     private func makeStorage() -> WidgetStorage {
         let suite = "WidgetCompletionTests-\(UUID().uuidString)"
         let defaults = UserDefaults(suiteName: suite)!
-        addTeardownBlock { defaults.removePersistentDomain(forName: suite) }
-        return WidgetStorage(defaults: defaults)
+        let directory = FileManager.default.temporaryDirectory.appending(path: suite, directoryHint: .isDirectory)
+        addTeardownBlock {
+            defaults.removePersistentDomain(forName: suite)
+            try? FileManager.default.removeItem(at: directory)
+        }
+        return WidgetStorage(defaults: defaults, completionsDirectory: directory)
     }
 }

@@ -217,24 +217,33 @@ struct InlineTaskCreator: View {
         }
         .onAppear {
             if draft.project == nil, let presetProject {
-                draft.project = presetProject
+                draft.pick(project: presetProject)
             }
             isFocused = true
         }
         .sheet(isPresented: $showDatePicker) {
-            DatePickerSheet(deadline: $draft.deadline, hasTime: $draft.deadlineHasTime)
+            DatePickerSheet(
+                deadline: Binding(
+                    get: { draft.deadline },
+                    set: { draft.pick(deadline: $0, hasTime: draft.deadlineHasTime) }
+                ),
+                hasTime: Binding(
+                    get: { draft.deadlineHasTime },
+                    set: { draft.pick(deadline: draft.deadline, hasTime: $0) }
+                )
+            )
         }
         .sheet(isPresented: $showScheduledDayPicker) {
-            DatePickerSheet(scheduledDay: $draft.scheduledDay)
+            DatePickerSheet(scheduledDay: Binding(get: { draft.scheduledDay }, set: { draft.pick(scheduledDay: $0) }))
         }
         .sheet(isPresented: $showPriorityPicker) {
-            PriorityPicker(selection: $draft.priority)
+            PriorityPicker(selection: Binding(get: { draft.priority }, set: { draft.pick(priority: $0) }))
         }
         .sheet(isPresented: $showTagPicker) {
-            TagPicker(selectedTags: $draft.tags)
+            TagPicker(selectedTags: Binding(get: { draft.tags }, set: { draft.pick(tags: $0) }))
         }
         .sheet(isPresented: $showProjectPicker) {
-            ProjectPicker(selection: $draft.project)
+            ProjectPicker(selection: Binding(get: { draft.project }, set: { draft.pick(project: $0) }))
         }
         .sheet(isPresented: $showRecurrencePicker) {
             RecurrencePicker(

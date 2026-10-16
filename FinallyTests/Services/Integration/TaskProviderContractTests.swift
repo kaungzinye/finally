@@ -95,6 +95,35 @@ final class TaskProviderContractTests: XCTestCase {
         XCTAssertEqual(adapter.workspaceIDs, ["task-workspace"])
     }
 
+    func testWidgetCompletionsReachEachOwningWorkspace() async throws {
+        let adapter = RecordingTaskProviderAdapter()
+        let coordinator = TaskProviderCoordinator(adapter: adapter)
+        let context = try makeInMemoryContext()
+        let selected = UserSession(workspaceId: "selected", workspaceName: "Selected", providerIdentity: .notion)
+        selected.isSelected = true
+        let other = UserSession(workspaceId: "other", workspaceName: "Other", providerIdentity: .finallyServer)
+        context.insert(selected)
+        context.insert(other)
+        for (id, workspace) in [("brief", "selected"), ("release", "other")] {
+            let task = TaskItem(externalTaskID: id, title: id)
+            task.providerWorkspaceId = workspace
+            context.insert(task)
+        }
+        try context.save()
+        let suite = "TaskProviderContractTests-\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+        addTeardownBlock { defaults.removePersistentDomain(forName: suite) }
+        let storage = WidgetStorage(defaults: defaults, completionsDirectory: FileManager.default.temporaryDirectory.appending(path: suite, directoryHint: .isDirectory))
+        storage.complete(WidgetCompletion(providerWorkspaceID: "selected", externalTaskID: "brief"))
+        storage.complete(WidgetCompletion(providerWorkspaceID: "other", externalTaskID: "release"))
+
+        await coordinator.submitWidgetCompletions(store: context, storage: storage)
+
+        XCTAssertEqual(Set(adapter.workspaceIDs), ["selected", "other"])
+        let tasks = try context.fetch(FetchDescriptor<TaskItem>())
+        XCTAssertTrue(tasks.allSatisfy { $0.status == .done })
+    }
+
     func testWorkspaceFreeLaunchUsesTheSelectedProviderWorkspace() async throws {
         let adapter = RecordingTaskProviderAdapter()
         let coordinator = TaskProviderCoordinator(adapter: adapter)

@@ -93,6 +93,60 @@ final class PhonePriorityConflictTests: XCTestCase {
         XCTAssertNil(task.serverConflictJSON)
     }
 
+    func testSavedConflictLeavesUnrelatedTasksSyncingAndStillPulls() async throws {
+        let (_, context, workspace, api, task) = try fixture()
+        task.title = "My phone title"
+        task.isDirty = true
+        task.serverConflictJSON = FinallyServerTaskMutation(title: "Another phone title", isCompleted: false).json
+        task.serverConflictFields = ["title"]
+        let other = try syncedTask("2", title: "Groceries", api: api, workspace: workspace, context: context)
+        other.title = "Groceries and milk"
+        other.isDirty = true
+        api.tasks["3"] = FinallyServerTask(id: "3", projectID: 42, title: "Agent capture", isCompleted: false, revision: 1)
+
+        do { try await FinallyServerTaskProviderAdapter(api: api).synchronize(.incremental, workspace: workspace, store: context); XCTFail("Expected conflict") }
+        catch FinallyServerClientError.conflict { }
+
+        XCTAssertEqual(api.tasks["2"]?.title, "Groceries and milk")
+        XCTAssertFalse(other.isDirty)
+        XCTAssertEqual(api.tasks["1"]?.title, "Proposal")
+        XCTAssertTrue(task.isDirty)
+        XCTAssertNotNil(task.serverConflictJSON)
+        let titles = try context.fetch(FetchDescriptor<TaskItem>()).map(\.title)
+        XCTAssertTrue(titles.contains("Agent capture"))
+    }
+
+    func testMissingTaskLeavesUnrelatedTasksSyncing() async throws {
+        let (_, context, workspace, api, task) = try fixture()
+        task.title = "Phone recovery"
+        task.isDirty = true
+        task.serverTaskMissing = true
+        let other = try syncedTask("2", title: "Groceries", api: api, workspace: workspace, context: context)
+        other.title = "Groceries and milk"
+        other.isDirty = true
+
+        do { try await FinallyServerTaskProviderAdapter(api: api).synchronize(.push, workspace: workspace, store: context); XCTFail("Expected missing task") }
+        catch FinallyServerClientError.notFound { }
+
+        XCTAssertEqual(api.tasks["2"]?.title, "Groceries and milk")
+        XCTAssertFalse(other.isDirty)
+        XCTAssertTrue(task.serverTaskMissing)
+        XCTAssertEqual(task.title, "Phone recovery")
+    }
+
+    private func syncedTask(_ id: String, title: String, api: MockFinallyServerAPIClient, workspace: UserSession, context: ModelContext) throws -> TaskItem {
+        let remote = FinallyServerTask(id: id, projectID: 42, title: title, isCompleted: false, revision: 3)
+        api.tasks[id] = remote
+        let task = TaskItem(externalTaskID: id, title: title)
+        task.providerWorkspaceId = workspace.workspaceId
+        task.serverRevision = remote.revision
+        task.serverSnapshotJSON = remote.mutation.json
+        task.lastSyncedAt = Date()
+        context.insert(task)
+        try context.save()
+        return task
+    }
+
     func testAcceptServerStateClearsDirtyEditAndPendingDeletion() async throws {
         let (_, _, _, _, task) = try fixture()
         task.title = "Phone title"

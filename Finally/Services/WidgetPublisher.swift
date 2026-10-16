@@ -84,7 +84,10 @@ enum WidgetPublisher {
         let pending = storage.pendingCompletions
         guard !pending.isEmpty else { return [] }
         let tasks = try store.fetch(FetchDescriptor<TaskItem>())
-        let completed = pending.compactMap { completion in
+        // Repeated taps on one task complete it once, so a recurring obligation advances one cycle.
+        var seen: Set<WidgetCompletion> = []
+        let completions = pending.map(\.completion).filter { seen.insert($0).inserted }
+        let completed = completions.compactMap { completion in
             tasks.first {
                 $0.providerWorkspaceId == completion.providerWorkspaceID
                     && $0.externalTaskID == completion.externalTaskID

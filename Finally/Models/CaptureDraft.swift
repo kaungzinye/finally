@@ -3,15 +3,15 @@ import Foundation
 /// The add bar's unsaved task: the typed text and the fields its chips hold.
 ///
 /// Text sets fields as the user types. A field the text set follows later edits to the text,
-/// and a field the user picked by hand stays as picked.
+/// and a field the user picked by hand, cleared included, stays as picked.
 struct CaptureDraft {
     var text = ""
-    var scheduledDay: Date?
-    var deadline: Date?
-    var deadlineHasTime = false
-    var priority: TaskPriority?
-    var tags: [String] = []
-    var project: ProjectItem?
+    private(set) var scheduledDay: Date?
+    private(set) var deadline: Date?
+    private(set) var deadlineHasTime = false
+    private(set) var priority: TaskPriority?
+    private(set) var tags: [String] = []
+    private(set) var project: ProjectItem?
     var recurrence: Recurrence = .none
     var customRecurrenceRule: RecurrenceRule?
     var parentTask: TaskItem?
@@ -20,6 +20,8 @@ struct CaptureDraft {
 
     /// The fields the current text set.
     private var fieldsFromText: Set<Field> = []
+    /// The fields the user picked by hand, which text no longer sets.
+    private var pickedFields: Set<Field> = []
     private var cleanTitle = ""
 
     init(project: ProjectItem? = nil) {
@@ -40,6 +42,7 @@ struct CaptureDraft {
         }
         set(\.project, to: namedProject, field: .project)
 
+        guard !pickedFields.contains(.tags) else { return }
         if !parsed.detectedTags.isEmpty, tags.isEmpty || fieldsFromText.contains(.tags) {
             tags = parsed.detectedTags
             fieldsFromText.insert(.tags)
@@ -49,16 +52,40 @@ struct CaptureDraft {
         }
     }
 
+    /// Sets the deadline by hand, so later text leaves it alone.
+    mutating func pick(deadline: Date?, hasTime: Bool) {
+        self.deadline = deadline
+        deadlineHasTime = hasTime
+        pick(.deadline)
+    }
+
+    /// Sets the scheduled day by hand, so later text leaves it alone.
+    mutating func pick(scheduledDay: Date?) {
+        self.scheduledDay = scheduledDay
+        pick(.scheduledDay)
+    }
+
+    /// Sets the priority by hand, so later text leaves it alone.
+    mutating func pick(priority: TaskPriority?) {
+        self.priority = priority
+        pick(.priority)
+    }
+
     /// Sets the project by hand, so later text leaves it alone.
-    mutating func pick(project: ProjectItem) {
+    mutating func pick(project: ProjectItem?) {
         self.project = project
-        fieldsFromText.remove(.project)
+        pick(.project)
+    }
+
+    /// Sets the tags by hand, so later text leaves them alone.
+    mutating func pick(tags: [String]) {
+        self.tags = tags
+        pick(.tags)
     }
 
     /// Adds a tag by hand, so later text leaves the tags alone.
     mutating func pick(tag: String) {
-        if !tags.contains(tag) { tags.append(tag) }
-        fieldsFromText.remove(.tags)
+        pick(tags: tags.contains(tag) ? tags : tags + [tag])
     }
 
     /// The task this draft captures, or nil when it has no title. A new deadline takes the
@@ -87,7 +114,13 @@ struct CaptureDraft {
         return task
     }
 
+    private mutating func pick(_ field: Field) {
+        pickedFields.insert(field)
+        fieldsFromText.remove(field)
+    }
+
     private mutating func set<Value>(_ keyPath: WritableKeyPath<CaptureDraft, Value?>, to detected: Value?, field: Field) {
+        guard !pickedFields.contains(field) else { return }
         let ownedByText = fieldsFromText.contains(field)
         if let detected, self[keyPath: keyPath] == nil || ownedByText {
             self[keyPath: keyPath] = detected

@@ -185,7 +185,7 @@ struct BoardView: View {
     private func drop(_ ids: [String], on status: TaskStatus) -> Bool {
         targetedStatus = nil
         guard let id = ids.first,
-              let task = allTasks.first(where: { $0.externalTaskID == id }),
+              let task = board.card(withID: id),
               task.status != status else { return false }
         withAnimation(.snappy) {
             let recycled = task.move(to: status)

@@ -54,6 +54,10 @@ struct ExactReminder: Codable, Equatable, Identifiable, Sendable {
         self.id = id
         self.at = at
     }
+
+    var label: String {
+        at.formatted(.dateTime.month(.abbreviated).day().hour().minute())
+    }
 }
 
 enum TaskReminder: Codable, Equatable, Identifiable, Sendable {
@@ -64,6 +68,21 @@ enum TaskReminder: Codable, Equatable, Identifiable, Sendable {
         switch self {
         case .deadline(let reminder): reminder.id
         case .exact(let reminder): reminder.id
+        }
+    }
+
+    /// The reminder's chip label and icon, as task detail shows them.
+    var label: String {
+        switch self {
+        case .deadline(let reminder): reminder.offset.label
+        case .exact(let reminder): reminder.label
+        }
+    }
+
+    var icon: String {
+        switch self {
+        case .deadline: "bell"
+        case .exact: "clock"
         }
     }
 

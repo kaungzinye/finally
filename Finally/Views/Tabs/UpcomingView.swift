@@ -4,9 +4,9 @@ import SwiftData
 struct UpcomingView: View {
     @Query(
         filter: #Predicate<TaskItem> { task in
-            task.statusRaw != "Complete" && task.isDeleted == false && task.deadline != nil
-        },
-        sort: \TaskItem.deadline
+            task.statusRaw != "Complete" && task.isDeleted == false
+                && (task.scheduledDay != nil || task.deadline != nil)
+        }
     )
     private var allFutureTasks: [TaskItem]
     @Query private var sessions: [UserSession]
@@ -25,22 +25,14 @@ struct UpcomingView: View {
         SortStack.from(sortStackJSON)
     }
 
-    private var upcomingTasks: [TaskItem] {
-        allFutureTasks.filter {
-            $0.belongs(to: sessions.selectedProviderWorkspace) &&
-                ($0.deadline ?? .distantFuture) > Date() &&
-                !$0.isSubtask
+    private var groupedByDay: [(Date, [TaskItem])] {
+        UpcomingDays(tasks: allFutureTasks, workspace: sessions.selectedProviderWorkspace).days.map {
+            ($0.day, sortStack.sorted($0.tasks))
         }
     }
 
-    private var groupedByDay: [(Date, [TaskItem])] {
-        let calendar = Calendar.current
-        let grouped = Dictionary(grouping: upcomingTasks) { task in
-            calendar.startOfDay(for: task.deadline ?? .distantFuture)
-        }
-        return grouped.keys.sorted().map { day in
-            (day, sortStack.sorted(grouped[day] ?? []))
-        }
+    private var upcomingTasks: [TaskItem] {
+        groupedByDay.flatMap(\.1)
     }
 
     private func dayTitle(_ day: Date) -> String {
@@ -157,7 +149,7 @@ struct UpcomingView: View {
                     ContentUnavailableView(
                         "No upcoming tasks",
                         systemImage: "calendar",
-                        description: Text("Tasks with a deadline show up here.")
+                        description: Text("Scheduled tasks and deadlines show up here.")
                     )
                 }
             }
@@ -214,7 +206,7 @@ struct UpcomingView: View {
     // MARK: - Bulk Actions
 
     private func bulkDeleteTasks() {
-        let tasksToDelete = allFutureTasks.filter { selectedTasks.contains($0.externalTaskID) }
+        let tasksToDelete = upcomingTasks.filter { selectedTasks.contains($0.externalTaskID) }
         for task in tasksToDelete {
             task.isDeleted = true
             task.isDirty = true
@@ -227,7 +219,7 @@ struct UpcomingView: View {
     }
 
     private func bulkCompleteTasks() {
-        let tasksToComplete = allFutureTasks.filter { selectedTasks.contains($0.externalTaskID) }
+        let tasksToComplete = upcomingTasks.filter { selectedTasks.contains($0.externalTaskID) }
         for task in tasksToComplete {
             let recycled = task.complete()
             if recycled {
@@ -250,7 +242,7 @@ struct UpcomingView: View {
     }
 }
 
-/// The next seven days. A dot marks a day with deadlines, and tapping a day scrolls to it.
+/// The next seven days. A dot marks a day with tasks, and tapping a day scrolls to it.
 private struct WeekStrip: View {
     let daysWithTasks: Set<Date>
     let onSelect: (Date) -> Void
