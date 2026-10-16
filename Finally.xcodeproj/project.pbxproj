@@ -99,6 +99,7 @@
 		A85B8C6B56396453AD68F782 /* FinallyServerTaskSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = D6309FEABF2B53C34BE78097 /* FinallyServerTaskSnapshot.swift */; };
 		A8B9D08ACCC5488F01A66707 /* NotionOnboardingIntegrationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A7A914B5B39AAD90D8A646CF /* NotionOnboardingIntegrationTests.swift */; };
 		A9060BC5E46C493F61E105DD /* DatePickerSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8AFC4C0D33FEEB196CFC5B9E /* DatePickerSheet.swift */; };
+		AA1C1EFDE66FD57CFF02C616 /* UpcomingDays.swift in Sources */ = {isa = PBXBuildFile; fileRef = B93B5DDCC228D2534F659D74 /* UpcomingDays.swift */; };
 		AA82CDE694D91D5E61C9CBDE /* RecurrenceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BDF3A5C0B718FB3F9D18C039 /* RecurrenceTests.swift */; };
 		AC6E936FD5E5A3FCCF63332B /* TodayTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A81F533A87E0D934D76D4BBC /* TodayTests.swift */; };
 		ACAF4BA177AC802C6C6C2110 /* FinallyStyle.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4DF65C99D85D8706CD946C4D /* FinallyStyle.swift */; };
@@ -132,6 +133,7 @@
 		E9954AF7B9F7D1DB3FBA82D9 /* TaskRowDate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 29566123700B36206EEE33C8 /* TaskRowDate.swift */; };
 		E9B73C07F7B1D3CA10A3A7E8 /* Constants.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7EAF47BA098BEE13C1604C57 /* Constants.swift */; };
 		EAAF54985B0838DA9647E794 /* WidgetDayTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F3F43A0781142BD781B31CE4 /* WidgetDayTests.swift */; };
+		EB88BBFE734B8C488480861C /* UpcomingDaysTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6393ADAF3784D84869409A86 /* UpcomingDaysTests.swift */; };
 		EE23D4C64F30E93498271399 /* MockNotionAPIClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 17927D5217F64C91979B6708 /* MockNotionAPIClient.swift */; };
 		EEB9D6E96677AD8EAB1DC409 /* Enums.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5DF9E28C5C320BE1EE73448A /* Enums.swift */; };
 		F3ACAD85A390E0059627C8CB /* PhonePriorityConflictTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 32E0D92C672C8159DFD1EBEE /* PhonePriorityConflictTests.swift */; };
@@ -225,6 +227,7 @@
 		628D2FCDB35AAD3E45C3B77E /* SchemaValidator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SchemaValidator.swift; sourceTree = "<group>"; };
 		62E26D76ABE69007EDD2D951 /* TaskProviderContractTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskProviderContractTests.swift; sourceTree = "<group>"; };
 		6361629AB42FF68CA77254EC /* Finally.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = Finally.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		6393ADAF3784D84869409A86 /* UpcomingDaysTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UpcomingDaysTests.swift; sourceTree = "<group>"; };
 		6491D6ECA6018FBC712CEEE1 /* NotionConnectView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotionConnectView.swift; sourceTree = "<group>"; };
 		695A63457914D18721BF9D98 /* SchemaValidatorUnitTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SchemaValidatorUnitTests.swift; sourceTree = "<group>"; };
 		6A16244EB7E87921909EB098 /* DefaultDeadlineReminders.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DefaultDeadlineReminders.swift; sourceTree = "<group>"; };
@@ -269,6 +272,7 @@
 		B2290A3B7A6EC1A0ADF9FD4C /* CompleteTaskIntent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CompleteTaskIntent.swift; sourceTree = "<group>"; };
 		B3D49B256E36F33AAD2C9991 /* MockNotificationScheduler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MockNotificationScheduler.swift; sourceTree = "<group>"; };
 		B810A6DFB04DE19772B99FA3 /* NotionCRUDE2ETests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotionCRUDE2ETests.swift; sourceTree = "<group>"; };
+		B93B5DDCC228D2534F659D74 /* UpcomingDays.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UpcomingDays.swift; sourceTree = "<group>"; };
 		BC96B5D0B933B1D93FA49970 /* DailyFocus.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DailyFocus.swift; sourceTree = "<group>"; };
 		BDF3A5C0B718FB3F9D18C039 /* RecurrenceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecurrenceTests.swift; sourceTree = "<group>"; };
 		BE8DC7A906F6CB3095FE4AA0 /* StatusChip.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatusChip.swift; sourceTree = "<group>"; };
@@ -324,6 +328,7 @@
 				E23557EFB66C7C96C459D609 /* TaskReminder.swift */,
 				8379C4A99FB2D717844E53B8 /* TasksDemoFixture.swift */,
 				B12204C23AFB16226884D3C7 /* TasksList.swift */,
+				B93B5DDCC228D2534F659D74 /* UpcomingDays.swift */,
 				EFCAC682CEE30C58506E0425 /* UserSession.swift */,
 				F1CAC1083AD59B4081B77077 /* WorkspaceScope.swift */,
 			);
@@ -580,6 +585,7 @@
 				A8C8BE82E40BF1889DB28C80 /* TasksListTests.swift */,
 				E04481BD7281408D0185E073 /* TaskStatusCycleTests.swift */,
 				A81F533A87E0D934D76D4BBC /* TodayTests.swift */,
+				6393ADAF3784D84869409A86 /* UpcomingDaysTests.swift */,
 				41C4DB95518E923875AD69F5 /* WidgetCompletionTests.swift */,
 				F3F43A0781142BD781B31CE4 /* WidgetDayTests.swift */,
 				4752AF695A41F249F8D509DC /* WidgetSnapshotTests.swift */,
@@ -755,6 +761,7 @@
 				C7C32C1C2B40907D50C60ECF /* TaskTitleParserTests.swift in Sources */,
 				3809D308E324CDD057440E20 /* TasksListTests.swift in Sources */,
 				AC6E936FD5E5A3FCCF63332B /* TodayTests.swift in Sources */,
+				EB88BBFE734B8C488480861C /* UpcomingDaysTests.swift in Sources */,
 				59E66E52132F634459982366 /* WidgetCompletionTests.swift in Sources */,
 				EAAF54985B0838DA9647E794 /* WidgetDayTests.swift in Sources */,
 				A11E76C94700690226719446 /* WidgetSnapshotTests.swift in Sources */,
@@ -859,6 +866,7 @@
 				A3A3594E80C835546635FBA3 /* TasksView.swift in Sources */,
 				BF566334AA73E647D972DF69 /* Today.swift in Sources */,
 				4772476F586F0B8090B14981 /* TodayView.swift in Sources */,
+				AA1C1EFDE66FD57CFF02C616 /* UpcomingDays.swift in Sources */,
 				D97C60EE3542CFC75F712AA4 /* UpcomingView.swift in Sources */,
 				9A45E9935E085623D5744E6B /* UserSession.swift in Sources */,
 				944DF6F56EF36EC2091A1992 /* WidgetDay.swift in Sources */,
