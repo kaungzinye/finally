@@ -83,7 +83,7 @@ final class CaptureDraftTests: XCTestCase {
 
     func testAPickedDeadlineOutranksTheText() {
         var draft = CaptureDraft()
-        draft.deadline = day(2026, 11, 1)
+        draft.pick(deadline: day(2026, 11, 1), hasTime: false)
 
         type("Pay rent due fri", into: &draft)
         type("Pay rent", into: &draft)
@@ -100,6 +100,40 @@ final class CaptureDraftTests: XCTestCase {
         type("Tax return", into: &draft, projects: [taxes])
 
         XCTAssertTrue(draft.project === taxes)
+    }
+
+    func testADeadlinePickedAfterTheTextSurvivesEditingTheTitle() {
+        var draft = CaptureDraft()
+
+        type("Pay rent due fri", into: &draft)
+        draft.pick(deadline: day(2026, 11, 1), hasTime: false)
+        type("Pay the rent due fri", into: &draft)
+
+        XCTAssertEqual(draft.deadline, day(2026, 11, 1))
+    }
+
+    func testScheduledDayPriorityAndTagsPickedAfterTheTextSurviveEditingTheTitle() {
+        var draft = CaptureDraft()
+
+        type("Call bank fri !!1 #money", into: &draft)
+        draft.pick(scheduledDay: day(2026, 10, 14))
+        draft.pick(priority: .low)
+        draft.pick(tags: ["errands"])
+        type("Call the bank fri !!1 #money", into: &draft)
+
+        XCTAssertEqual(draft.scheduledDay, day(2026, 10, 14))
+        XCTAssertEqual(draft.priority, .low)
+        XCTAssertEqual(draft.tags, ["errands"])
+    }
+
+    func testClearingATextDateByHandKeepsItCleared() {
+        var draft = CaptureDraft()
+
+        type("Pay rent due fri", into: &draft)
+        draft.pick(deadline: nil, hasTime: false)
+        type("Pay the rent due fri", into: &draft)
+
+        XCTAssertNil(draft.deadline)
     }
 
     func testBlankTextMakesNoTask() {
