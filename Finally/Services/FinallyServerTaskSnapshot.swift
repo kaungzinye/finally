@@ -22,8 +22,9 @@ extension FinallyServerTaskMutation {
         if title != other.title { fields.insert("title") }
         if isCompleted != other.isCompleted { fields.insert("done") }
         if !sameInstant(scheduledDay, other.scheduledDay) { fields.insert("start_date") }
-        if !sameInstant(deadline, other.deadline) { fields.insert("due_date") }
-        if deadlineHasTime != other.deadlineHasTime { fields.formUnion(["due_date", "deadline_has_time"]) }
+        if !sameInstant(deadline, other.deadline) || deadlineHasTime != other.deadlineHasTime {
+            fields.formUnion(["due_date", "deadline_has_time"])
+        }
         if reminders != other.reminders { fields.insert("reminder_rules") }
         if priority != other.priority { fields.insert("priority") }
         return fields

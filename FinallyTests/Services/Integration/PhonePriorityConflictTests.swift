@@ -31,7 +31,7 @@ final class PhonePriorityConflictTests: XCTestCase {
         task.deadline = task.deadline?.addingTimeInterval(3600)
         task.isDirty = true
         try await FinallyServerTaskProviderAdapter(api: api).synchronize(.push, workspace: workspace, store: context)
-        XCTAssertEqual(api.mutations.first?.changedFields, ["due_date"])
+        XCTAssertEqual(api.mutations.first?.changedFields, ["due_date", "deadline_has_time"])
         XCTAssertEqual(api.mutations.first?.baseRevision, 7)
         XCTAssertEqual(task.title, "Agent title")
         XCTAssertEqual(task.priority, .high)
@@ -56,7 +56,7 @@ final class PhonePriorityConflictTests: XCTestCase {
         XCTAssertTrue(task.isDirty)
         XCTAssertEqual(task.serverRevision, 8)
         try await adapter.synchronize(.push, workspace: workspace, store: context)
-        XCTAssertEqual(api.mutations.last?.changedFields, ["due_date"])
+        XCTAssertEqual(api.mutations.last?.changedFields, ["due_date", "deadline_has_time"])
         XCTAssertEqual(api.mutations.last?.baseRevision, 8)
         XCTAssertEqual(api.tasks["1"]?.deadline, laterDeadline)
         XCTAssertFalse(task.isDirty)
