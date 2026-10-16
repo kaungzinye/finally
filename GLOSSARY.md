@@ -89,7 +89,7 @@ _Avoid_: calendar marker
 **Deadline reminder**: A reminder rule resolved relative to a task's deadline: the morning of, a number of days or weeks before, or an hour before a timed deadline. It moves when the deadline moves. A task carries any number of them.
 _Avoid_: anchored reminder
 
-**Default deadline reminders**: The deadline reminders a task receives when it first gains a deadline, configured in Settings. They default to the morning of, one day before, and one week before, plus one hour before for a timed deadline. The user edits them per task afterwards.
+**Default deadline reminders**: The deadline reminders a task receives when its deadline goes from empty to set, configured in Settings. They default to the morning of, one day before, and one week before, plus one hour before for a timed deadline. A deadline gaining a time receives the one-hour default, and clearing a deadline drops its deadline reminders. The user edits them per task afterwards.
 
 **Exact reminder**: A reminder rule with a fixed timestamp independent of task dates. The interface offers it as "Remind me at".
 _Avoid_: explicit-date reminder

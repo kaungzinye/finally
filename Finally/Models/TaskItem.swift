@@ -62,13 +62,21 @@ final class TaskItem {
     }
 
     /// Sets the deadline from a local edit. A deadline going from empty to set receives the
-    /// default deadline reminders. Moving a deadline keeps the task's own list.
+    /// default deadline reminders, and clearing it drops its deadline reminders. A deadline
+    /// gaining a time receives the default hour-before reminder. Moving a deadline keeps the
+    /// task's own list.
     func setDeadline(_ newDeadline: Date?, hasTime: Bool, defaults: DefaultDeadlineReminders) {
-        let gainsDeadline = deadline == nil && newDeadline != nil
+        let hadDeadline = deadline != nil
+        let hadTime = deadlineHasTime
         deadline = newDeadline
         deadlineHasTime = newDeadline != nil && hasTime
-        guard gainsDeadline else { return }
-        defaults.offsets(deadlineHasTime: deadlineHasTime).forEach(addDeadlineReminder)
+        if newDeadline == nil {
+            taskReminders.removeAll { if case .deadline = $0 { true } else { false } }
+        } else if !hadDeadline {
+            defaults.offsets(deadlineHasTime: deadlineHasTime).forEach(addDeadlineReminder)
+        } else if deadlineHasTime, !hadTime, defaults.offsets.contains(.hourBefore) {
+            addDeadlineReminder(.hourBefore)
+        }
     }
 
     /// Adds a deadline reminder. A task holds at most one rule per offset.

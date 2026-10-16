@@ -75,7 +75,7 @@ final class DeadlineReminderTests: XCTestCase {
 
         XCTAssertEqual(task.addableDeadlineReminderOffsets, [.daysBefore(2), .daysBefore(3), .weeksBefore(2)])
 
-        task.setDeadline(date(2026, 10, 23, 17), hasTime: true, defaults: .standard)
+        task.setDeadline(date(2026, 10, 23, 17), hasTime: true, defaults: DefaultDeadlineReminders(offsets: [.morningOf]))
 
         XCTAssertEqual(task.addableDeadlineReminderOffsets, [.daysBefore(2), .daysBefore(3), .weeksBefore(2), .hourBefore])
     }
@@ -120,15 +120,47 @@ final class DeadlineReminderTests: XCTestCase {
                        [date(2026, 10, 30, 9), date(2026, 10, 29, 9), date(2026, 10, 30, 11), date(2026, 10, 27, 9)])
     }
 
-    func testSettingAClearedDeadlineAgainAddsOnlyTheMissingDefaults() {
+    func testSettingAClearedDeadlineAgainStartsFromTheDefaults() {
         let task = TaskItem(externalTaskID: "cleared", title: "Book flights")
         task.setDeadline(date(2026, 10, 23), hasTime: false, defaults: .standard)
         task.addDeadlineReminder(.daysBefore(3))
         task.setDeadline(nil, hasTime: false, defaults: .standard)
 
+        XCTAssertEqual(task.deadlineReminderOffsets, [])
+
         task.setDeadline(date(2026, 11, 6, 10), hasTime: true, defaults: .standard)
 
+        XCTAssertEqual(task.deadlineReminderOffsets, [.morningOf, .daysBefore(1), .weeksBefore(1), .hourBefore])
+    }
+
+    func testClearingTheDeadlineKeepsExactReminders() {
+        let task = TaskItem(externalTaskID: "exact", title: "Call the bank")
+        task.setDeadline(date(2026, 10, 23), hasTime: false, defaults: .standard)
+        task.taskReminders.append(.exact(ExactReminder(at: date(2026, 10, 20, 15))))
+
+        task.setDeadline(nil, hasTime: false, defaults: .standard)
+
+        XCTAssertEqual(task.taskReminders.count, 1)
+    }
+
+    func testADeadlineGainingATimeAddsTheHourBeforeDefault() {
+        let task = TaskItem(externalTaskID: "timed", title: "Ship the release notes")
+        task.setDeadline(date(2026, 10, 23), hasTime: false, defaults: .standard)
+        task.addDeadlineReminder(.daysBefore(3))
+
+        task.setDeadline(date(2026, 10, 23, 17), hasTime: true, defaults: .standard)
+
         XCTAssertEqual(task.deadlineReminderOffsets, [.morningOf, .daysBefore(1), .weeksBefore(1), .daysBefore(3), .hourBefore])
+    }
+
+    func testADeadlineGainingATimeSkipsHourBeforeWhenTheDefaultsLeaveItOut() {
+        let task = TaskItem(externalTaskID: "timed-off", title: "Ship the release notes")
+        let defaults = DefaultDeadlineReminders(offsets: [.morningOf])
+        task.setDeadline(date(2026, 10, 23), hasTime: false, defaults: defaults)
+
+        task.setDeadline(date(2026, 10, 23, 17), hasTime: true, defaults: defaults)
+
+        XCTAssertEqual(task.deadlineReminderOffsets, [.morningOf])
     }
 
     func testARecurrenceCycleKeepsTheOffsetsAgainstTheNextDeadline() {

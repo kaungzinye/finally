@@ -39,7 +39,7 @@ The phone stores synchronized rules in SwiftData and resolves them locally again
 
 A deadline at 17:00 on Friday with a 09:00 default reminder time gets `morningOf` at 09:00 Friday, `daysBefore 1` at 09:00 Thursday, and `hourBefore` at 16:00 Friday. Deadline reminders without a deadline stay inert. Fire times in the past are skipped. Day-level resolution uses the local calendar, and the phone schedules resolved instants with explicit UTC components, so a timezone change keeps exact instants and recalculates day-level ones.
 
-New deadlines receive the default deadline reminders configured on the phone when the deadline goes from empty to set. The defaults are phone settings and never travel to the server.
+New deadlines receive the default deadline reminders configured on the phone when the deadline goes from empty to set. A deadline gaining a time receives the one-hour default, and clearing a deadline drops its deadline rules. The defaults are phone settings and never travel to the server.
 
 ## Reconciliation
 

@@ -1,6 +1,6 @@
 # Default deadline reminders
 
-The deadline reminders a task receives the moment it first gains a deadline. The user edits the list in Settings.
+The deadline reminders a task receives the moment its deadline goes from empty to set. The user edits the list in Settings.
 
 Default deadline reminders seed each new [[Deadline reminder]] set.
 
@@ -13,4 +13,6 @@ Default deadline reminders seed each new [[Deadline reminder]] set.
 
 ## Rules
 
-- Defaults apply once, when a deadline goes from empty to set. Moving the deadline keeps the task's own list, and removing a chip keeps it removed.
+- Defaults apply when a deadline goes from empty to set. Moving the deadline keeps the task's own list, and removing a chip keeps it removed.
+- Clearing the deadline drops its deadline reminders, so setting it again starts from the defaults. Exact reminders stay.
+- A date-only deadline gaining a time receives the one-hour default when the defaults include it.
