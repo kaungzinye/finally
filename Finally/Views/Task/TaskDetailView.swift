@@ -136,10 +136,10 @@ struct TaskDetailView: View {
         .presentationBackground(Palette.sheet)
         .onDisappear(perform: submitPendingEdits)
         .sheet(isPresented: $showDatePicker) {
-            DatePickerSheet(selectedDate: deadlineBinding, hasTime: $deadlinePickerHasTime)
+            DatePickerSheet(deadline: deadlineBinding, hasTime: $deadlinePickerHasTime)
         }
         .sheet(isPresented: $showScheduledDayPicker) {
-            DatePickerSheet(selectedDate: scheduledDayBinding)
+            DatePickerSheet(scheduledDay: scheduledDayBinding)
         }
         .sheet(isPresented: $showPriorityPicker) {
             PriorityPicker(selection: edit(\.priority))
@@ -169,21 +169,22 @@ struct TaskDetailView: View {
     @ViewBuilder
     private var fieldChips: some View {
         ChipView(
-            label: task.scheduledDay.map { formattedPlanningDate($0, hasTime: false) } ?? "Scheduled",
+            label: task.scheduledDay.map { "Scheduled \(formattedPlanningDate($0, hasTime: false))" } ?? "Scheduled",
             icon: "scope",
             isPlaceholder: task.scheduledDay == nil
         ) { showScheduledDayPicker = true }
-        .accessibilityLabel(task.scheduledDay.map { "Scheduled \(formattedPlanningDate($0, hasTime: false))" } ?? "Scheduled")
+        .accessibilityIdentifier("task-detail-scheduled")
 
         ChipView(
-            label: task.deadline.map { formattedPlanningDate($0, hasTime: task.deadlineHasTime) } ?? "Deadline",
+            label: task.deadline.map { "Deadline \(formattedPlanningDate($0, hasTime: task.deadlineHasTime))" } ?? "Deadline",
             icon: "calendar",
+            color: task.isOverdue ? Palette.urgent : Palette.ink,
             isPlaceholder: task.deadline == nil
         ) {
             deadlinePickerHasTime = task.deadlineHasTime
             showDatePicker = true
         }
-        .accessibilityLabel(task.deadline.map { "Deadline \(formattedPlanningDate($0, hasTime: task.deadlineHasTime))" } ?? "Deadline")
+        .accessibilityIdentifier("task-detail-deadline")
 
         ChipView(
             label: task.priority?.rawValue ?? "Priority",

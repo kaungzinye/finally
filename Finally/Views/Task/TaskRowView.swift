@@ -63,7 +63,7 @@ struct TaskRowView: View {
             .tint(Palette.high)
         }
         .sheet(isPresented: $showDatePicker) {
-            DatePickerSheet(selectedDate: scheduledDayBinding)
+            DatePickerSheet(scheduledDay: scheduledDayBinding)
         }
     }
 
