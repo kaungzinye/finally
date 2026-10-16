@@ -153,7 +153,7 @@ final class BackendDataFlowIntegrationTests: XCTestCase {
             guard case .permissionDenied = error else {
                 return XCTFail("Expected permissionDenied, received \(error)")
             }
-            XCTAssertEqual(error.localizedDescription, "You don't have edit access to this database")
+            XCTAssertEqual(error.localizedDescription, "You can't edit this Notion database.")
         }
 
         XCTAssertTrue(task.isDirty)

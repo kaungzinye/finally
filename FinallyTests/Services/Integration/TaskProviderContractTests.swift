@@ -396,7 +396,7 @@ final class TaskProviderContractTests: XCTestCase {
 
         XCTAssertEqual(
             coordinator.lastWarning,
-            "This provider keeps these fields on this device: labels."
+            "These fields stay on this iPhone only: labels."
         )
     }
 
