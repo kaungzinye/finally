@@ -336,6 +336,42 @@ final class SyncServiceNotionMappingIntegrationTests: XCTestCase {
         XCTAssertTrue(task.scheduledDay! < task.deadline!)
     }
 
+    func testFullSync_KeepsAScheduledDayAfterTheDeadline() async throws {
+        let mock = MockNotionAPIClient()
+        let syncService = SyncService(api: mock)
+        let context = try makeInMemoryContext()
+
+        var mappings = PropertyMappings()
+        mappings.taskScheduledDayProperty = "Target"
+        mappings.taskDeadlineProperty = "Due Date"
+
+        let session = UserSession(workspaceId: "ws-1", workspaceName: "Workspace", providerIdentity: .notion)
+        session.tasksDatabaseId = "tasks-db"
+        session.propertyMappings = mappings
+        context.insert(session)
+
+        mock.queryAllPagesResult["tasks-db"] = [
+            NotionTestFactory.page(
+                id: "task-1",
+                properties: [
+                    "Name": NotionTestFactory.propertyValue(
+                        type: "title",
+                        title: [NotionRichText(plainText: "Finish late")]
+                    ),
+                    "Status": NotionTestFactory.propertyValue(type: "status", statusName: "Not started"),
+                    "Due Date": NotionTestFactory.propertyValue(type: "date", dateStart: "2026-06-01"),
+                    "Target": NotionTestFactory.propertyValue(type: "date", dateStart: "2026-06-10"),
+                ]
+            )
+        ]
+
+        try await syncService.fullSync(session: session, modelContext: context)
+
+        let task = try XCTUnwrap(try context.fetch(FetchDescriptor<TaskItem>()).first)
+        let scheduledDay = try XCTUnwrap(task.scheduledDay)
+        XCTAssertEqual(Calendar.current.component(.day, from: scheduledDay), 10)
+    }
+
     func testFullSync_WhenChildArrivesBeforeParent_LinksSubtaskToParent() async throws {
         let mock = MockNotionAPIClient()
         let syncService = SyncService(api: mock)

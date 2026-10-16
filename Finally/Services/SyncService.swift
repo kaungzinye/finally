@@ -364,7 +364,6 @@ final class SyncService {
                 task.scheduledDay = parseDate(targetStr).map { Calendar.current.startOfDay(for: $0) }
             }
 
-            task.validateScheduledDay()
             // Priority
             if let priorityKey = mappings.taskPriorityProperty,
                let priorityProp = page.properties[priorityKey],
