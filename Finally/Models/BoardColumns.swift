@@ -26,4 +26,12 @@ struct BoardColumns {
             Column(status: status, tasks: board.filter { $0.status == status }.sorted(by: TasksList.isNearer))
         }
     }
+
+    /// The card a drop names, resolved within this board's workspace.
+    func card(withID id: String) -> TaskItem? {
+        for column in columns {
+            if let task = column.tasks.first(where: { $0.externalTaskID == id }) { return task }
+        }
+        return nil
+    }
 }
