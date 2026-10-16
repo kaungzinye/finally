@@ -7,43 +7,30 @@ struct PriorityPicker: View {
     var body: some View {
         NavigationStack {
             List {
-                Button {
-                    selection = nil
-                    dismiss()
-                } label: {
-                    HStack {
-                        Image(systemName: "flag")
-                            .foregroundStyle(.secondary)
-                        Text("No Priority")
-                        Spacer()
-                        if selection == nil {
-                            Image(systemName: "checkmark")
-                                .foregroundStyle(.primary)
-                        }
+                Section {
+                    CheckRow(isSelected: selection == nil, action: { choose(nil) }) {
+                        PriorityRing(color: Palette.low, isDone: false)
+                        Text("No priority")
                     }
-                }
 
-                ForEach(TaskPriority.allCases, id: \.self) { priority in
-                    Button {
-                        selection = priority
-                        dismiss()
-                    } label: {
-                        HStack {
-                            Image(systemName: priority.icon)
-                                .foregroundStyle(priority.color)
+                    ForEach(TaskPriority.allCases, id: \.self) { priority in
+                        CheckRow(isSelected: selection == priority, action: { choose(priority) }) {
+                            PriorityRing(color: priority.color, isDone: false)
                             Text(priority.rawValue)
-                            Spacer()
-                            if selection == priority {
-                                Image(systemName: "checkmark")
-                                    .foregroundStyle(.primary)
-                            }
                         }
                     }
                 }
             }
+            .paperList(background: Palette.sheet)
             .navigationTitle("Priority")
             .navigationBarTitleDisplayMode(.inline)
         }
         .presentationDetents([.medium])
+        .paperSheet()
+    }
+
+    private func choose(_ priority: TaskPriority?) {
+        selection = priority
+        dismiss()
     }
 }

@@ -26,7 +26,7 @@ struct SearchFilterView: View {
                         .onTapGesture { selectedTask = task }
                 }
             }
-            .paperList()
+            .paperList(background: Palette.sheet)
             .navigationTitle("Search")
             .searchable(text: $searchText, isPresented: $isSearching, prompt: "Search tasks")
             .onAppear { isSearching = true }
@@ -35,7 +35,7 @@ struct SearchFilterView: View {
                     ContentUnavailableView(
                         "Search tasks",
                         systemImage: "magnifyingglass",
-                        description: Text("Type to search by task name")
+                        description: Text("Type part of a task's name.")
                     )
                 } else if filteredTasks.isEmpty {
                     ContentUnavailableView.search(text: searchText)
@@ -46,5 +46,6 @@ struct SearchFilterView: View {
                     .presentationDetents([.fraction(0.8)])
             }
         }
+        .paperSheet()
     }
 }
