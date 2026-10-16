@@ -378,6 +378,44 @@ final class SyncServiceNotionMappingIntegrationTests: XCTestCase {
         XCTAssertEqual(child.parent?.subtasks.map(\.externalTaskID), ["child-1"])
     }
 
+    /// Notion carries no reminder rules, so the phone owns them and a pull that first brings a
+    /// deadline seeds the defaults locally.
+    func testFullSync_WhenAPullFirstBringsADeadline_AppliesTheDefaultDeadlineReminders() async throws {
+        let mock = MockNotionAPIClient()
+        let defaults = DefaultDeadlineReminders(offsets: [.morningOf, .daysBefore(2), .hourBefore])
+        let syncService = SyncService(api: mock, defaultDeadlineReminders: { defaults })
+        let context = try makeInMemoryContext()
+        let session = UserSession(workspaceId: "ws-1", workspaceName: "Workspace", providerIdentity: .notion)
+        session.tasksDatabaseId = "tasks-db"
+        session.propertyMappings = PropertyMappings()
+        context.insert(session)
+        func page(deadline: String?) -> NotionPage {
+            NotionTestFactory.page(
+                id: "task-1",
+                properties: [
+                    "Name": NotionTestFactory.propertyValue(type: "title", title: [NotionRichText(plainText: "Renew passport")]),
+                    "Status": NotionTestFactory.propertyValue(type: "status", statusName: "Not Started"),
+                    "Due Date": NotionTestFactory.propertyValue(type: "date", dateStart: deadline),
+                ]
+            )
+        }
+
+        mock.queryAllPagesResult["tasks-db"] = [page(deadline: nil)]
+        try await syncService.fullSync(session: session, modelContext: context)
+        let task = try XCTUnwrap(try context.fetch(FetchDescriptor<TaskItem>()).first)
+        XCTAssertTrue(task.taskReminders.isEmpty)
+
+        mock.queryAllPagesResult["tasks-db"] = [page(deadline: "2026-11-02")]
+        try await syncService.fullSync(session: session, modelContext: context)
+        XCTAssertEqual(task.deadlineReminderOffsets, [.morningOf, .daysBefore(2)])
+        XCTAssertFalse(task.isDirty)
+
+        task.removeReminder(id: try XCTUnwrap(task.taskReminders.first).id)
+        mock.queryAllPagesResult["tasks-db"] = [page(deadline: "2026-11-09")]
+        try await syncService.fullSync(session: session, modelContext: context)
+        XCTAssertEqual(task.deadlineReminderOffsets, [.daysBefore(2)])
+    }
+
     private func makeInMemoryContext() throws -> ModelContext {
         let schema = Schema([
             TaskItem.self,

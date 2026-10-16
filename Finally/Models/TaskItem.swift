@@ -45,6 +45,42 @@ final class TaskItem {
 
     var hasReminders: Bool { !taskReminders.isEmpty }
 
+    var deadlineReminderOffsets: [DeadlineReminderOffset] {
+        taskReminders.compactMap { reminder in
+            if case .deadline(let rule) = reminder { rule.offset } else { nil }
+        }
+    }
+
+    /// What the + chip offers: the short list minus the task's own chips. "1 hour before"
+    /// needs a timed deadline.
+    var addableDeadlineReminderOffsets: [DeadlineReminderOffset] {
+        guard deadline != nil else { return [] }
+        let present = deadlineReminderOffsets
+        return DeadlineReminderOffset.menu.filter { offset in
+            !present.contains(offset) && (deadlineHasTime || offset != .hourBefore)
+        }
+    }
+
+    /// Sets the deadline from a local edit. A deadline going from empty to set receives the
+    /// default deadline reminders. Moving a deadline keeps the task's own list.
+    func setDeadline(_ newDeadline: Date?, hasTime: Bool, defaults: DefaultDeadlineReminders) {
+        let gainsDeadline = deadline == nil && newDeadline != nil
+        deadline = newDeadline
+        deadlineHasTime = newDeadline != nil && hasTime
+        guard gainsDeadline else { return }
+        defaults.offsets(deadlineHasTime: deadlineHasTime).forEach(addDeadlineReminder)
+    }
+
+    /// Adds a deadline reminder. A task holds at most one rule per offset.
+    func addDeadlineReminder(_ offset: DeadlineReminderOffset) {
+        guard offset.isValid, !deadlineReminderOffsets.contains(offset) else { return }
+        taskReminders.append(.deadline(DeadlineReminder(offset: offset)))
+    }
+
+    func removeReminder(id: UUID) {
+        taskReminders.removeAll { $0.id == id }
+    }
+
     // MARK: - Computed Properties
 
     var status: TaskStatus {
@@ -124,38 +160,6 @@ final class TaskItem {
     init(externalTaskID: String, title: String) {
         self.externalTaskID = externalTaskID
         self.title = title
-    }
-
-    // MARK: - Anchor helpers
-
-    func anchorDate(for anchor: ReminderAnchor) -> Date? {
-        switch anchor {
-        case .deadline: return deadline
-        case .scheduledDay: return scheduledDay
-        }
-    }
-
-    func hasTimeForAnchor(_ anchor: ReminderAnchor) -> Bool {
-        switch anchor {
-        case .deadline: return deadlineHasTime
-        case .scheduledDay: return false
-        }
-    }
-
-    func adjustedAnchorDate(_ anchorDate: Date, hasTime: Bool, defaultReminderMinutes: Int?) -> Date {
-        if hasTime || isSubtask {
-            return anchorDate
-        }
-        let storedMinutes = defaultReminderMinutes
-            ?? UserDefaults.standard.integer(forKey: AppConstants.defaultReminderTimeMinutesKey)
-        let preferredMinutes = storedMinutes > 0 ? storedMinutes : AppConstants.defaultReminderTimeMinutes
-        let hour = preferredMinutes / 60
-        let minute = preferredMinutes % 60
-        var comps = Calendar.current.dateComponents([.year, .month, .day], from: anchorDate)
-        comps.hour = hour
-        comps.minute = minute
-        comps.second = 0
-        return Calendar.current.date(from: comps) ?? anchorDate
     }
 
     var computedSuggestedDate: Date? {
@@ -239,11 +243,7 @@ enum DeadlineDemoFixture {
         task.tags = ["Launch", "Client"]
         task.recurrence = .weekly
         task.scheduledDay = calendar.date(byAdding: .day, value: 9, to: referenceDate)
-        task.deadline = calendar.date(byAdding: .day, value: 20, to: referenceDate)
-        task.taskReminders = [
-            .anchored(AnchoredReminder(anchor: .scheduledDay, value: 1, unit: .days)),
-            .anchored(AnchoredReminder(anchor: .deadline, value: 2, unit: .hours)),
-        ]
+        task.setDeadline(calendar.date(byAdding: .day, value: 20, to: referenceDate), hasTime: false, defaults: .standard)
 
         let subtaskDefinitions: [(String, Int, TaskStatus)] = [
             ("Confirm scope and milestones", 0, .done),

@@ -5,6 +5,71 @@ import XCTest
 @testable import Finally
 
 final class ServerReminderRuleTests: XCTestCase {
+    private let ruleID = UUID(uuidString: "5B0A3C1E-7D44-4F1B-9E0C-2A6D8B3F1C47")!
+
+    private func wireObject(_ reminder: TaskReminder) throws -> NSDictionary {
+        let data = try JSONEncoder().encode(FinallyServerReminderRule(reminder))
+        return try XCTUnwrap(JSONSerialization.jsonObject(with: data) as? NSDictionary)
+    }
+
+    private func decode(_ json: String) throws -> TaskReminder {
+        try JSONDecoder().decode(FinallyServerReminderRule.self, from: Data(json.utf8)).reminder()
+    }
+
+    func testDeadlineRulesEncodeTheContractShapes() throws {
+        let id = ruleID.uuidString
+        XCTAssertEqual(try wireObject(.deadline(DeadlineReminder(id: ruleID, offset: .morningOf))),
+                       ["id": id, "kind": "deadline", "offset": "morningOf"])
+        XCTAssertEqual(try wireObject(.deadline(DeadlineReminder(id: ruleID, offset: .daysBefore(1)))),
+                       ["id": id, "kind": "deadline", "offset": "daysBefore", "value": 1])
+        XCTAssertEqual(try wireObject(.deadline(DeadlineReminder(id: ruleID, offset: .weeksBefore(1)))),
+                       ["id": id, "kind": "deadline", "offset": "weeksBefore", "value": 1])
+        XCTAssertEqual(try wireObject(.deadline(DeadlineReminder(id: ruleID, offset: .hourBefore))),
+                       ["id": id, "kind": "deadline", "offset": "hourBefore"])
+    }
+
+    func testExactRuleEncodesTheContractShape() throws {
+        let instant = try XCTUnwrap(FinallyServerTimestamp.date(from: "2026-10-20T15:00:00.000Z"))
+
+        XCTAssertEqual(try wireObject(.exact(ExactReminder(id: ruleID, at: instant))),
+                       ["id": ruleID.uuidString, "kind": "exact", "at": "2026-10-20T15:00:00.000Z"])
+    }
+
+    func testDeadlineRulesDecodeTheContractShapes() throws {
+        let id = ruleID.uuidString
+        XCTAssertEqual(try decode(#"{"id":"\#(id)","kind":"deadline","offset":"morningOf"}"#),
+                       .deadline(DeadlineReminder(id: ruleID, offset: .morningOf)))
+        XCTAssertEqual(try decode(#"{"id":"\#(id)","kind":"deadline","offset":"daysBefore","value":30}"#),
+                       .deadline(DeadlineReminder(id: ruleID, offset: .daysBefore(30))))
+        XCTAssertEqual(try decode(#"{"id":"\#(id)","kind":"deadline","offset":"weeksBefore","value":12}"#),
+                       .deadline(DeadlineReminder(id: ruleID, offset: .weeksBefore(12))))
+        XCTAssertEqual(try decode(#"{"id":"\#(id.lowercased())","kind":"deadline","offset":"hourBefore"}"#),
+                       .deadline(DeadlineReminder(id: ruleID, offset: .hourBefore)))
+    }
+
+    func testRulesOutsideTheContractAreRejected() {
+        let id = ruleID.uuidString
+        let rejected = [
+            #"{"id":"\#(id)","kind":"anchored","offset":"morningOf"}"#,
+            #"{"id":"\#(id)","kind":"deadline","offset":"monthsBefore","value":1}"#,
+            #"{"id":"\#(id)","kind":"deadline"}"#,
+            #"{"id":"\#(id)","kind":"deadline","offset":"daysBefore"}"#,
+            #"{"id":"\#(id)","kind":"deadline","offset":"daysBefore","value":0}"#,
+            #"{"id":"\#(id)","kind":"deadline","offset":"daysBefore","value":31}"#,
+            #"{"id":"\#(id)","kind":"deadline","offset":"weeksBefore","value":0}"#,
+            #"{"id":"\#(id)","kind":"deadline","offset":"weeksBefore","value":13}"#,
+            #"{"id":"\#(id)","kind":"deadline","offset":"morningOf","value":1}"#,
+            #"{"id":"\#(id)","kind":"deadline","offset":"hourBefore","value":1}"#,
+            #"{"id":"\#(id)","kind":"deadline","offset":"morningOf","at":"2026-10-20T15:00:00.000Z"}"#,
+            #"{"id":"\#(id)","kind":"exact"}"#,
+            #"{"id":"\#(id)","kind":"exact","at":"tomorrow"}"#,
+            #"{"id":"not-a-uuid","kind":"deadline","offset":"morningOf"}"#,
+        ]
+        for json in rejected {
+            XCTAssertThrowsError(try decode(json), json)
+        }
+    }
+
     @MainActor
     func testPersistedServerRuleSchedulesThroughFreshContextAndService() async throws {
         let container = try ModelContainer(for: TaskItem.self, ProjectItem.self, UserSession.self,
@@ -12,7 +77,7 @@ final class ServerReminderRuleTests: XCTestCase {
         let originalContext = ModelContext(container)
         let now = Date(timeIntervalSince1970: 2_000_000_000)
         let instant = now.addingTimeInterval(600)
-        let rule = TaskReminder.explicitDate(ExplicitDateReminder(dateTime: instant))
+        let rule = TaskReminder.exact(ExactReminder(at: instant))
         let wire = try JSONEncoder().encode(FinallyServerReminderRule(rule))
         let task = TaskItem(externalTaskID: "1", title: "Proposal")
         task.providerWorkspaceId = "server"
@@ -36,7 +101,7 @@ final class ServerReminderRuleTests: XCTestCase {
     func testExactReminderPreservesIdentityAndFixedInstantThroughWireRoundTrip() throws {
         let id = UUID()
         let instant = Date(timeIntervalSince1970: 2_000_000_000.125)
-        let original = TaskReminder.explicitDate(ExplicitDateReminder(id: id, dateTime: instant))
+        let original = TaskReminder.exact(ExactReminder(id: id, at: instant))
         let data = try JSONEncoder().encode(FinallyServerReminderRule(original))
         let wire = try JSONDecoder().decode(FinallyServerReminderRule.self, from: data)
         let decoded = try wire.reminder()
@@ -71,43 +136,8 @@ final class ServerReminderRuleTests: XCTestCase {
                        expected.timeIntervalSince1970, accuracy: 0.001)
     }
 
-    func testAnchoredReminderRetainsRuleAndMovesWithAcceptedDeadline() throws {
-        let id = UUID()
-        let original = TaskReminder.anchored(AnchoredReminder(id: id, anchor: .deadline,
-                                                             value: 30, unit: .minutes, direction: .before))
-        let data = try JSONEncoder().encode(FinallyServerReminderRule(original))
-        let wire = try JSONDecoder().decode(FinallyServerReminderRule.self, from: data)
-        let decoded = try wire.reminder()
-        let task = TaskItem(externalTaskID: "1", title: "Proposal")
-        task.deadlineHasTime = true
-        let acceptedDeadline = Date(timeIntervalSince1970: 2_000_000_000)
-        task.deadline = acceptedDeadline
-
-        XCTAssertEqual(decoded, original)
-        XCTAssertEqual(decoded.fireDate(for: task), acceptedDeadline.addingTimeInterval(-1800))
-        task.deadline = acceptedDeadline.addingTimeInterval(3600)
-        XCTAssertEqual(decoded.fireDate(for: task), acceptedDeadline.addingTimeInterval(1800))
-    }
-
-    func testScheduledDayAnchorTravelsAsThePlannedDayWireValue() throws {
-        let id = UUID()
-        let original = TaskReminder.anchored(AnchoredReminder(id: id, anchor: .scheduledDay,
-                                                             value: 1, unit: .days, direction: .before))
-
-        let sent = try XCTUnwrap(JSONSerialization.jsonObject(
-            with: JSONEncoder().encode(FinallyServerReminderRule(original))
-        ) as? [String: Any])
-        let payload = """
-        {"id":"\(id.uuidString)","kind":"anchored","anchor":"plannedDay","value":1,"unit":"days","direction":"before"}
-        """
-        let received = try JSONDecoder().decode(FinallyServerReminderRule.self, from: Data(payload.utf8)).reminder()
-
-        XCTAssertEqual(sent["anchor"] as? String, "plannedDay")
-        XCTAssertEqual(received, original)
-    }
-
     func testSharedRuleUUIDKeepsProviderWorkspaceAndTaskNotificationsDistinct() {
-        let reminder = TaskReminder.anchored(AnchoredReminder(anchor: .deadline, value: 30, unit: .minutes))
+        let reminder = TaskReminder.deadline(DeadlineReminder(offset: .hourBefore))
         let first = TaskItem(externalTaskID: "1", title: "Proposal")
         first.providerWorkspaceId = "server"
         let second = TaskItem(externalTaskID: "2", title: "Review")

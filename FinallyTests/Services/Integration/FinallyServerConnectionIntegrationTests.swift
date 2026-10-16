@@ -623,6 +623,63 @@ final class FinallyServerConnectionIntegrationTests: XCTestCase {
         XCTAssertEqual(created.scheduledDay, Date(timeIntervalSince1970: 1_781_049_600))
     }
 
+    func testURLClientCarriesReminderRulesInTheContractShape() async throws {
+        let configuration = URLSessionConfiguration.ephemeral
+        configuration.protocolClasses = [MockURLProtocol.self]
+        let session = URLSession(configuration: configuration)
+        let morningID = try XCTUnwrap(UUID(uuidString: "0D6C1F7A-4B6E-4E8B-9C55-2F3A1B7D9E01"))
+        let daysID = try XCTUnwrap(UUID(uuidString: "6E2B9D41-8A3C-4F27-B1D0-7C5E4A2F8B12"))
+        let exactID = try XCTUnwrap(UUID(uuidString: "A9F04C3B-2D1E-4B6A-8E7F-5C0D9B1A3E23"))
+        var sentRules: [NSDictionary] = []
+        MockURLProtocol.handler = { request in
+            let sent = try XCTUnwrap(
+                JSONSerialization.jsonObject(with: Self.bodyData(of: request)) as? [String: Any]
+            )
+            sentRules = try XCTUnwrap(sent["reminder_rules"] as? [NSDictionary])
+            let body = """
+            {"id":8,"project_id":42,"title":"File taxes","revision":1,"done":false,
+             "due_date":"2026-10-23T17:00:00Z","deadline_has_time":true,
+             "reminder_rules":[
+               {"id":"\(morningID.uuidString)","kind":"deadline","offset":"morningOf"},
+               {"id":"\(daysID.uuidString)","kind":"deadline","offset":"daysBefore","value":2},
+               {"id":"\(exactID.uuidString)","kind":"exact","at":"2026-10-20T15:00:00.000Z"}
+             ]}
+            """
+            return (
+                HTTPURLResponse(url: request.url!, statusCode: 201, httpVersion: nil, headerFields: nil)!,
+                Data(body.utf8)
+            )
+        }
+        let client = URLSessionFinallyServerAPIClient(
+            baseURL: URL(string: "https://tasks.example.com")!,
+            token: "jwt-token",
+            session: session
+        )
+        let exactInstant = try XCTUnwrap(FinallyServerTimestamp.date(from: "2026-10-20T15:00:00.000Z"))
+        let rules: [TaskReminder] = [
+            .deadline(DeadlineReminder(id: morningID, offset: .morningOf)),
+            .deadline(DeadlineReminder(id: daysID, offset: .daysBefore(2))),
+            .exact(ExactReminder(id: exactID, at: exactInstant)),
+        ]
+
+        let created = try await client.createTask(
+            projectID: 42,
+            mutation: FinallyServerTaskMutation(
+                title: "File taxes",
+                deadline: FinallyServerTimestamp.date(from: "2026-10-23T17:00:00Z"),
+                deadlineHasTime: true,
+                reminders: rules
+            )
+        )
+
+        XCTAssertEqual(sentRules, [
+            ["id": morningID.uuidString, "kind": "deadline", "offset": "morningOf"],
+            ["id": daysID.uuidString, "kind": "deadline", "offset": "daysBefore", "value": 2],
+            ["id": exactID.uuidString, "kind": "exact", "at": "2026-10-20T15:00:00.000Z"],
+        ])
+        XCTAssertEqual(created.reminders, rules)
+    }
+
     private static func bodyData(of request: URLRequest) throws -> Data {
         if let body = request.httpBody { return body }
         let stream = try XCTUnwrap(request.httpBodyStream)

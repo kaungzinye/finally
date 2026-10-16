@@ -416,7 +416,7 @@ final class TaskProviderContractTests: XCTestCase {
         task.tags = ["Launch"]
         task.recurrence = .weekly
         task.taskReminders = [
-            .explicitDate(ExplicitDateReminder(dateTime: Date(timeIntervalSince1970: 1_780_050_000)))
+            .exact(ExactReminder(at: Date(timeIntervalSince1970: 1_780_050_000)))
         ]
         context.insert(workspace)
         context.insert(task)

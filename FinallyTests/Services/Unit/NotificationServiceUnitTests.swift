@@ -23,11 +23,11 @@ final class NotificationServiceUnitTests: XCTestCase {
         let now = referenceDate
 
         let task = TaskItem(externalTaskID: "t-1", title: "Buy milk")
-        task.deadline = now.addingTimeInterval(3600)
+        task.deadline = now.addingTimeInterval(7200)
         task.deadlineHasTime = true
         ctx.insert(task)
 
-        let reminder = TaskReminder.presetThirtyMinutesBeforeDeadline()
+        let reminder = TaskReminder.deadline(DeadlineReminder(offset: .hourBefore))
         task.taskReminders = [reminder]
         try ctx.save()
 
@@ -46,9 +46,10 @@ final class NotificationServiceUnitTests: XCTestCase {
 
         let task = TaskItem(externalTaskID: "t-2", title: "Old task")
         task.deadline = now.addingTimeInterval(-1800)
+        task.deadlineHasTime = true
         ctx.insert(task)
 
-        let reminder = TaskReminder.presetThirtyMinutesBeforeDeadline()
+        let reminder = TaskReminder.deadline(DeadlineReminder(offset: .hourBefore))
         task.taskReminders = [reminder]
         try ctx.save()
 
@@ -88,8 +89,8 @@ final class NotificationServiceUnitTests: XCTestCase {
         let scheduler = MockNotificationScheduler()
         let task = TaskItem(externalTaskID: "t-cancel", title: "Cancel me")
         task.taskReminders = [
-            TaskReminder.presetOneDayBeforeDeadline(),
-            TaskReminder.presetThirtyMinutesBeforeDeadline(),
+            TaskReminder.deadline(DeadlineReminder(offset: .daysBefore(1))),
+            TaskReminder.deadline(DeadlineReminder(offset: .hourBefore)),
         ]
 
         let service = makeService(scheduler: scheduler, now: referenceDate)
@@ -107,7 +108,7 @@ final class NotificationServiceUnitTests: XCTestCase {
         let task = TaskItem(externalTaskID: "t-reschedule", title: "Reschedule me")
         task.deadline = now.addingTimeInterval(2 * 86_400)
         task.deadlineHasTime = true
-        task.taskReminders = [TaskReminder.presetOneDayBeforeDeadline()]
+        task.taskReminders = [TaskReminder.deadline(DeadlineReminder(offset: .daysBefore(1)))]
         ctx.insert(task)
         try ctx.save()
 
@@ -125,7 +126,7 @@ final class NotificationServiceUnitTests: XCTestCase {
         let task = TaskItem(externalTaskID: "t-done", title: "Done task")
         task.deadline = now.addingTimeInterval(7200)
         task.status = .done
-        task.taskReminders = [TaskReminder.presetOneDayBeforeDeadline()]
+        task.taskReminders = [TaskReminder.deadline(DeadlineReminder(offset: .daysBefore(1)))]
         ctx.insert(task)
         try ctx.save()
 
@@ -145,7 +146,7 @@ final class NotificationServiceUnitTests: XCTestCase {
             let task = TaskItem(externalTaskID: "t-limit-\(i)", title: "Task \(i)")
             task.deadline = now.addingTimeInterval(2 * 86_400 + Double(i + 1) * 3600)
             task.deadlineHasTime = true
-            task.taskReminders = [TaskReminder.presetOneDayBeforeDeadline()]
+            task.taskReminders = [TaskReminder.deadline(DeadlineReminder(offset: .daysBefore(1)))]
             ctx.insert(task)
         }
         try ctx.save()

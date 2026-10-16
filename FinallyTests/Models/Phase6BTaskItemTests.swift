@@ -83,8 +83,8 @@ final class Phase6BTaskItemTests: XCTestCase {
     func testTaskReminders_PersistsOnTaskItem() {
         let task = TaskItem(externalTaskID: "t-4", title: "Task")
         task.taskReminders = [
-            TaskReminder.presetThirtyMinutesBeforeDeadline(),
-            .explicitDate(ExplicitDateReminder(dateTime: Date(timeIntervalSince1970: 1_700_000_000))),
+            TaskReminder.deadline(DeadlineReminder(offset: .hourBefore)),
+            .exact(ExactReminder(at: Date(timeIntervalSince1970: 1_700_000_000))),
         ]
 
         XCTAssertEqual(task.taskReminders.count, 2)
@@ -101,7 +101,7 @@ final class Phase6BTaskItemTests: XCTestCase {
         XCTAssertEqual(task.priority, .urgent)
         XCTAssertEqual(task.recurrence, .weekly)
         XCTAssertTrue(try XCTUnwrap(task.scheduledDay) < XCTUnwrap(task.deadline))
-        XCTAssertEqual(task.taskReminders.count, 2)
+        XCTAssertEqual(task.deadlineReminderOffsets, [.morningOf, .daysBefore(1), .weeksBefore(1)])
         XCTAssertEqual(task.subtasks.map(\.sortIndex), [0, 1, 2])
         XCTAssertEqual(task.subtasks.filter { $0.status == .done }.count, 1)
     }

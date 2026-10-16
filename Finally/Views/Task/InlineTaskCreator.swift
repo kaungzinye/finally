@@ -17,7 +17,6 @@ struct InlineTaskCreator: View {
     @State private var project: ProjectItem?
     @State private var recurrence: Recurrence = .none
     @State private var customRecurrenceRule: RecurrenceRule?
-    @State private var reminderChoices: [ReminderChoice] = []
     @State private var parentTask: TaskItem?
 
     // NLP auto-detection tracking
@@ -36,7 +35,6 @@ struct InlineTaskCreator: View {
     @State private var showTagPicker = false
     @State private var showProjectPicker = false
     @State private var showRecurrencePicker = false
-    @State private var showReminderPicker = false
     @State private var showParentPicker = false
 
     @FocusState private var isFocused: Bool
@@ -151,12 +149,6 @@ struct InlineTaskCreator: View {
                                 icon: "folder"
                             ) { showProjectPicker = true }
                         }
-                        if !reminderChoices.isEmpty {
-                            ChipView(
-                                label: "\(reminderChoices.count) reminder\(reminderChoices.count == 1 ? "" : "s")",
-                                icon: "bell.fill"
-                            ) { showReminderPicker = true }
-                        }
                         if let parentTask {
                             ChipView(
                                 label: "↳ \(parentTask.title)",
@@ -174,7 +166,7 @@ struct InlineTaskCreator: View {
                 }
             }
 
-            // Property buttons + send (order matches TaskRowView: date, priority, reminders, tags, project, recurrence)
+            // Property buttons + send
             HStack(spacing: 18) {
                 Button { showDatePicker = true } label: {
                     Image(systemName: "calendar")
@@ -187,10 +179,6 @@ struct InlineTaskCreator: View {
                 Button { showPriorityPicker = true } label: {
                     Image(systemName: "flag")
                         .foregroundStyle(priority?.color ?? Palette.muted)
-                }
-                Button { showReminderPicker = true } label: {
-                    Image(systemName: !reminderChoices.isEmpty ? "bell.fill" : "bell")
-                        .foregroundStyle(!reminderChoices.isEmpty ? Palette.ink : Palette.muted)
                 }
                 Button { showTagPicker = true } label: {
                     Image(systemName: "tag")
@@ -261,16 +249,13 @@ struct InlineTaskCreator: View {
                 contextDate: deadline
             )
         }
-        .sheet(isPresented: $showReminderPicker) {
-            InlineReminderPicker(selectedChoices: $reminderChoices)
-        }
         .sheet(isPresented: $showParentPicker) {
             ParentTaskPicker(selection: $parentTask)
         }
     }
 
     private var hasSelections: Bool {
-        deadline != nil || scheduledDay != nil || priority != nil || !tags.isEmpty || project != nil || recurrence != .none || !reminderChoices.isEmpty || parentTask != nil
+        deadline != nil || scheduledDay != nil || priority != nil || !tags.isEmpty || project != nil || recurrence != .none || parentTask != nil
     }
 
     private func createTask() {
@@ -288,9 +273,8 @@ struct InlineTaskCreator: View {
         let task = TaskItem(externalTaskID: UUID().uuidString, title: title)
         let selectedWorkspace = try? modelContext.selectedProviderWorkspace()
         task.providerWorkspaceId = selectedWorkspace?.workspaceId
-        task.deadline = deadline
+        task.setDeadline(deadline, hasTime: deadlineHasTime, defaults: .current())
         task.scheduledDay = scheduledDay
-        task.deadlineHasTime = deadline != nil && deadlineHasTime
         task.validateScheduledDay()
         task.priority = priority
         task.tags = tags
@@ -311,11 +295,10 @@ struct InlineTaskCreator: View {
             SubtaskScheduler.distributeSubtaskDates(parent: parent)
         }
 
-        task.taskReminders = reminderChoices.map { $0.toTaskReminder(hasScheduledDay: scheduledDay != nil) }
-
-        if !task.taskReminders.isEmpty {
+        if task.hasReminders {
             NotificationService.shared.rescheduleAllReminders(modelContext: modelContext)
         }
+
 
         let context = modelContext
         Task {
@@ -335,7 +318,6 @@ struct InlineTaskCreator: View {
         tags = []
         if presetProject == nil { project = nil }
         recurrence = .none
-        reminderChoices = []
         parentTask = nil
         customRecurrenceRule = nil
         nlpDetectedDate = false
