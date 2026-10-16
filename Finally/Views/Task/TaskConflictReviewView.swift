@@ -48,6 +48,18 @@ struct TaskConflictReviewView: View {
         LabeledContent("Scheduled", value: mutation.scheduledDay?.formatted(date: .abbreviated, time: .omitted) ?? "None")
         LabeledContent("Deadline", value: mutation.deadline?.formatted(date: .abbreviated, time: .shortened) ?? "None")
         LabeledContent("Priority", value: mutation.priority?.rawValue ?? "None")
+        LabeledContent("Reminders") {
+            if mutation.reminders.isEmpty {
+                Text("None")
+            } else {
+                FlowLayout(spacing: 6) {
+                    ForEach(mutation.reminders) { reminder in
+                        ChipView(label: reminder.label, icon: reminder.icon)
+                    }
+                }
+                .allowsHitTesting(false)
+            }
+        }
         if task.isDeleted { Text("This iPhone deleted the task.") }
     }
 

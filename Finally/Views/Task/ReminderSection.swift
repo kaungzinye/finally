@@ -46,7 +46,7 @@ struct ReminderSection: View {
                         .accessibilityIdentifier("add-deadline-reminder")
                     }
                     ForEach(exactReminders) { rule in
-                        RemovableChip(label: rule.at.formatted(.dateTime.month(.abbreviated).day().hour().minute()),
+                        RemovableChip(label: rule.label,
                                       icon: "clock", isInert: rule.at <= Date()) {
                             edit { task.removeReminder(id: rule.id) }
                         }
