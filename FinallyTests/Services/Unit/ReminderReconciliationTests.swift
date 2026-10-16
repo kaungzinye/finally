@@ -16,9 +16,9 @@ final class ReminderReconciliationTests: XCTestCase {
     private func task(_ id: String, after seconds: Double, store: ModelContext) -> TaskItem {
         let task = TaskItem(externalTaskID: id, title: id)
         task.providerWorkspaceId = "server"
-        task.deadline = now.addingTimeInterval(seconds + 1800)
+        task.deadline = now.addingTimeInterval(seconds + 3600)
         task.deadlineHasTime = true
-        task.taskReminders = [.presetThirtyMinutesBeforeDeadline()]
+        task.taskReminders = [.deadline(DeadlineReminder(offset: .hourBefore))]
         store.insert(task)
         return task
     }
@@ -98,7 +98,7 @@ final class ReminderReconciliationTests: XCTestCase {
     func testEditsCompletionAndDraftIdentityCancelOrphans() async throws {
         let store = try context()
         let task = task("draft", after: 60, store: store)
-        let exact = TaskReminder.explicitDate(ExplicitDateReminder(dateTime: now.addingTimeInterval(90)))
+        let exact = TaskReminder.exact(ExactReminder(at: now.addingTimeInterval(90)))
         task.taskReminders.append(exact)
         let center = MockNotificationScheduler()
         let service = NotificationService(center: center, now: { self.now })
@@ -110,9 +110,9 @@ final class ReminderReconciliationTests: XCTestCase {
         service.rescheduleAllReminders(modelContext: store)
         await service.waitUntilIdle()
         XCTAssertTrue(draftIDs.isDisjoint(with: Set(center.pending.keys)))
-        let anchored = try XCTUnwrap(center.pending[task.taskReminders[0].notificationId(for: task)]?.trigger as? UNCalendarNotificationTrigger)
+        let deadlineTrigger = try XCTUnwrap(center.pending[task.taskReminders[0].notificationId(for: task)]?.trigger as? UNCalendarNotificationTrigger)
         let fixed = try XCTUnwrap(center.pending[exact.notificationId(for: task)]?.trigger as? UNCalendarNotificationTrigger)
-        XCTAssertEqual(anchored.nextTriggerDate(), now.addingTimeInterval(3660))
+        XCTAssertEqual(deadlineTrigger.nextTriggerDate(), now.addingTimeInterval(3660))
         XCTAssertEqual(fixed.nextTriggerDate(), now.addingTimeInterval(90))
         task.status = .done
         service.rescheduleAllReminders(modelContext: store)
@@ -139,10 +139,44 @@ final class ReminderReconciliationTests: XCTestCase {
         XCTAssertNil(service.authorizationMessage)
     }
 
+    func testPendingRequestsFollowTheTasksChipsAndSkipPastFireTimes() async throws {
+        let store = try context()
+        let task = TaskItem(externalTaskID: "chips", title: "File taxes")
+        task.providerWorkspaceId = "server"
+        let deadline = now.addingTimeInterval(3 * 86_400)
+        task.setDeadline(deadline, hasTime: true, defaults: .standard)
+        store.insert(task)
+        let rule = { (offset: DeadlineReminderOffset) in
+            try XCTUnwrap(task.taskReminders.first { reminder in
+                if case .deadline(let rule) = reminder { rule.offset == offset } else { false }
+            })
+        }
+        let center = MockNotificationScheduler()
+        let service = NotificationService(center: center, now: { self.now })
+
+        service.rescheduleAllReminders(modelContext: store, defaultReminderMinutes: 9 * 60)
+        await service.waitUntilIdle()
+
+        // One week before already passed, so it stays saved and unscheduled.
+        XCTAssertEqual(task.taskReminders.count, 4)
+        XCTAssertEqual(Set(center.pending.keys), Set(try [.morningOf, .daysBefore(1), .hourBefore].map { try rule($0).notificationId(for: task) }))
+        let hourBefore = try XCTUnwrap(center.pending[rule(.hourBefore).notificationId(for: task)]?.trigger as? UNCalendarNotificationTrigger)
+        XCTAssertEqual(hourBefore.nextTriggerDate(), deadline.addingTimeInterval(-3600))
+
+        let morningOf = try rule(.morningOf)
+        task.removeReminder(id: morningOf.id)
+        task.addDeadlineReminder(.daysBefore(2))
+        service.rescheduleAllReminders(modelContext: store, defaultReminderMinutes: 9 * 60)
+        await service.waitUntilIdle()
+
+        XCTAssertEqual(Set(center.pending.keys), Set(try [.daysBefore(1), .daysBefore(2), .hourBefore].map { try rule($0).notificationId(for: task) }))
+        XCTAssertNil(center.pending[morningOf.notificationId(for: task)])
+    }
+
     func testExactTriggerKeepsInstantAcrossTimezoneChanges() throws {
         let task = TaskItem(externalTaskID: "exact", title: "Exact")
         let instant = now.addingTimeInterval(3600)
-        let reminder = TaskReminder.explicitDate(ExplicitDateReminder(dateTime: instant))
+        let reminder = TaskReminder.exact(ExactReminder(at: instant))
         let service = NotificationService(center: MockNotificationScheduler(), now: { self.now })
         let previous = NSTimeZone.default
         defer { NSTimeZone.default = previous }

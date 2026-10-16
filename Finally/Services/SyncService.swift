@@ -48,9 +48,15 @@ final class SyncService {
 
     var isSyncing = false
     var lastError: String?
+    /// Notion carries no reminder rules, so the phone seeds the defaults when a pull first brings a deadline.
+    private let defaultDeadlineReminders: () -> DefaultDeadlineReminders
 
-    init(api: NotionAPIClient = NotionAPIService()) {
+    init(
+        api: NotionAPIClient = NotionAPIService(),
+        defaultDeadlineReminders: @escaping () -> DefaultDeadlineReminders = { .current() }
+    ) {
         self.api = api
+        self.defaultDeadlineReminders = defaultDeadlineReminders
     }
 
     // MARK: - Sync On Launch
@@ -339,15 +345,12 @@ final class SyncService {
                let dateStr = dateProp.date?.start {
                 if let endStr = dateProp.date?.end {
                     task.scheduledDay = parseDate(dateStr).map { Calendar.current.startOfDay(for: $0) }
-                    task.deadline = parseDate(endStr)
-                    task.deadlineHasTime = endStr.contains("T")
+                    task.setDeadline(parseDate(endStr), hasTime: endStr.contains("T"), defaults: defaultDeadlineReminders())
                 } else {
-                    task.deadline = parseDate(dateStr)
-                    task.deadlineHasTime = dateStr.contains("T")
+                    task.setDeadline(parseDate(dateStr), hasTime: dateStr.contains("T"), defaults: defaultDeadlineReminders())
                 }
             } else {
-                task.deadline = nil
-                task.deadlineHasTime = false
+                task.setDeadline(nil, hasTime: false, defaults: defaultDeadlineReminders())
             }
 
             // The optional Notion "Target" property stores the scheduled day.

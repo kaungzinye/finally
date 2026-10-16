@@ -10,7 +10,7 @@ Finally is a free, open-source iOS task manager that connects to [Notion](https:
 - Two-way sync with your Tasks and Projects databases
 - Today, Upcoming, and Tasks tabs. Tasks holds the Inbox, projects, an Unscheduled filter, and the Board
 - Inline task creation with chip-based fields (due date, target date, priority, tags, project, recurrence)
-- Per-task local push reminders (anchored or exact-date)
+- Local reminders: default deadline reminders, edited per task as chips, and "Remind me at"
 - Home screen widget
 - iOS 17+ with SwiftUI and SwiftData
 

@@ -61,6 +61,18 @@ struct SettingsView: View {
 
                 Section("Notifications") {
                     NavigationLink {
+                        DefaultDeadlineRemindersView()
+                    } label: {
+                        HStack {
+                            Label("Deadline reminders", systemImage: "bell")
+                            Spacer()
+                            DefaultDeadlineRemindersLabel()
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                    .accessibilityIdentifier("deadline-reminders-setting")
+
+                    NavigationLink {
                         NotificationTimePickerView()
                     } label: {
                         HStack {

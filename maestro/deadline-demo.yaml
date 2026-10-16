@@ -1,7 +1,49 @@
 # Prerequisite: the runner launches the app with the demo argument first:
 #   xcrun simctl launch <udid> com.kaungzinye.finally -deadline-demo
+# The demo task has a date-only deadline, so it starts with the default deadline reminders
+# and the + chip never offers "1 hour before".
 appId: com.kaungzinye.finally
 ---
 - extendedWaitUntil:
     visible: "Ship the project proposal"
     timeout: 10000
+- assertVisible: "Morning of"
+- assertVisible: "1 day before"
+- assertVisible: "1 week before"
+- assertNotVisible: "1 hour before"
+- assertVisible: "Remind me at"
+- takeScreenshot: maestro-default-chips
+
+# ✕ removes a chip.
+- tapOn:
+    id: "remove 1 week before"
+- assertNotVisible: "1 week before"
+
+# + adds from the short list.
+- tapOn:
+    id: "add-deadline-reminder"
+- assertVisible: "2 days before"
+- assertVisible: "1 week before"
+- assertNotVisible: "1 hour before"
+- tapOn: "2 days before"
+- tapOn:
+    text: "Allow"
+    optional: true
+- assertVisible: "2 days before"
+- assertVisible:
+    id: "remove 2 days before"
+- takeScreenshot: maestro-edited-chips
+
+# "Remind me at" adds an exact reminder.
+- tapOn: "Remind me at"
+- assertVisible:
+    id: "add-exact-reminder"
+- takeScreenshot: maestro-remind-me-at
+- tapOn:
+    id: "add-exact-reminder"
+- tapOn:
+    text: "Allow"
+    optional: true
+- assertVisible:
+    id: "remove .*:00.*"
+- takeScreenshot: maestro-exact-chip

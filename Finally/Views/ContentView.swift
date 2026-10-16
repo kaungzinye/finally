@@ -154,10 +154,12 @@ private extension View {
                         .foregroundStyle(Palette.ink)
                         .frame(width: 56, height: 56)
                         .glassSurface(in: Circle())
+                        .contentShape(Circle())
                 }
                 .buttonStyle(.plain)
                 .padding(16)
                 .accessibilityLabel("Add a task")
+                .accessibilityIdentifier("add-task")
                 .transition(.opacity.combined(with: .scale(scale: 0.8)))
             }
         }

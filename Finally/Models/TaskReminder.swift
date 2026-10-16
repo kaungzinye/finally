@@ -1,149 +1,69 @@
 import Foundation
 
-// MARK: - Reminder enums (Phase 6B)
+// MARK: - Deadline reminder offsets
 
-enum ReminderAnchor: String, Codable, CaseIterable, Identifiable, Sendable {
-    case deadline = "deadline"
-    case scheduledDay = "scheduledDay"
+/// How far ahead of a task's deadline a deadline reminder fires. Day-level offsets fire at the
+/// default reminder time on their computed day. `hourBefore` needs a timed deadline.
+enum DeadlineReminderOffset: Codable, Hashable, Sendable {
+    case morningOf
+    case daysBefore(Int)
+    case weeksBefore(Int)
+    case hourBefore
 
-    var id: String { rawValue }
-
-    var label: String {
-        switch self {
-        case .deadline: return "Deadline"
-        case .scheduledDay: return "Scheduled day"
-        }
-    }
-}
-
-enum ReminderOffsetUnit: String, Codable, CaseIterable, Identifiable, Sendable {
-    case minutes, hours, days, weeks, months
-
-    var id: String { rawValue }
-
-    var displayName: String {
-        switch self {
-        case .minutes: return "Minutes"
-        case .hours: return "Hours"
-        case .days: return "Days"
-        case .weeks: return "Weeks"
-        case .months: return "Months"
-        }
-    }
-
-    var bounds: ClosedRange<Int> {
-        switch self {
-        case .minutes: return 1...59
-        case .hours: return 1...23
-        case .days: return 1...30
-        case .weeks: return 1...51
-        case .months: return 1...11
-        }
-    }
-
-    func applyOffset(value: Int, direction: ReminderOffsetDirection, to baseDate: Date, calendar: Calendar = .current) -> Date? {
-        let signedValue = direction == .before ? -value : value
-        switch self {
-        case .minutes:
-            return calendar.date(byAdding: .minute, value: signedValue, to: baseDate)
-        case .hours:
-            return calendar.date(byAdding: .hour, value: signedValue, to: baseDate)
-        case .days:
-            return calendar.date(byAdding: .day, value: signedValue, to: baseDate)
-        case .weeks:
-            return calendar.date(byAdding: .weekOfYear, value: signedValue, to: baseDate)
-        case .months:
-            return calendar.date(byAdding: .month, value: signedValue, to: baseDate)
-        }
-    }
-}
-
-enum ReminderOffsetDirection: String, Codable, CaseIterable, Identifiable, Sendable {
-    case before, after
-
-    var id: String { rawValue }
+    /// The short list the + chip offers, in order.
+    static let menu: [DeadlineReminderOffset] = [
+        .morningOf, .daysBefore(1), .daysBefore(2), .daysBefore(3), .weeksBefore(1), .weeksBefore(2), .hourBefore,
+    ]
 
     var label: String {
         switch self {
-        case .before: return "Before"
-        case .after: return "After"
+        case .morningOf: "Morning of"
+        case .daysBefore(let days): days == 1 ? "1 day before" : "\(days) days before"
+        case .weeksBefore(let weeks): weeks == 1 ? "1 week before" : "\(weeks) weeks before"
+        case .hourBefore: "1 hour before"
+        }
+    }
+
+    /// Days before run from 1 to 30 and weeks before from 1 to 12.
+    var isValid: Bool {
+        switch self {
+        case .morningOf, .hourBefore: true
+        case .daysBefore(let days): (1...30).contains(days)
+        case .weeksBefore(let weeks): (1...12).contains(weeks)
         }
     }
 }
 
-// MARK: - Stored reminder entries
+// MARK: - Stored reminder rules
 
-struct AnchoredReminder: Codable, Equatable, Identifiable, Sendable {
+struct DeadlineReminder: Codable, Equatable, Identifiable, Sendable {
     var id: UUID
-    var anchor: ReminderAnchor
-    var value: Int
-    var unit: ReminderOffsetUnit
-    var direction: ReminderOffsetDirection
+    var offset: DeadlineReminderOffset
 
-    init(
-        id: UUID = UUID(),
-        anchor: ReminderAnchor,
-        value: Int,
-        unit: ReminderOffsetUnit,
-        direction: ReminderOffsetDirection = .before
-    ) {
+    init(id: UUID = UUID(), offset: DeadlineReminderOffset) {
         self.id = id
-        self.anchor = anchor
-        self.value = value
-        self.unit = unit
-        self.direction = direction
-    }
-
-    var displayLabel: String {
-        let unitLabel = value == 1 ? String(unit.displayName.dropLast()) : unit.displayName
-        return "\(value) \(unitLabel.lowercased()) \(direction.rawValue) \(anchor.label.lowercased())"
-    }
-
-    func isValidValue() -> Bool {
-        unit.bounds.contains(value)
+        self.offset = offset
     }
 }
 
-struct ExplicitDateReminder: Codable, Equatable, Identifiable, Sendable {
+struct ExactReminder: Codable, Equatable, Identifiable, Sendable {
     var id: UUID
-    var dateTime: Date
+    var at: Date
 
-    init(id: UUID = UUID(), dateTime: Date) {
+    init(id: UUID = UUID(), at: Date) {
         self.id = id
-        self.dateTime = dateTime
-    }
-
-    var displayLabel: String {
-        dateTime.formatted(date: .abbreviated, time: .shortened)
+        self.at = at
     }
 }
 
 enum TaskReminder: Codable, Equatable, Identifiable, Sendable {
-    case anchored(AnchoredReminder)
-    case explicitDate(ExplicitDateReminder)
+    case deadline(DeadlineReminder)
+    case exact(ExactReminder)
 
     var id: UUID {
         switch self {
-        case .anchored(let reminder): return reminder.id
-        case .explicitDate(let reminder): return reminder.id
-        }
-    }
-
-    var displayLabel: String {
-        switch self {
-        case .anchored(let reminder): return reminder.displayLabel
-        case .explicitDate(let reminder): return reminder.displayLabel
-        }
-    }
-
-    func isDuplicate(of other: TaskReminder) -> Bool {
-        switch (self, other) {
-        case (.anchored(let a), .anchored(let b)):
-            return a.anchor == b.anchor && a.value == b.value && a.unit == b.unit && a.direction == b.direction
-        case (.explicitDate(let a), .explicitDate(let b)):
-            return abs(a.dateTime.timeIntervalSince(b.dateTime)) < 60
-        default:
-            return false
+        case .deadline(let reminder): reminder.id
+        case .exact(let reminder): reminder.id
         }
     }
 
@@ -153,74 +73,62 @@ enum TaskReminder: Codable, Equatable, Identifiable, Sendable {
         return "task-reminder-\(workspace.count):\(workspace)\(taskID.count):\(taskID):\(id.uuidString)"
     }
 
-    func fireDate(for task: TaskItem, defaultReminderMinutes: Int? = nil) -> Date? {
+    /// The instant this reminder fires, or nil while it is inert.
+    /// Day-level offsets resolve on `calendar`'s days at `reminderMinutes` past midnight.
+    func fireDate(deadline: Date?, deadlineHasTime: Bool, reminderMinutes: Int, calendar: Calendar = .current) -> Date? {
         switch self {
-        case .explicitDate(let reminder):
-            return reminder.dateTime
-        case .anchored(let reminder):
-            guard let anchorDate = task.anchorDate(for: reminder.anchor) else { return nil }
-            let base = task.adjustedAnchorDate(
-                anchorDate,
-                hasTime: task.hasTimeForAnchor(reminder.anchor),
-                defaultReminderMinutes: defaultReminderMinutes
-            )
-            return reminder.unit.applyOffset(
-                value: reminder.value,
-                direction: reminder.direction,
-                to: base
-            )
+        case .exact(let reminder):
+            return reminder.at
+        case .deadline(let reminder):
+            guard let deadline else { return nil }
+            switch reminder.offset {
+            case .hourBefore:
+                return deadlineHasTime ? deadline.addingTimeInterval(-3600) : nil
+            case .morningOf:
+                return Self.reminderTime(daysBefore: 0, deadline: deadline, minutes: reminderMinutes, calendar: calendar)
+            case .daysBefore(let days):
+                return Self.reminderTime(daysBefore: days, deadline: deadline, minutes: reminderMinutes, calendar: calendar)
+            case .weeksBefore(let weeks):
+                return Self.reminderTime(daysBefore: 7 * weeks, deadline: deadline, minutes: reminderMinutes, calendar: calendar)
+            }
         }
     }
 
-    static func presetWeekBeforeScheduledDay() -> TaskReminder {
-        .anchored(AnchoredReminder(anchor: .scheduledDay, value: 1, unit: .weeks, direction: .before))
+    private static func reminderTime(daysBefore days: Int, deadline: Date, minutes: Int, calendar: Calendar) -> Date? {
+        guard let day = calendar.date(byAdding: .day, value: -days, to: calendar.startOfDay(for: deadline)) else { return nil }
+        return calendar.date(bySettingHour: minutes / 60, minute: minutes % 60, second: 0, of: day)
     }
+}
 
-    static func presetOneDayBeforeDeadline() -> TaskReminder {
-        .anchored(AnchoredReminder(anchor: .deadline, value: 1, unit: .days, direction: .before))
+extension TaskReminder {
+    /// Resolves against the task's current deadline and the default reminder time in Settings.
+    func fireDate(for task: TaskItem, defaultReminderMinutes: Int? = nil) -> Date? {
+        fireDate(
+            deadline: task.deadline,
+            deadlineHasTime: task.deadlineHasTime,
+            reminderMinutes: defaultReminderMinutes ?? DefaultReminderTime.minutes()
+        )
     }
+}
 
-    static func presetTwoDaysBeforeDeadline() -> TaskReminder {
-        .anchored(AnchoredReminder(anchor: .deadline, value: 2, unit: .days, direction: .before))
+/// The time of day, in minutes past midnight, at which day-level deadline reminders fire.
+enum DefaultReminderTime {
+    static func minutes(in defaults: UserDefaults = .standard) -> Int {
+        defaults.object(forKey: AppConstants.defaultReminderTimeMinutesKey) as? Int ?? AppConstants.defaultReminderTimeMinutes
     }
-
-    static func presetTwoHoursBeforeDeadline() -> TaskReminder {
-        .anchored(AnchoredReminder(anchor: .deadline, value: 2, unit: .hours, direction: .before))
-    }
-
-    static func presetThirtyMinutesBeforeDeadline() -> TaskReminder {
-        .anchored(AnchoredReminder(anchor: .deadline, value: 30, unit: .minutes, direction: .before))
-    }
-
 }
 
 enum TaskReminderCodec {
-    private struct Payload: Codable {
-        var anchored: [AnchoredReminder]
-        var explicit: [ExplicitDateReminder]
-    }
-
     static func decode(from json: String?) -> [TaskReminder] {
         guard let json, let data = json.data(using: .utf8),
-              let payload = try? JSONDecoder().decode(Payload.self, from: data) else {
+              let reminders = try? JSONDecoder().decode([TaskReminder].self, from: data) else {
             return []
         }
-        let anchored = payload.anchored.map { TaskReminder.anchored($0) }
-        let explicit = payload.explicit.map { TaskReminder.explicitDate($0) }
-        return anchored + explicit
+        return reminders
     }
 
     static func encode(_ reminders: [TaskReminder]) -> String? {
-        var anchored: [AnchoredReminder] = []
-        var explicit: [ExplicitDateReminder] = []
-        for reminder in reminders {
-            switch reminder {
-            case .anchored(let entry): anchored.append(entry)
-            case .explicitDate(let entry): explicit.append(entry)
-            }
-        }
-        let payload = Payload(anchored: anchored, explicit: explicit)
-        guard let data = try? JSONEncoder().encode(payload) else { return nil }
+        guard let data = try? JSONEncoder().encode(reminders) else { return nil }
         return String(data: data, encoding: .utf8)
     }
 }

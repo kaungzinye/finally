@@ -73,7 +73,8 @@ Finally/
 │   ├── Models/
 │   │   ├── TaskItem.swift               # SwiftData @Model
 │   │   ├── ProjectItem.swift
-│   │   ├── ReminderItem.swift
+│   │   ├── TaskReminder.swift           # Deadline and exact reminders, and their fire dates
+│   │   ├── DefaultDeadlineReminders.swift # The defaults a new deadline receives
 │   │   ├── ModelContainer+Shared.swift  # App Group container config
 │   │   └── UserSession.swift
 │   ├── Services/
@@ -94,7 +95,7 @@ Finally/
 │   │   │   ├── TaskRowView.swift        # Single task row with checkbox + chips
 │   │   │   ├── TaskDetailView.swift     # Full task editing sheet
 │   │   │   ├── InlineTaskCreator.swift  # Bottom bar with quick-action buttons
-│   │   │   └── ReminderListView.swift   # Manage reminders for a task
+│   │   │   └── ReminderSection.swift    # Reminder chips and "Remind me at" in task detail
 │   │   ├── Components/
 │   │   │   ├── ChipView.swift           # Tappable colored pill
 │   │   │   ├── PriorityPicker.swift
@@ -108,6 +109,7 @@ Finally/
 │   │   │   └── SchemaErrorView.swift
 │   │   └── Settings/
 │   │       ├── SettingsView.swift
+│   │       ├── DefaultDeadlineRemindersView.swift # Edits the default deadline reminders
 │   │       ├── AppearanceSettingView.swift
 │   │       └── DatabaseSetupGuideView.swift
 │   └── Shared/                          # Compiled by the app and the widget

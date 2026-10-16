@@ -13,8 +13,8 @@ struct TaskDetailView: View {
     @State private var showTagPicker = false
     @State private var showProjectPicker = false
     @State private var showRecurrencePicker = false
+    @State private var showRemindMeAt = false
     @State private var newSubtaskTitle = ""
-    @State private var subtaskReminderTarget: TaskItem? = nil
 
     @State private var editedTitle: String = ""
     @State private var editedDeadline: Date?
@@ -68,8 +68,7 @@ struct TaskDetailView: View {
                 .paperRow()
                 .listRowSeparator(.hidden)
 
-                // Reminders (inline)
-                ReminderSectionContent(task: task)
+                ReminderSection(task: task) { showRemindMeAt = true }
                     .cardRow()
 
                 // Sub-tasks (only for non-subtask tasks)
@@ -117,16 +116,6 @@ struct TaskDetailView: View {
                                 }
 
                                 Spacer()
-
-                                subtaskReminderIndicator(subtask)
-
-                                Button {
-                                    subtaskReminderTarget = subtask
-                                } label: {
-                                    Image(systemName: subtask.taskReminders.isEmpty ? "bell" : "bell.badge")
-                                        .foregroundStyle(subtask.taskReminders.isEmpty ? Palette.muted : Palette.ink)
-                                }
-                                .buttonStyle(.plain)
                             }
                         }
                         .onDelete { indexSet in
@@ -206,15 +195,19 @@ struct TaskDetailView: View {
         .sheet(isPresented: $showProjectPicker) {
             ProjectPicker(selection: $editedProject)
         }
+        .sheet(isPresented: $showRemindMeAt) {
+            RemindMeAtSheet { date in
+                ReminderSection.save(task, store: modelContext, provider: taskProvider, asksPermission: true) {
+                    task.taskReminders.append(.exact(ExactReminder(at: date)))
+                }
+            }
+        }
         .sheet(isPresented: $showRecurrencePicker) {
             RecurrencePicker(
                 selection: $editedRecurrence,
                 customRule: $editedCustomRule,
                 contextDate: editedDeadline
             )
-        }
-        .sheet(item: $subtaskReminderTarget) { subtask in
-            SubtaskReminderSheet(subtask: subtask)
         }
     }
 
@@ -254,17 +247,6 @@ struct TaskDetailView: View {
             icon: "repeat",
             isPlaceholder: editedRecurrence == .none
         ) { showRecurrencePicker = true }
-    }
-
-    @ViewBuilder
-    private func subtaskReminderIndicator(_ subtask: TaskItem) -> some View {
-        let now = Date()
-        let nextFire = subtask.taskReminders.compactMap { $0.fireDate(for: subtask) }.filter { $0 > now }.min()
-        if let fire = nextFire {
-            Label(fire.formatted(date: .omitted, time: .shortened), systemImage: "bell.fill")
-                .font(.meta)
-                .foregroundStyle(Palette.muted)
-        }
     }
 
     private var sortedActiveSubtasks: [TaskItem] {
@@ -316,9 +298,8 @@ struct TaskDetailView: View {
         let scheduledDayChanged = task.scheduledDay != editedScheduledDay
 
         task.title = editedTitle
-        task.deadline = editedDeadline
+        task.setDeadline(editedDeadline, hasTime: editedDeadlineHasTime, defaults: .current())
         task.scheduledDay = editedScheduledDay
-        task.deadlineHasTime = editedDeadline != nil && editedDeadlineHasTime
         task.validateScheduledDay()
         task.priority = editedPriority
         task.tags = editedTags

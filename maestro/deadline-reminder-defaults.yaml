@@ -1,0 +1,79 @@
+# Prerequisite: the runner installs the app fresh, then launches the in-memory fixture:
+#   xcrun simctl launch <udid> com.kaungzinye.finally -tasks-demo
+# Settings edits the default deadline reminders, and a new deadline picks up the edited list.
+# The defaults are a phone setting that outlives the in-memory store, so a rerun needs a fresh install.
+appId: com.kaungzinye.finally
+---
+- extendedWaitUntil:
+    visible: "Tasks"
+    timeout: 10000
+- tapOn:
+    text: "Tasks"
+    index: 0
+- tapOn: "Settings"
+- tapOn:
+    id: "deadline-reminders-setting"
+- assertVisible: "Morning of"
+- assertVisible: "1 day before"
+- assertVisible: "1 week before"
+- assertVisible: "1 hour before"
+- takeScreenshot: settings-default-reminders
+
+# ✕ removes a default and + adds one from the short list.
+- tapOn:
+    id: "remove 1 week before"
+- assertNotVisible: "1 week before"
+- tapOn:
+    id: "add-default-reminder"
+- tapOn: "2 days before"
+- assertVisible:
+    id: "remove 2 days before"
+- takeScreenshot: settings-edited-reminders
+
+# The edit persists across leaving and reopening the page.
+- tapOn:
+    id: "BackButton"
+- tapOn:
+    id: "deadline-reminders-setting"
+- assertVisible:
+    id: "remove 2 days before"
+- assertNotVisible: "1 week before"
+- tapOn:
+    id: "BackButton"
+- tapOn: "Done"
+- extendedWaitUntil:
+    visible:
+      id: "tasks-inbox-header"
+    timeout: 5000
+
+# A task captured with a date-only deadline receives the edited defaults, without 1 hour before.
+- tapOn:
+    id: "add-task"
+- extendedWaitUntil:
+    visible: "Add a task..."
+    timeout: 5000
+- inputText: "Pay the rent tomorrow"
+- tapOn:
+    id: "send-task"
+- hideKeyboard
+- tapOn:
+    point: "50%,5%"
+- tapOn: "Search"
+- inputText: "rent"
+- extendedWaitUntil:
+    visible: "Pay the rent"
+    timeout: 5000
+- tapOn: "Pay the rent"
+- extendedWaitUntil:
+    visible:
+      id: "remove 2 days before"
+    timeout: 5000
+- assertVisible:
+    id: "remove Morning of"
+- assertVisible:
+    id: "remove 1 day before"
+- assertNotVisible:
+    id: "remove 1 week before"
+- assertNotVisible:
+    id: "remove 1 hour before"
+- takeScreenshot: new-deadline-reminders
