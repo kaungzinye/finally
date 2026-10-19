@@ -203,15 +203,7 @@ final class WidgetCompletionTests: XCTestCase {
     func testCompletingAParentsLastStepOutsideDailyFocusShowsTheParentInToday() throws {
         let storage = makeStorage()
         let context = try makeContext()
-        let launch = insertTask("launch", "Prepare the launch", into: context)
-        for (index, (id, title)) in [("slides", "Draft the slides"), ("rehearse", "Rehearse the talk")].enumerated() {
-            let step = TaskItem(externalTaskID: id, title: title)
-            step.providerWorkspaceId = "notion-workspace"
-            step.parentId = launch.externalTaskID
-            step.parent = launch
-            step.sortIndex = index
-            context.insert(step)
-        }
+        insertParentWithUndatedSteps(into: context)
         try context.save()
         try WidgetPublisher.publish(store: context, storage: storage)
 
@@ -222,6 +214,21 @@ final class WidgetCompletionTests: XCTestCase {
         storage.complete(WidgetCompletion(providerWorkspaceID: "notion-workspace", externalTaskID: "rehearse"))
         day = WidgetDay(snapshot: storage.snapshot!, at: Date())
         XCTAssertEqual(day.today.map(\.title), ["Prepare the launch"])
+    }
+
+    func testTheAppApplyingAnUndatedStepCompletionKeepsItsFilledRingSection() throws {
+        let storage = makeStorage()
+        let context = try makeContext()
+        insertParentWithUndatedSteps(into: context)
+        try context.save()
+        try WidgetPublisher.publish(store: context, storage: storage)
+
+        storage.complete(WidgetCompletion(providerWorkspaceID: "notion-workspace", externalTaskID: "slides"))
+        try WidgetPublisher.applyPendingCompletions(store: context, storage: storage)
+
+        let day = WidgetDay(snapshot: storage.snapshot!, at: Date())
+        XCTAssertEqual(day.today.map(\.title), ["Rehearse the talk"])
+        XCTAssertEqual(day.ringSections, [RingSection(isFocus: false, isDone: false), RingSection(isFocus: false, isDone: true)])
     }
 
     func testTheAppApplyingAStepCompletionShowsTheNextStep() throws {
@@ -237,6 +244,21 @@ final class WidgetCompletionTests: XCTestCase {
     }
 
     // MARK: - Helpers
+
+    /// Inserts "Prepare the launch", scheduled today, with two steps whose only dates are computed.
+    @discardableResult
+    private func insertParentWithUndatedSteps(into context: ModelContext) -> TaskItem {
+        let launch = insertTask("launch", "Prepare the launch", into: context)
+        for (index, (id, title)) in [("slides", "Draft the slides"), ("rehearse", "Rehearse the talk")].enumerated() {
+            let step = TaskItem(externalTaskID: id, title: title)
+            step.providerWorkspaceId = "notion-workspace"
+            step.parentId = launch.externalTaskID
+            step.parent = launch
+            step.sortIndex = index
+            context.insert(step)
+        }
+        return launch
+    }
 
     /// Publishes a Daily Focus whose one pick, "Prepare the launch", has two undated steps.
     @discardableResult

@@ -175,10 +175,12 @@ final class TaskItem {
         self.title = title
     }
 
+    /// A step's day spread across its parent's open steps. A finished step takes its place among
+    /// them as though it were open, so it keeps the Today membership it finished in.
     var computedSuggestedDate: Date? {
         guard isSubtask, let parent else { return nil }
         let sorted = parent.activeSubtasks
-            .filter { $0.status != .done }
+            .filter { $0.status != .done || $0 === self }
             .sorted { $0.sortIndex < $1.sortIndex }
         guard let index = sorted.firstIndex(where: { $0.externalTaskID == externalTaskID }) else { return nil }
 
