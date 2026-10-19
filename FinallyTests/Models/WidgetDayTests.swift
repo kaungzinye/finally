@@ -169,7 +169,7 @@ final class WidgetDayTests: XCTestCase {
 
     func testComingUpHoldsTheNextSevenDaysByDateThenPriorityThenTitle() {
         var subtask = widgetTask("Draft the slides")
-        subtask.isSubtask = true
+        subtask.parentID = "Prepare the launch"
         subtask.suggestedDate = at(day: 17)
         let snapshot = WidgetSnapshot(workspaceID: "notion-workspace", focusDay: nil, focusLimit: 3, focusPickCount: 0, isFocusConfirmed: false, tasks: [
             widgetTask("Review the contract", scheduled: at(day: 17)),
@@ -223,11 +223,11 @@ final class WidgetDayTests: XCTestCase {
     func testTheRingDrawsOneSectionPerTodayTaskWithPicksFirstAndFinishedTasksFilled() {
         let snapshot = WidgetSnapshot(workspaceID: "notion-workspace", focusDay: at(day: 16), focusLimit: 3, focusPickCount: 2, isFocusConfirmed: true, focusPlaces: [place(1, "Draft the brief"), place(2, "Ship the release")], tasks: [
             widgetTask("Water the plants", scheduled: at(day: 16)),
-            widgetTask("Pay the rent", scheduled: at(day: 16), status: .done),
+            widgetTask("Pay the rent", scheduled: at(day: 16), status: .done, completedAt: at(day: 16, hour: 9)),
             widgetTask("Ship the release", deadline: at(day: 17)),
             widgetTask("Renew the passport", deadline: at(day: 15)),
-            widgetTask("Book the dentist", scheduled: at(day: 14), status: .done),
-            widgetTask("Send the invoice", deadline: at(day: 15), status: .done),
+            widgetTask("Book the dentist", scheduled: at(day: 14), status: .done, completedAt: at(day: 15, hour: 9)),
+            widgetTask("Send the invoice", deadline: at(day: 15), status: .done, completedAt: at(day: 15, hour: 9)),
             widgetTask("Draft the brief", deadline: at(day: 16), status: .done),
             widgetTask("Review the contract", scheduled: at(day: 17)),
         ])
@@ -239,6 +239,27 @@ final class WidgetDayTests: XCTestCase {
             RingSection(isFocus: true, isDone: false),
             RingSection(isFocus: false, isDone: false),
             RingSection(isFocus: false, isDone: false),
+            RingSection(isFocus: false, isDone: true),
+        ])
+    }
+
+    func testTheRingFillsASectionForEachTodayTaskFinishedToday() {
+        let snapshot = WidgetSnapshot(workspaceID: "notion-workspace", focusDay: nil, focusLimit: 3, focusPickCount: 0, isFocusConfirmed: false, tasks: [
+            widgetTask("Renew the passport", deadline: at(day: 14), status: .done, completedAt: at(day: 16, hour: 9)),
+            widgetTask("Book the dentist", scheduled: at(day: 13), status: .done, completedAt: at(day: 16, hour: 10)),
+            widgetTask("Send the invoice", deadline: at(day: 16, hour: 12), status: .done, completedAt: at(day: 16, hour: 11)),
+            widgetTask("Pay the rent", scheduled: at(day: 15), status: .done, completedAt: at(day: 15, hour: 18)),
+            widgetTask("Review the contract", scheduled: at(day: 18), status: .done, completedAt: at(day: 16, hour: 8)),
+            widgetTask("Water the plants", scheduled: at(day: 16)),
+        ])
+
+        let day = WidgetDay(snapshot: snapshot, at: now, calendar: calendar)
+
+        XCTAssertEqual(day.finishedToday.map(\.title), ["Renew the passport", "Book the dentist", "Send the invoice"])
+        XCTAssertEqual(day.ringSections, [
+            RingSection(isFocus: false, isDone: false),
+            RingSection(isFocus: false, isDone: true),
+            RingSection(isFocus: false, isDone: true),
             RingSection(isFocus: false, isDone: true),
         ])
     }
@@ -271,11 +292,12 @@ final class WidgetDayTests: XCTestCase {
         scheduled: Date? = nil,
         deadline: Date? = nil,
         priority: TaskPriority? = nil,
-        status: TaskStatus = .notStarted
+        status: TaskStatus = .notStarted,
+        completedAt: Date? = nil
     ) -> WidgetTask {
         WidgetTask(
             providerWorkspaceID: "notion-workspace", externalTaskID: title, title: title, priority: priority,
-            status: status, scheduledDay: scheduled, deadline: deadline
+            status: status, scheduledDay: scheduled, deadline: deadline, completedAt: completedAt
         )
     }
 

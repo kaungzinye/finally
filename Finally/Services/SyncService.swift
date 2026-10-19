@@ -339,6 +339,8 @@ final class SyncService {
                let notionStatus = statusProp.status {
                 let mapped = mappings.taskStatus(for: notionStatus) ?? .notStarted
                 print("[Sync] Task '\(title)' status: '\(notionStatus.name)' → \(mapped.rawValue)")
+                // Notion keeps no finish time, so a page newly reported done finished at its last edit.
+                if mapped == .done, task.status != .done { task.completedAt = editedTime }
                 task.status = mapped
             } else {
                 print("[Sync] Task '\(title)' NO STATUS FOUND. Property key: '\(mappings.taskStatusProperty)', available keys: \(Array(page.properties.keys))")

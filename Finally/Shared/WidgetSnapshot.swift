@@ -9,8 +9,12 @@ struct WidgetTask: Codable, Equatable, Identifiable {
     var status: TaskStatus
     let scheduledDay: Date?
     let deadline: Date?
+    /// When the task finished, or nil while it is open.
+    var completedAt: Date?
     var deadlineHasTime = false
-    var isSubtask = false
+    /// The external ID of the parent this task is a step of, in the same provider workspace.
+    var parentID: String?
+    var isSubtask: Bool { parentID != nil }
     var suggestedDate: Date?
     var hasOpenSubtasks = false
 
@@ -75,13 +79,30 @@ extension WidgetSnapshot {
         return [now] + Set(deadlines).sorted() + [midnight]
     }
 
-    /// Shows a widget completion: the task turns done, and a finished step hands its Daily Focus
-    /// place to the next open task in its pick, as the app does.
-    mutating func complete(_ completion: WidgetCompletion) {
+    /// Shows a widget completion at `date`: the task turns done, a parent whose last open step finished
+    /// returns to Today, and a finished step hands its Daily Focus place to the next open task in
+    /// its pick, as the app does.
+    mutating func complete(_ completion: WidgetCompletion, at date: Date = Date()) {
         for index in tasks.indices where tasks[index].providerWorkspaceID == completion.providerWorkspaceID
-            && tasks[index].externalTaskID == completion.externalTaskID {
+            && tasks[index].externalTaskID == completion.externalTaskID && tasks[index].isOpen {
             tasks[index].status = .done
+            tasks[index].completedAt = date
+            if let parentID = tasks[index].parentID {
+                refreshOpenSteps(ofParent: parentID, in: completion.providerWorkspaceID)
+            }
             passFocusPlaces(from: tasks[index].id)
+        }
+    }
+
+    /// Sets whether the parent still has an open step among its steps in the snapshot. A dated
+    /// parent's open steps all carry a suggested date, so the snapshot holds every one of them.
+    private mutating func refreshOpenSteps(ofParent parentID: String, in workspaceID: String) {
+        let hasOpenSteps = tasks.contains {
+            $0.providerWorkspaceID == workspaceID && $0.parentID == parentID && $0.isOpen
+        }
+        for index in tasks.indices where tasks[index].providerWorkspaceID == workspaceID
+            && tasks[index].externalTaskID == parentID {
+            tasks[index].hasOpenSubtasks = hasOpenSteps
         }
     }
 

@@ -17,7 +17,7 @@ struct WidgetDay {
     let otherTasks: [Today.Member<WidgetTask>]
     /// Open tasks dated in the next seven days and not in Today, ordered by their first date there.
     let comingUp: [WidgetTask]
-    /// Tasks finished today that are not picks: scheduled or due today, then done.
+    /// Tasks finished today that hold no Daily Focus place and were in Today when they finished.
     let finishedToday: [WidgetTask]
 
     init(snapshot: WidgetSnapshot, at date: Date, calendar: Calendar = .current) {
@@ -47,9 +47,12 @@ struct WidgetDay {
         let today = calendar.startOfDay(for: date)
         let lastDay = calendar.date(byAdding: .day, value: 7, to: today) ?? today
         let todayIDs = pickIDs.union(otherTasks.map(\.task.id))
+        // A picked parent's finished step counts toward that pick's section, not one of its own.
+        let placeIDs = snapshot.isFocusConfirmed && isToday ? Set(snapshot.focusPlaces.flatMap(\.taskIDs)) : []
         finishedToday = scoped.filter { task in
-            guard !task.isOpen, !pickIDs.contains(task.id) else { return false }
-            return [task.scheduledDay, task.deadline].contains { $0.map { calendar.isDate($0, inSameDayAs: date) } ?? false }
+            let parentWidgetID = task.parentID.map { "\(task.providerWorkspaceID):\($0)" }
+            guard !placeIDs.contains(task.id), !(parentWidgetID.map(placeIDs.contains) ?? false) else { return false }
+            return Today.finishedReason(for: task, at: date, calendar: calendar) != nil
         }
         comingUp = scoped
             .compactMap { task -> (task: WidgetTask, day: Date)? in

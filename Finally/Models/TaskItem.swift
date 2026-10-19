@@ -6,6 +6,8 @@ final class TaskItem {
     var externalTaskID: String
     var title: String
     var statusRaw: String = TaskStatus.notStarted.rawValue
+    /// When the task finished, or nil while it is open or when its provider gives no finish time.
+    var completedAt: Date?
     var deadline: Date?
     var deadlineHasTime: Bool = false
     var scheduledDay: Date?
@@ -93,7 +95,10 @@ final class TaskItem {
 
     var status: TaskStatus {
         get { TaskStatus(rawValue: statusRaw) ?? .notStarted }
-        set { statusRaw = newValue.rawValue }
+        set {
+            if newValue != .done { completedAt = nil }
+            statusRaw = newValue.rawValue
+        }
     }
 
     var priority: TaskPriority? {
@@ -265,7 +270,7 @@ final class TaskItem {
     }
 
     @discardableResult
-    func complete() -> Bool {
+    func complete(at date: Date = Date()) -> Bool {
         if recurrence != .none, let deadline {
             let previousDeadline = deadline
             let previousScheduledDay = scheduledDay
@@ -297,8 +302,10 @@ final class TaskItem {
 
         for subtask in subtasks where subtask.status != .done {
             subtask.status = .done
+            subtask.completedAt = date
         }
         self.status = .done
+        self.completedAt = date
         self.isDirty = true
         return false
     }

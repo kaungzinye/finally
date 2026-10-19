@@ -174,6 +174,30 @@ final class WidgetCompletionTests: XCTestCase {
         XCTAssertEqual(day.ringSections, [RingSection(isFocus: true, isDone: false), RingSection(isFocus: true, isDone: true)])
     }
 
+    func testCompletingAParentsLastStepOutsideDailyFocusShowsTheParentInToday() throws {
+        let storage = makeStorage()
+        let context = try makeContext()
+        let launch = insertTask("launch", "Prepare the launch", into: context)
+        for (index, (id, title)) in [("slides", "Draft the slides"), ("rehearse", "Rehearse the talk")].enumerated() {
+            let step = TaskItem(externalTaskID: id, title: title)
+            step.providerWorkspaceId = "notion-workspace"
+            step.parentId = launch.externalTaskID
+            step.parent = launch
+            step.sortIndex = index
+            context.insert(step)
+        }
+        try context.save()
+        try WidgetPublisher.publish(store: context, storage: storage)
+
+        storage.complete(WidgetCompletion(providerWorkspaceID: "notion-workspace", externalTaskID: "slides"))
+        var day = WidgetDay(snapshot: storage.snapshot!, at: Date())
+        XCTAssertEqual(day.today.map(\.title), ["Rehearse the talk"])
+
+        storage.complete(WidgetCompletion(providerWorkspaceID: "notion-workspace", externalTaskID: "rehearse"))
+        day = WidgetDay(snapshot: storage.snapshot!, at: Date())
+        XCTAssertEqual(day.today.map(\.title), ["Prepare the launch"])
+    }
+
     func testTheAppApplyingAStepCompletionShowsTheNextStep() throws {
         let storage = makeStorage()
         let context = try makeContext()

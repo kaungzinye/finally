@@ -81,17 +81,24 @@ final class WidgetSnapshotTests: XCTestCase {
         XCTAssertTrue(confirmed.isFocusConfirmed)
     }
 
-    func testTheSnapshotKeepsTasksFinishedOnTheirDay() {
+    func testTheSnapshotKeepsTasksFinishedTodayOutOfToday() {
         let rent = task("Pay the rent", scheduled: at(day: 16))
-        rent.status = .done
-        let invoice = task("Send the invoice", deadline: at(day: 16))
-        invoice.status = .done
+        rent.complete(at: at(day: 16, hour: 9))
+        let invoice = task("Send the invoice", deadline: at(day: 15))
+        invoice.complete(at: at(day: 16, hour: 10))
         let dentist = task("Book the dentist", scheduled: at(day: 14))
-        dentist.status = .done
+        dentist.complete(at: at(day: 16, hour: 11))
+        let passport = task("Renew the passport", scheduled: at(day: 14))
+        passport.complete(at: at(day: 15, hour: 11))
+        let contract = task("Review the contract", scheduled: at(day: 18))
+        contract.complete(at: at(day: 16, hour: 12))
 
-        let snapshot = WidgetSnapshot(tasks: [rent, invoice, dentist], focus: nil, workspace: notion, at: now, calendar: calendar)
+        let snapshot = WidgetSnapshot(
+            tasks: [rent, invoice, dentist, passport, contract], focus: nil, workspace: notion, at: now, calendar: calendar
+        )
 
-        XCTAssertEqual(Set(snapshot.tasks.map(\.title)), ["Pay the rent", "Send the invoice"])
+        XCTAssertEqual(Set(snapshot.tasks.filter { !$0.isOpen }.map(\.title)), ["Pay the rent", "Send the invoice", "Book the dentist"])
+        XCTAssertEqual(snapshot.tasks.first { $0.title == "Book the dentist" }?.completedAt, at(day: 16, hour: 11))
     }
 
     func testAWidgetRowOpensItsTaskInItsOwnWorkspace() {
@@ -134,7 +141,7 @@ final class WidgetSnapshotTests: XCTestCase {
                 WidgetTask(
                     providerWorkspaceID: "notion-workspace", externalTaskID: "slides", title: "Draft the slides",
                     priority: nil, status: .done, scheduledDay: nil, deadline: nil,
-                    isSubtask: true, suggestedDate: at(day: 16, hour: 11)
+                    parentID: "brief", suggestedDate: at(day: 16, hour: 11)
                 ),
             ]
         )
