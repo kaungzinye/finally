@@ -8,6 +8,7 @@ struct DailyFocusPickerView: View {
     let onPick: (TaskItem) -> Void
 
     @Environment(\.dismiss) private var dismiss
+    @Environment(DailyFocusService.self) private var dailyFocusService
     @Query(
         filter: #Predicate<TaskItem> { task in
             task.statusRaw != "Complete" && task.isDeleted == false
@@ -106,6 +107,7 @@ struct DailyFocusPickerView: View {
                         Section {
                             ForEach(focus.resolvedPicks(among: allTasks)) { item in
                                 Button {
+                                    guard focusIsCurrent() else { return }
                                     do {
                                         try focus.pick(task, replacing: item.pick)
                                         onPick(task)
@@ -145,7 +147,18 @@ struct DailyFocusPickerView: View {
         .paperSheet()
     }
 
+    /// A pick lands in the day the focus belongs to. Once midnight passes, the picker closes so
+    /// Today moves to the new day, and the user picks again there.
+    private func focusIsCurrent() -> Bool {
+        guard Today.dayChange(from: focus.day, at: Date()) != nil else { return true }
+        dailyFocusService.lastError = DailyFocusError.dayEnded.errorDescription
+        replacementTask = nil
+        dismiss()
+        return false
+    }
+
     private func pick(_ task: TaskItem) {
+        guard focusIsCurrent() else { return }
         if focus.isFull {
             replacementTask = task
             return

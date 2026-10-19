@@ -15,6 +15,7 @@ enum DailyFocusError: LocalizedError, Equatable {
     case taskUnavailable
     case needsSteps
     case needsNextDay
+    case dayEnded
 
     var errorDescription: String? {
         switch self {
@@ -24,6 +25,7 @@ enum DailyFocusError: LocalizedError, Equatable {
         case .taskUnavailable: "This task is unavailable. You can drop it from Daily Focus."
         case .needsSteps: "Add an unfinished step to this task, then finish breaking it down."
         case .needsNextDay: "Choose Daily Focus for a later day."
+        case .dayEnded: "A new day started. Pick again for today."
         }
     }
 }

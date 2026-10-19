@@ -43,6 +43,13 @@ enum Today {
         }
     }
 
+    /// The start of the new day when the calendar day at `now` differs from the day Today shows,
+    /// or nil while that day still holds.
+    static func dayChange(from shown: Date, at now: Date, calendar: Calendar = .current) -> Date? {
+        let current = calendar.startOfDay(for: now)
+        return calendar.isDate(shown, inSameDayAs: current) ? nil : current
+    }
+
     /// Today's members in display order: overdue, due today, scheduled today, then missed
     /// scheduled days. `isExcluded` leaves tasks out, such as the Daily Focus picks above Other tasks.
     static func members<Task: TodayTask>(

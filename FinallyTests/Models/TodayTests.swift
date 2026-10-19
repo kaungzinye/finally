@@ -11,6 +11,14 @@ final class TodayTests: XCTestCase {
     /// Friday 16 October 2026, 15:00 UTC.
     private var now: Date { at(day: 16, hour: 15) }
 
+    func testTodayMovesToTheNewDayOnceMidnightPasses() {
+        XCTAssertEqual(Today.dayChange(from: at(day: 15), at: at(day: 16, hour: 0, minute: 1), calendar: calendar), at(day: 16))
+    }
+
+    func testTodayStaysOnTheDayItShowsUntilMidnight() {
+        XCTAssertNil(Today.dayChange(from: at(day: 16), at: at(day: 16, hour: 23, minute: 59), calendar: calendar))
+    }
+
     func testTodayHoldsOpenTasksScheduledOrDueToday() {
         let scheduled = task("Water the plants", scheduled: at(day: 16))
         let due = task("Send the invoice", deadline: at(day: 16))
