@@ -72,9 +72,19 @@ extension WidgetSnapshot {
         return [now] + Set(deadlines).sorted() + [midnight]
     }
 
+    /// Shows a widget completion: the task turns done, and a finished step hands its Daily Focus
+    /// place to the next open task in its pick, as the app does.
+    mutating func complete(_ completion: WidgetCompletion) {
+        for index in tasks.indices where tasks[index].providerWorkspaceID == completion.providerWorkspaceID
+            && tasks[index].externalTaskID == completion.externalTaskID {
+            tasks[index].status = .done
+            passFocusPlaces(from: tasks[index].id)
+        }
+    }
+
     /// Moves each Daily Focus place the finished task held to the first open task after it in
     /// that place. A place stays put when no open task remains in it.
-    mutating func passFocusPlaces(from taskID: String) {
+    private mutating func passFocusPlaces(from taskID: String) {
         let openIDs = Set(tasks.filter(\.isOpen).map(\.id))
         for index in focusPlaces.indices where focusPlaces[index].taskIDs.first == taskID {
             if let next = focusPlaces[index].taskIDs.dropFirst().firstIndex(where: openIDs.contains) {
@@ -135,19 +145,14 @@ struct WidgetStorage {
         }
     }
 
-    /// The widget's side of completing a task: record it for the app and show it done. A finished
-    /// step hands its Daily Focus place to the next open task in its pick, as the app does.
+    /// The widget's side of completing a task: record it for the app and show it done.
     func complete(_ completion: WidgetCompletion) {
         if let data = try? JSONEncoder().encode(completion) {
             try? FileManager.default.createDirectory(at: completionsDirectory, withIntermediateDirectories: true)
             try? data.write(to: file(for: UUID().uuidString), options: .atomic)
         }
         guard var snapshot else { return }
-        for index in snapshot.tasks.indices where snapshot.tasks[index].providerWorkspaceID == completion.providerWorkspaceID
-            && snapshot.tasks[index].externalTaskID == completion.externalTaskID {
-            snapshot.tasks[index].status = .done
-            snapshot.passFocusPlaces(from: snapshot.tasks[index].id)
-        }
+        snapshot.complete(completion)
         self.snapshot = snapshot
     }
 

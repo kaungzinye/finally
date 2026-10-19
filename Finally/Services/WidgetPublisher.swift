@@ -79,7 +79,10 @@ enum WidgetPublisher {
             predicate: #Predicate { $0.day == day && $0.storageWorkspaceID == workspaceID }
         )).first
         let tasks = try store.fetch(FetchDescriptor<TaskItem>())
-        storage.snapshot = WidgetSnapshot(tasks: tasks, focus: focus, workspace: workspace, at: referenceDate)
+        var snapshot = WidgetSnapshot(tasks: tasks, focus: focus, workspace: workspace, at: referenceDate)
+        // Completions the app has yet to apply stay done on the widget.
+        storage.pendingCompletions.forEach { snapshot.complete($0.completion) }
+        storage.snapshot = snapshot
 #if canImport(WidgetKit)
         WidgetCenter.shared.reloadAllTimelines()
 #endif
