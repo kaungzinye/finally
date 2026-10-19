@@ -107,6 +107,15 @@ final class WidgetSnapshotTests: XCTestCase {
         XCTAssertEqual(router.deepLinkWorkspaceId, "server-workspace")
     }
 
+    func testTheConfirmLinkOpensTheTodayTab() {
+        let router = NavigationRouter()
+        router.selectedTab = .tasks
+
+        router.handleURL(AppConstants.todayURL)
+
+        XCTAssertEqual(router.selectedTab, .today)
+    }
+
     func testTheSnapshotSurvivesAppGroupStorage() {
         let storage = makeStorage()
         let snapshot = WidgetSnapshot(

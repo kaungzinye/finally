@@ -3,6 +3,8 @@ import Foundation
 enum AppConstants {
     static let appGroupID = "group.com.kaungzinye.finally"
     static let urlScheme = "finally"
+    /// Opens the app on the Today tab.
+    static let todayURL = URL(string: "\(urlScheme)://today")!
     static let keychainService = "com.kaungzinye.finally"
     static let keychainTokenAccount = "notion_access_token"
 
