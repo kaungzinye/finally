@@ -28,6 +28,7 @@ final class WidgetCompletionTests: XCTestCase {
         let release = insertTask("release", "Ship the release", into: context)
         let focus = DailyFocus(day: Calendar.current.startOfDay(for: Date()), storageWorkspaceID: "notion-workspace")
         focus.picks = [brief.dailyFocusPick, release.dailyFocusPick]
+        focus.confirm()
         context.insert(focus)
         try context.save()
         try WidgetPublisher.publish(store: context, storage: storage)
@@ -52,6 +53,7 @@ final class WidgetCompletionTests: XCTestCase {
         let release = insertTask("release", "Ship the release", into: context)
         let focus = DailyFocus(day: Calendar.current.startOfDay(for: Date()), storageWorkspaceID: "notion-workspace")
         focus.picks = [brief.dailyFocusPick, release.dailyFocusPick]
+        focus.confirm()
         context.insert(focus)
         try context.save()
         try WidgetPublisher.publish(store: context, storage: storage)
@@ -204,6 +206,7 @@ final class WidgetCompletionTests: XCTestCase {
         }
         let focus = DailyFocus(day: Calendar.current.startOfDay(for: Date()), storageWorkspaceID: "notion-workspace")
         focus.picks = picks
+        focus.confirm()
         context.insert(focus)
         try context.save()
         try WidgetPublisher.publish(store: context, storage: storage)
