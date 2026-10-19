@@ -54,6 +54,9 @@ struct WidgetSnapshot: Codable, Equatable {
     var focusLimit: Int
     /// Every pick, a deleted one included, so the picks count like the Today tab.
     var focusPickCount: Int
+    /// The user confirmed the Daily Focus. A day the personal agent proposed waits for the user,
+    /// so the widgets show its picks for review and offer no completion.
+    var isFocusConfirmed: Bool
     /// The picks the widgets show, one per resolved pick, in pick order.
     var focusPlaces: [WidgetFocusPlace] = []
     var tasks: [WidgetTask]

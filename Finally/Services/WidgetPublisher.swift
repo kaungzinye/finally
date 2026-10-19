@@ -39,6 +39,7 @@ extension WidgetSnapshot {
             focusDay: focus?.day,
             focusLimit: focus?.focusLimit ?? DailyFocus.defaultFocusLimit,
             focusPickCount: focus?.picks.count ?? 0,
+            isFocusConfirmed: focus?.isConfirmed ?? false,
             focusPlaces: places,
             tasks: shown.map(WidgetTask.init)
         )

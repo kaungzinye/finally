@@ -4,7 +4,8 @@ import WidgetKit
 
 // MARK: - Focus widget
 
-/// Medium. The open Daily Focus picks under "3 things to do". A finished pick drops off.
+/// Medium. The open Daily Focus picks under "3 things to do". A finished pick drops off. A Daily
+/// Focus waiting for confirmation lists its picks for review instead, and opens Today.
 struct FocusWidgetView: View {
     let day: WidgetDay
     let date: Date
@@ -12,9 +13,41 @@ struct FocusWidgetView: View {
     private static let rows = 4
 
     var body: some View {
+        if day.awaitsConfirmation {
+            review
+        } else {
+            focus
+        }
+    }
+
+    private var review: some View {
+        let picks = day.unconfirmedPicks
+        let shown = picks.count > Self.rows ? Self.rows - 1 : Self.rows
+        return VStack(alignment: .leading, spacing: 2) {
+            WidgetHeader(title: day.confirmHeading)
+            ForEach(picks.prefix(shown)) { task in
+                Text(task.title)
+                    .font(.subheadline)
+                    .foregroundStyle(Palette.ink)
+                    .lineLimit(1)
+                    .frame(height: WidgetTaskRow.height, alignment: .leading)
+            }
+            if picks.count > shown {
+                Text("+\(picks.count - shown) more")
+                    .font(.meta)
+                    .foregroundStyle(Palette.muted)
+                    .frame(height: WidgetTaskRow.height, alignment: .leading)
+            }
+            Spacer(minLength: 0)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .widgetURL(AppConstants.todayURL)
+    }
+
+    private var focus: some View {
         let picks = day.openPicks
         let shown = picks.count > Self.rows ? Self.rows - 1 : Self.rows
-        VStack(alignment: .leading, spacing: 2) {
+        return VStack(alignment: .leading, spacing: 2) {
             WidgetHeader(title: day.focusHeading)
             if picks.isEmpty {
                 Spacer(minLength: 0)
@@ -36,13 +69,26 @@ struct FocusWidgetView: View {
 
 // MARK: - Now widget
 
-/// Small. The first open pick, large, with its deadline, its place among the picks, and Done.
+/// Small. The first open pick, large, with its deadline, its place among the picks, and Done. A
+/// Daily Focus waiting for confirmation asks the user to open Today instead.
 struct NowWidgetView: View {
     let day: WidgetDay
     let date: Date
 
     var body: some View {
-        if let task = day.nowPick {
+        if day.awaitsConfirmation {
+            VStack(alignment: .leading, spacing: 4) {
+                Text(day.confirmHeading)
+                    .font(.system(.headline, design: .rounded, weight: .semibold))
+                    .foregroundStyle(Palette.ink)
+                Text("Open to confirm")
+                    .font(.meta)
+                    .foregroundStyle(Palette.muted)
+                Spacer(minLength: 0)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .widgetURL(AppConstants.todayURL)
+        } else if let task = day.nowPick {
             VStack(alignment: .leading, spacing: 4) {
                 if let place = day.nowPickPlace {
                     Text(place)
@@ -145,14 +191,20 @@ struct LockScreenRingView: View {
     }
 }
 
-/// Rectangular. The first open pick and its deadline.
+/// Rectangular. The first open pick and its deadline, or the Daily Focus waiting for confirmation.
 struct LockScreenNowView: View {
     let day: WidgetDay
     let date: Date
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            if let task = day.nowPick {
+            if day.awaitsConfirmation {
+                Text(day.confirmHeading)
+                    .font(.headline)
+                Text("Open to confirm")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            } else if let task = day.nowPick {
                 if let place = day.nowPickPlace {
                     Text(place)
                         .font(.system(.caption2, design: .rounded, weight: .semibold))
@@ -175,7 +227,7 @@ struct LockScreenNowView: View {
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .widgetURL(day.nowPick?.url)
+        .widgetURL(day.awaitsConfirmation ? AppConstants.todayURL : day.nowPick?.url)
     }
 }
 

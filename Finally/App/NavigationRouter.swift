@@ -29,6 +29,8 @@ final class NavigationRouter {
         case "oauth-callback":
             let components = URLComponents(url: url, resolvingAgainstBaseURL: false)
             pendingOAuthCode = components?.queryItems?.first(where: { $0.name == "code" })?.value
+        case "today":
+            selectedTab = .today
         case "tasks":
             if path == "/new" || path == "new" {
                 showNewTaskSheet = true

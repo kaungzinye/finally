@@ -27,6 +27,7 @@ final class WidgetDayTests: XCTestCase {
         let tasks = [passport, brief, launch, slides, release, invoice, plants, dentist, rent, contract]
         let focus = DailyFocus(day: at(day: 16), storageWorkspaceID: "notion-workspace")
         focus.picks = [brief.dailyFocusPick, launch.dailyFocusPick, release.dailyFocusPick]
+        focus.confirm()
 
         let day = WidgetDay(
             snapshot: WidgetSnapshot(tasks: tasks, focus: focus, workspace: workspace, at: now, calendar: calendar),
@@ -57,7 +58,7 @@ final class WidgetDayTests: XCTestCase {
         rent.deadlineHasTime = true
         let brief = widgetTask("Draft the brief", deadline: at(day: 16))
         let snapshot = WidgetSnapshot(
-            workspaceID: "notion-workspace", focusDay: nil, focusLimit: 3, focusPickCount: 0,
+            workspaceID: "notion-workspace", focusDay: nil, focusLimit: 3, focusPickCount: 0, isFocusConfirmed: false,
             tasks: [invoice, call, lunch, release, rent, brief]
         )
 
@@ -70,7 +71,7 @@ final class WidgetDayTests: XCTestCase {
     }
 
     func testPicksFromAnEarlierDayAreNotTodaysFocus() {
-        let snapshot = WidgetSnapshot(workspaceID: "notion-workspace", focusDay: at(day: 15), focusLimit: 3, focusPickCount: 1, focusPlaces: [place(1, "Draft the brief")], tasks: [
+        let snapshot = WidgetSnapshot(workspaceID: "notion-workspace", focusDay: at(day: 15), focusLimit: 3, focusPickCount: 1, isFocusConfirmed: true, focusPlaces: [place(1, "Draft the brief")], tasks: [
             widgetTask("Draft the brief", scheduled: at(day: 15)),
         ])
 
@@ -97,7 +98,7 @@ final class WidgetDayTests: XCTestCase {
     }
 
     func testTheFocusWidgetListsOpenPicksUnderTheFocusLimit() {
-        let snapshot = WidgetSnapshot(workspaceID: "notion-workspace", focusDay: at(day: 16), focusLimit: 3, focusPickCount: 3, focusPlaces: [place(1, "Draft the brief"), place(2, "Ship the release"), place(3, "Water the plants")], tasks: [
+        let snapshot = WidgetSnapshot(workspaceID: "notion-workspace", focusDay: at(day: 16), focusLimit: 3, focusPickCount: 3, isFocusConfirmed: true, focusPlaces: [place(1, "Draft the brief"), place(2, "Ship the release"), place(3, "Water the plants")], tasks: [
             widgetTask("Water the plants", scheduled: at(day: 16)),
             widgetTask("Draft the brief", deadline: at(day: 16), status: .done),
             widgetTask("Ship the release", deadline: at(day: 17)),
@@ -111,7 +112,7 @@ final class WidgetDayTests: XCTestCase {
     }
 
     func testTheNowWidgetShowsTheFirstOpenPickAndItsPlace() {
-        let snapshot = WidgetSnapshot(workspaceID: "notion-workspace", focusDay: at(day: 16), focusLimit: 3, focusPickCount: 3, focusPlaces: [place(1, "Draft the brief"), place(2, "Ship the release"), place(3, "Water the plants")], tasks: [
+        let snapshot = WidgetSnapshot(workspaceID: "notion-workspace", focusDay: at(day: 16), focusLimit: 3, focusPickCount: 3, isFocusConfirmed: true, focusPlaces: [place(1, "Draft the brief"), place(2, "Ship the release"), place(3, "Water the plants")], tasks: [
             widgetTask("Draft the brief", deadline: at(day: 16), status: .done),
             widgetTask("Ship the release", deadline: at(day: 17)),
             widgetTask("Water the plants", scheduled: at(day: 16)),
@@ -123,8 +124,41 @@ final class WidgetDayTests: XCTestCase {
         XCTAssertEqual(day.nowPickPlace, "2 of 3")
     }
 
+    func testAnUnconfirmedDailyFocusListsItsPicksForReviewWithNothingToComplete() {
+        let snapshot = WidgetSnapshot(workspaceID: "notion-workspace", focusDay: at(day: 16), focusLimit: 3, focusPickCount: 3, isFocusConfirmed: false, focusPlaces: [place(1, "Draft the brief"), place(2, "Ship the release"), place(3, "Water the plants")], tasks: [
+            widgetTask("Water the plants", scheduled: at(day: 16)),
+            widgetTask("Draft the brief", deadline: at(day: 16)),
+            widgetTask("Ship the release", deadline: at(day: 17)),
+        ])
+
+        let day = WidgetDay(snapshot: snapshot, at: now, calendar: calendar)
+
+        XCTAssertTrue(day.awaitsConfirmation)
+        XCTAssertEqual(day.confirmHeading, "3 things to confirm")
+        XCTAssertEqual(day.unconfirmedPicks.map(\.title), ["Draft the brief", "Ship the release", "Water the plants"])
+        XCTAssertEqual(day.picks, [])
+        XCTAssertEqual(day.openPicks, [])
+        XCTAssertNil(day.nowPick)
+        XCTAssertNil(day.nowPickPlace)
+    }
+
+    func testTodayAndTheRingCountUnconfirmedPicksAsOrdinaryTodayTasks() {
+        let snapshot = WidgetSnapshot(workspaceID: "notion-workspace", focusDay: at(day: 16), focusLimit: 3, focusPickCount: 3, isFocusConfirmed: false, focusPlaces: [place(1, "Water the plants"), place(2, "Ship the release"), place(3, "Draft the brief")], tasks: [
+            widgetTask("Water the plants", scheduled: at(day: 16)),
+            widgetTask("Draft the brief", deadline: at(day: 16)),
+            widgetTask("Ship the release", deadline: at(day: 17)),
+            widgetTask("Renew the passport", deadline: at(day: 15)),
+        ])
+
+        let day = WidgetDay(snapshot: snapshot, at: now, calendar: calendar)
+
+        XCTAssertEqual(day.today.map(\.title), ["Renew the passport", "Draft the brief", "Water the plants"])
+        XCTAssertEqual(day.comingUp.map(\.title), ["Ship the release"])
+        XCTAssertEqual(day.ringSections, Array(repeating: RingSection(isFocus: false, isDone: false), count: 3))
+    }
+
     func testAOnePickFocusReadsOneThingToDo() {
-        let snapshot = WidgetSnapshot(workspaceID: "notion-workspace", focusDay: at(day: 16), focusLimit: 1, focusPickCount: 0, tasks: [])
+        let snapshot = WidgetSnapshot(workspaceID: "notion-workspace", focusDay: at(day: 16), focusLimit: 1, focusPickCount: 0, isFocusConfirmed: false, tasks: [])
 
         let day = WidgetDay(snapshot: snapshot, at: now, calendar: calendar)
 
@@ -137,7 +171,7 @@ final class WidgetDayTests: XCTestCase {
         var subtask = widgetTask("Draft the slides")
         subtask.isSubtask = true
         subtask.suggestedDate = at(day: 17)
-        let snapshot = WidgetSnapshot(workspaceID: "notion-workspace", focusDay: nil, focusLimit: 3, focusPickCount: 0, tasks: [
+        let snapshot = WidgetSnapshot(workspaceID: "notion-workspace", focusDay: nil, focusLimit: 3, focusPickCount: 0, isFocusConfirmed: false, tasks: [
             widgetTask("Review the contract", scheduled: at(day: 17)),
             widgetTask("Call the bank", deadline: at(day: 18), priority: .medium),
             widgetTask("Plan the trip", scheduled: at(day: 23)),
@@ -187,7 +221,7 @@ final class WidgetDayTests: XCTestCase {
     }
 
     func testTheRingDrawsOneSectionPerTodayTaskWithPicksFirstAndFinishedTasksFilled() {
-        let snapshot = WidgetSnapshot(workspaceID: "notion-workspace", focusDay: at(day: 16), focusLimit: 3, focusPickCount: 2, focusPlaces: [place(1, "Draft the brief"), place(2, "Ship the release")], tasks: [
+        let snapshot = WidgetSnapshot(workspaceID: "notion-workspace", focusDay: at(day: 16), focusLimit: 3, focusPickCount: 2, isFocusConfirmed: true, focusPlaces: [place(1, "Draft the brief"), place(2, "Ship the release")], tasks: [
             widgetTask("Water the plants", scheduled: at(day: 16)),
             widgetTask("Pay the rent", scheduled: at(day: 16), status: .done),
             widgetTask("Ship the release", deadline: at(day: 17)),
@@ -218,6 +252,7 @@ final class WidgetDayTests: XCTestCase {
             focusDay: nil,
             focusLimit: 3,
             focusPickCount: 0,
+            isFocusConfirmed: false,
             tasks: (0..<today).map { widgetTask("Today \($0 + 1)", scheduled: at(day: 16)) }
                 + (0..<comingUp).map { widgetTask("Coming \($0 + 1)", scheduled: at(day: 17)) }
         )
