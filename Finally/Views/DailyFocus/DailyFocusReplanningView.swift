@@ -224,7 +224,7 @@ struct DailyFocusReplanningView: View {
         }
         if let task, task.isDirty {
             NotificationService.shared.rescheduleAllReminders(modelContext: store)
-            await taskProvider.submitPendingChangesReportingFailure(for: [task], store: store)
+            await taskProvider.submitPendingChangesReportingFailure(for: task.pendingEdits, store: store)
         }
         if let focusError { throw focusError }
     }

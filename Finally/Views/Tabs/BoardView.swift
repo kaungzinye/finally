@@ -202,7 +202,7 @@ struct BoardView: View {
 
     private func submit(_ task: TaskItem) {
         Task {
-            await taskProvider.submitPendingChangesReportingFailure(for: [task], store: modelContext)
+            await taskProvider.submitPendingChangesReportingFailure(for: task.pendingEdits, store: modelContext)
         }
     }
 

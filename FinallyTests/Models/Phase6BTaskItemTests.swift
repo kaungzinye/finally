@@ -103,6 +103,24 @@ final class Phase6BTaskItemTests: XCTestCase {
         XCTAssertEqual(subtask.status, .notStarted)
     }
 
+    func testComplete_ParentMarksTheStepsItFinishesForSync() {
+        let parent = TaskItem(externalTaskID: "parent", title: "Parent")
+        let open = TaskItem(externalTaskID: "sub-open", title: "Open step")
+        let done = TaskItem(externalTaskID: "sub-done", title: "Done step")
+        done.status = .done
+        for step in [open, done] {
+            step.parentId = parent.externalTaskID
+            step.parent = parent
+        }
+        parent.subtasks = [open, done]
+
+        _ = parent.complete()
+
+        XCTAssertEqual(open.status, .done)
+        XCTAssertTrue(open.isDirty)
+        XCTAssertFalse(done.isDirty)
+    }
+
     func testTaskReminders_PersistsOnTaskItem() {
         let task = TaskItem(externalTaskID: "t-4", title: "Task")
         task.taskReminders = [

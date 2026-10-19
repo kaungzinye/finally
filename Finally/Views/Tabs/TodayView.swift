@@ -178,7 +178,7 @@ struct TodayView: View {
         guard task.isDirty else { return }
         NotificationService.shared.rescheduleAllReminders(modelContext: modelContext)
         Task {
-            await taskProvider.submitPendingChangesReportingFailure(for: [task], store: modelContext)
+            await taskProvider.submitPendingChangesReportingFailure(for: task.pendingEdits, store: modelContext)
         }
     }
 }

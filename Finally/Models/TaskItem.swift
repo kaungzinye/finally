@@ -303,6 +303,7 @@ final class TaskItem {
         for subtask in subtasks where subtask.status != .done {
             subtask.status = .done
             subtask.completedAt = date
+            subtask.isDirty = true
         }
         self.status = .done
         self.completedAt = date

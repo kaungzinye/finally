@@ -120,7 +120,7 @@ struct TaskRowView: View {
 
     private func submitTaskMutation() {
         Task {
-            await taskProvider.submitPendingChangesReportingFailure(for: [task], store: modelContext)
+            await taskProvider.submitPendingChangesReportingFailure(for: task.pendingEdits, store: modelContext)
         }
     }
 }

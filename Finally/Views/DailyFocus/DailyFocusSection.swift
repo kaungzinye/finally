@@ -196,7 +196,7 @@ private struct CurrentPickCard: View {
             }
         }
         Task {
-            await taskProvider.submitPendingChangesReportingFailure(for: [task], store: modelContext)
+            await taskProvider.submitPendingChangesReportingFailure(for: task.pendingEdits, store: modelContext)
         }
     }
 }
