@@ -79,19 +79,37 @@ extension WidgetSnapshot {
         return [now] + Set(deadlines).sorted() + [midnight]
     }
 
-    /// Shows a widget completion at its tap time: the task turns done, a parent whose last open step
-    /// finished returns to Today, and a finished step hands its Daily Focus place to the next open
-    /// task in its pick, as the app does.
+    /// Shows every pending widget completion, each finished at its first tap, in tap order.
+    mutating func complete(_ pending: [PendingWidgetCompletion]) {
+        pending.map(\.completion)
+            .sorted { $0.completedAt < $1.completedAt }
+            .forEach { complete($0) }
+    }
+
+    /// Shows a widget completion at its tap time, as `TaskItem.complete` does: the task and its open
+    /// steps turn done, a parent whose last open step finished returns to Today, and each Daily
+    /// Focus place hands over to the next open task in its pick. A recurring parent shows done with
+    /// its steps until the app advances it, since the snapshot holds no recurrence.
     mutating func complete(_ completion: WidgetCompletion) {
-        for index in tasks.indices where tasks[index].providerWorkspaceID == completion.providerWorkspaceID
+        let workspaceID = completion.providerWorkspaceID
+        for index in tasks.indices where tasks[index].providerWorkspaceID == workspaceID
             && tasks[index].externalTaskID == completion.externalTaskID && tasks[index].isOpen {
-            tasks[index].status = .done
-            tasks[index].completedAt = completion.completedAt
-            if let parentID = tasks[index].parentID {
-                refreshOpenSteps(ofParent: parentID, in: completion.providerWorkspaceID)
+            for step in tasks.indices where tasks[step].providerWorkspaceID == workspaceID
+                && tasks[step].parentID == completion.externalTaskID && tasks[step].isOpen {
+                finish(at: step, completedAt: completion.completedAt)
             }
-            passFocusPlaces(from: tasks[index].id)
+            finish(at: index, completedAt: completion.completedAt)
+            if let parentID = tasks[index].parentID {
+                refreshOpenSteps(ofParent: parentID, in: workspaceID)
+            }
         }
+        passFocusPlaces()
+    }
+
+    private mutating func finish(at index: Int, completedAt: Date) {
+        tasks[index].status = .done
+        tasks[index].completedAt = completedAt
+        tasks[index].hasOpenSubtasks = false
     }
 
     /// Sets whether the parent still has an open step among its steps in the snapshot. A dated
@@ -106,13 +124,16 @@ extension WidgetSnapshot {
         }
     }
 
-    /// Moves each Daily Focus place the finished task held to the first open task after it in
-    /// that place. A place stays put when no open task remains in it.
-    private mutating func passFocusPlaces(from taskID: String) {
+    /// Moves each Daily Focus place to the first open task left in it. A place with no open task
+    /// left shows its pick, the last task in it.
+    private mutating func passFocusPlaces() {
         let openIDs = Set(tasks.filter(\.isOpen).map(\.id))
-        for index in focusPlaces.indices where focusPlaces[index].taskIDs.first == taskID {
-            if let next = focusPlaces[index].taskIDs.dropFirst().firstIndex(where: openIDs.contains) {
-                focusPlaces[index].taskIDs.removeFirst(next)
+        for index in focusPlaces.indices {
+            let ids = focusPlaces[index].taskIDs
+            if let next = ids.firstIndex(where: openIDs.contains) {
+                focusPlaces[index].taskIDs = Array(ids[next...])
+            } else if let pick = ids.last {
+                focusPlaces[index].taskIDs = [pick]
             }
         }
     }
@@ -161,6 +182,14 @@ struct WidgetStorage {
         nonmutating set {
             defaults.set(newValue.flatMap { try? JSONEncoder().encode($0) }, forKey: Self.snapshotKey)
         }
+    }
+
+    /// What the widgets draw: the stored snapshot with every pending completion shown on top, so
+    /// a completion stays done even when a racing tap overwrote the snapshot it wrote.
+    var displayedSnapshot: WidgetSnapshot? {
+        guard var snapshot else { return nil }
+        snapshot.complete(pendingCompletions)
+        return snapshot
     }
 
     var pendingCompletions: [PendingWidgetCompletion] {
