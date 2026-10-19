@@ -70,8 +70,8 @@ final class WidgetDayTests: XCTestCase {
     }
 
     func testPicksFromAnEarlierDayAreNotTodaysFocus() {
-        let snapshot = WidgetSnapshot(workspaceID: "notion-workspace", focusDay: at(day: 15), focusLimit: 3, focusPickCount: 1, tasks: [
-            widgetTask("Draft the brief", scheduled: at(day: 15), focusPosition: 1),
+        let snapshot = WidgetSnapshot(workspaceID: "notion-workspace", focusDay: at(day: 15), focusLimit: 3, focusPickCount: 1, focusPlaces: [place(1, "Draft the brief")], tasks: [
+            widgetTask("Draft the brief", scheduled: at(day: 15)),
         ])
 
         let day = WidgetDay(snapshot: snapshot, at: now, calendar: calendar)
@@ -97,10 +97,10 @@ final class WidgetDayTests: XCTestCase {
     }
 
     func testTheFocusWidgetListsOpenPicksUnderTheFocusLimit() {
-        let snapshot = WidgetSnapshot(workspaceID: "notion-workspace", focusDay: at(day: 16), focusLimit: 3, focusPickCount: 3, tasks: [
-            widgetTask("Water the plants", scheduled: at(day: 16), focusPosition: 3),
-            widgetTask("Draft the brief", deadline: at(day: 16), status: .done, focusPosition: 1),
-            widgetTask("Ship the release", deadline: at(day: 17), focusPosition: 2),
+        let snapshot = WidgetSnapshot(workspaceID: "notion-workspace", focusDay: at(day: 16), focusLimit: 3, focusPickCount: 3, focusPlaces: [place(1, "Draft the brief"), place(2, "Ship the release"), place(3, "Water the plants")], tasks: [
+            widgetTask("Water the plants", scheduled: at(day: 16)),
+            widgetTask("Draft the brief", deadline: at(day: 16), status: .done),
+            widgetTask("Ship the release", deadline: at(day: 17)),
             widgetTask("Send the invoice", deadline: at(day: 16)),
         ])
 
@@ -111,10 +111,10 @@ final class WidgetDayTests: XCTestCase {
     }
 
     func testTheNowWidgetShowsTheFirstOpenPickAndItsPlace() {
-        let snapshot = WidgetSnapshot(workspaceID: "notion-workspace", focusDay: at(day: 16), focusLimit: 3, focusPickCount: 3, tasks: [
-            widgetTask("Draft the brief", deadline: at(day: 16), status: .done, focusPosition: 1),
-            widgetTask("Ship the release", deadline: at(day: 17), focusPosition: 2),
-            widgetTask("Water the plants", scheduled: at(day: 16), focusPosition: 3),
+        let snapshot = WidgetSnapshot(workspaceID: "notion-workspace", focusDay: at(day: 16), focusLimit: 3, focusPickCount: 3, focusPlaces: [place(1, "Draft the brief"), place(2, "Ship the release"), place(3, "Water the plants")], tasks: [
+            widgetTask("Draft the brief", deadline: at(day: 16), status: .done),
+            widgetTask("Ship the release", deadline: at(day: 17)),
+            widgetTask("Water the plants", scheduled: at(day: 16)),
         ])
 
         let day = WidgetDay(snapshot: snapshot, at: now, calendar: calendar)
@@ -187,14 +187,14 @@ final class WidgetDayTests: XCTestCase {
     }
 
     func testTheRingDrawsOneSectionPerTodayTaskWithPicksFirstAndFinishedTasksFilled() {
-        let snapshot = WidgetSnapshot(workspaceID: "notion-workspace", focusDay: at(day: 16), focusLimit: 3, focusPickCount: 2, tasks: [
+        let snapshot = WidgetSnapshot(workspaceID: "notion-workspace", focusDay: at(day: 16), focusLimit: 3, focusPickCount: 2, focusPlaces: [place(1, "Draft the brief"), place(2, "Ship the release")], tasks: [
             widgetTask("Water the plants", scheduled: at(day: 16)),
             widgetTask("Pay the rent", scheduled: at(day: 16), status: .done),
-            widgetTask("Ship the release", deadline: at(day: 17), focusPosition: 2),
+            widgetTask("Ship the release", deadline: at(day: 17)),
             widgetTask("Renew the passport", deadline: at(day: 15)),
             widgetTask("Book the dentist", scheduled: at(day: 14), status: .done),
             widgetTask("Send the invoice", deadline: at(day: 15), status: .done),
-            widgetTask("Draft the brief", deadline: at(day: 16), status: .done, focusPosition: 1),
+            widgetTask("Draft the brief", deadline: at(day: 16), status: .done),
             widgetTask("Review the contract", scheduled: at(day: 17)),
         ])
 
@@ -227,17 +227,20 @@ final class WidgetDayTests: XCTestCase {
         calendar.date(from: DateComponents(year: 2026, month: 10, day: day, hour: hour, minute: minute, second: second))!
     }
 
+    private func place(_ position: Int, _ externalTaskID: String) -> WidgetFocusPlace {
+        WidgetFocusPlace(position: position, taskIDs: ["notion-workspace:\(externalTaskID)"])
+    }
+
     private func widgetTask(
         _ title: String,
         scheduled: Date? = nil,
         deadline: Date? = nil,
         priority: TaskPriority? = nil,
-        status: TaskStatus = .notStarted,
-        focusPosition: Int? = nil
+        status: TaskStatus = .notStarted
     ) -> WidgetTask {
         WidgetTask(
             providerWorkspaceID: "notion-workspace", externalTaskID: title, title: title, priority: priority,
-            status: status, scheduledDay: scheduled, deadline: deadline, focusPosition: focusPosition
+            status: status, scheduledDay: scheduled, deadline: deadline
         )
     }
 

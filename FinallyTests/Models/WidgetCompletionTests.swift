@@ -6,9 +6,9 @@ final class WidgetCompletionTests: XCTestCase {
     func testCompletingFromAWidgetRecordsTheCompletionAndShowsTheTaskDone() {
         let storage = makeStorage()
         let today = Calendar.current.startOfDay(for: Date())
-        storage.snapshot = WidgetSnapshot(workspaceID: "notion-workspace", focusDay: today, focusLimit: 3, focusPickCount: 2, tasks: [
-            widgetTask("brief", "Draft the brief", focusPosition: 1),
-            widgetTask("release", "Ship the release", focusPosition: 2),
+        storage.snapshot = WidgetSnapshot(workspaceID: "notion-workspace", focusDay: today, focusLimit: 3, focusPickCount: 2, focusPlaces: [place(1, "brief"), place(2, "release")], tasks: [
+            widgetTask("brief", "Draft the brief"),
+            widgetTask("release", "Ship the release"),
         ])
 
         storage.complete(WidgetCompletion(providerWorkspaceID: "notion-workspace", externalTaskID: "brief"))
@@ -130,6 +130,27 @@ final class WidgetCompletionTests: XCTestCase {
         XCTAssertEqual(day.nowPick?.title, "Prepare the launch")
     }
 
+    func testAStepPickedBesideItsParentKeepsItsOwnPlace() throws {
+        let storage = makeStorage()
+        let context = try makeContext()
+        try publishPickedParentWithSteps(into: context, storage: storage, alsoPicking: "rehearse")
+
+        storage.complete(WidgetCompletion(providerWorkspaceID: "notion-workspace", externalTaskID: "slides"))
+
+        var day = WidgetDay(snapshot: storage.snapshot!, at: Date())
+        XCTAssertEqual(day.nowPick?.title, "Rehearse the talk")
+        XCTAssertEqual(day.nowPickPlace, "1 of 2")
+        XCTAssertEqual(day.openPicks.map(\.title), ["Rehearse the talk"])
+        XCTAssertEqual(day.ringSections, [RingSection(isFocus: true, isDone: false), RingSection(isFocus: true, isDone: false)])
+
+        storage.complete(WidgetCompletion(providerWorkspaceID: "notion-workspace", externalTaskID: "rehearse"))
+
+        day = WidgetDay(snapshot: storage.snapshot!, at: Date())
+        XCTAssertEqual(day.nowPick?.title, "Prepare the launch")
+        XCTAssertEqual(day.nowPickPlace, "1 of 2")
+        XCTAssertEqual(day.ringSections, [RingSection(isFocus: true, isDone: false), RingSection(isFocus: true, isDone: true)])
+    }
+
     func testTheAppApplyingAStepCompletionShowsTheNextStep() throws {
         let storage = makeStorage()
         let context = try makeContext()
@@ -146,8 +167,11 @@ final class WidgetCompletionTests: XCTestCase {
 
     /// Publishes a Daily Focus whose one pick, "Prepare the launch", has two undated steps.
     @discardableResult
-    private func publishPickedParentWithSteps(into context: ModelContext, storage: WidgetStorage) throws -> TaskItem {
+    private func publishPickedParentWithSteps(
+        into context: ModelContext, storage: WidgetStorage, alsoPicking stepID: String? = nil
+    ) throws -> TaskItem {
         let launch = insertTask("launch", "Prepare the launch", into: context)
+        var picks = [launch.dailyFocusPick]
         for (index, (id, title)) in [("slides", "Draft the slides"), ("rehearse", "Rehearse the talk")].enumerated() {
             let step = TaskItem(externalTaskID: id, title: title)
             step.providerWorkspaceId = "notion-workspace"
@@ -155,9 +179,10 @@ final class WidgetCompletionTests: XCTestCase {
             step.parent = launch
             step.sortIndex = index
             context.insert(step)
+            if id == stepID { picks.append(step.dailyFocusPick) }
         }
         let focus = DailyFocus(day: Calendar.current.startOfDay(for: Date()), storageWorkspaceID: "notion-workspace")
-        focus.picks = [launch.dailyFocusPick]
+        focus.picks = picks
         context.insert(focus)
         try context.save()
         try WidgetPublisher.publish(store: context, storage: storage)
@@ -183,11 +208,14 @@ final class WidgetCompletionTests: XCTestCase {
         return task
     }
 
-    private func widgetTask(_ id: String, _ title: String, focusPosition: Int? = nil) -> WidgetTask {
+    private func place(_ position: Int, _ externalTaskID: String) -> WidgetFocusPlace {
+        WidgetFocusPlace(position: position, taskIDs: ["notion-workspace:\(externalTaskID)"])
+    }
+
+    private func widgetTask(_ id: String, _ title: String) -> WidgetTask {
         WidgetTask(
             providerWorkspaceID: "notion-workspace", externalTaskID: id, title: title, priority: nil,
-            status: .notStarted, scheduledDay: Calendar.current.startOfDay(for: Date()), deadline: nil,
-            focusPosition: focusPosition
+            status: .notStarted, scheduledDay: Calendar.current.startOfDay(for: Date()), deadline: nil
         )
     }
 

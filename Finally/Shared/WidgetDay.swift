@@ -5,8 +5,11 @@ import Foundation
 struct WidgetDay {
     let focusLimit: Int
     let focusPickCount: Int
-    /// Today's Daily Focus picks in pick order, finished ones included.
+    /// Today's Daily Focus picks in pick order, finished ones included. Two picks can show one
+    /// task, such as a picked step that is also its picked parent's next step.
     let picks: [WidgetTask]
+    /// Each pick's place in Daily Focus, matching `picks` by index.
+    private let pickPositions: [Int]
     /// The rest of Today in Today order, never repeating a pick.
     let otherTasks: [Today.Member<WidgetTask>]
     /// Open tasks dated in the next seven days and not in Today, ordered by their first date there.
@@ -18,9 +21,14 @@ struct WidgetDay {
         let isToday = snapshot.focusDay.map { calendar.isDate($0, inSameDayAs: date) } ?? false
         focusLimit = snapshot.focusLimit
         focusPickCount = isToday ? snapshot.focusPickCount : 0
-        let picks = isToday
-            ? snapshot.tasks.filter { $0.focusPosition != nil }.sorted { $0.focusPosition! < $1.focusPosition! }
+        let tasksByID = Dictionary(snapshot.tasks.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
+        let places = isToday
+            ? snapshot.focusPlaces.sorted { $0.position < $1.position }.compactMap { place in
+                place.taskIDs.first.flatMap { tasksByID[$0] }.map { (position: place.position, task: $0) }
+            }
             : []
+        let picks = places.map(\.task)
+        pickPositions = places.map(\.position)
         let pickIDs = Set(picks.map(\.id))
         // Picks span workspaces. Everything else matches the Today tab's selected workspace.
         let scoped = snapshot.tasks.filter { $0.providerWorkspaceID == snapshot.workspaceID }
@@ -51,14 +59,18 @@ struct WidgetDay {
 
     var focusHeading: String { DailyFocusHeading.text(focusLimit: focusLimit) }
 
-    var openPicks: [WidgetTask] { picks.filter(\.isOpen) }
+    /// The open picks, each task once.
+    var openPicks: [WidgetTask] {
+        var seen: Set<String> = []
+        return picks.filter { $0.isOpen && seen.insert($0.id).inserted }
+    }
 
     /// The pick to work on now: the first open one.
     var nowPick: WidgetTask? { openPicks.first }
 
     /// Where the now pick sits among the picks, such as "2 of 3".
     var nowPickPlace: String? {
-        nowPick?.focusPosition.map { "\($0) of \(focusPickCount)" }
+        picks.firstIndex(where: \.isOpen).map { "\(pickPositions[$0]) of \(focusPickCount)" }
     }
 
     /// All of Today in Today-tab order: the open picks, then the other tasks.
