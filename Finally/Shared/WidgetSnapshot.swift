@@ -9,6 +9,8 @@ struct WidgetTask: Codable, Equatable, Identifiable {
     var status: TaskStatus
     let scheduledDay: Date?
     let deadline: Date?
+    /// When the task finished, or nil while it is open.
+    var completedAt: Date?
     var deadlineHasTime = false
     /// The external ID of the parent this task is a step of, in the same provider workspace.
     var parentID: String?
@@ -77,13 +79,14 @@ extension WidgetSnapshot {
         return [now] + Set(deadlines).sorted() + [midnight]
     }
 
-    /// Shows a widget completion: the task turns done, a parent whose last open step finished
+    /// Shows a widget completion at `date`: the task turns done, a parent whose last open step finished
     /// returns to Today, and a finished step hands its Daily Focus place to the next open task in
     /// its pick, as the app does.
-    mutating func complete(_ completion: WidgetCompletion) {
+    mutating func complete(_ completion: WidgetCompletion, at date: Date = Date()) {
         for index in tasks.indices where tasks[index].providerWorkspaceID == completion.providerWorkspaceID
-            && tasks[index].externalTaskID == completion.externalTaskID {
+            && tasks[index].externalTaskID == completion.externalTaskID && tasks[index].isOpen {
             tasks[index].status = .done
+            tasks[index].completedAt = date
             if let parentID = tasks[index].parentID {
                 refreshOpenSteps(ofParent: parentID, in: completion.providerWorkspaceID)
             }

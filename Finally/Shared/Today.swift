@@ -13,6 +13,8 @@ protocol TodayTask {
     /// The locally computed day to work on a subtask.
     var effectiveSuggestedDate: Date? { get }
     var hasOpenSubtasks: Bool { get }
+    /// When the task finished, or nil while it is open or when its finish time is unknown.
+    var completedAt: Date? { get }
 }
 
 /// Everything on the user's plate for the current day. The Today tab, the widgets, and the lock
@@ -91,8 +93,32 @@ enum Today {
         return nil
     }
 
+    /// Why a finished task counts as Today's finished work: it finished on the reference date's day
+    /// and was a member of Today just before it finished. The lock screen ring fills its section.
+    static func finishedReason(for task: some TodayTask, at referenceDate: Date, calendar: Calendar = .current) -> Reason? {
+        guard !task.isOpen, let completedAt = task.completedAt,
+              calendar.isDate(completedAt, inSameDayAs: referenceDate) else { return nil }
+        return reason(for: Unfinished(task: task), at: completedAt, calendar: calendar)
+    }
+
     /// A deadline has passed once its time passes, or once its day ends when it has no time.
     static func isOverdue(deadline: Date, hasTime: Bool, at referenceDate: Date, calendar: Calendar = .current) -> Bool {
         hasTime ? deadline < referenceDate : calendar.startOfDay(for: deadline) < calendar.startOfDay(for: referenceDate)
     }
+}
+
+/// A finished task as it stood just before it finished.
+private struct Unfinished<Base: TodayTask>: TodayTask {
+    let task: Base
+
+    var title: String { task.title }
+    var isOpen: Bool { true }
+    var scheduledDay: Date? { task.scheduledDay }
+    var deadline: Date? { task.deadline }
+    var deadlineHasTime: Bool { task.deadlineHasTime }
+    var priorityRank: Int { task.priorityRank }
+    var isSubtask: Bool { task.isSubtask }
+    var effectiveSuggestedDate: Date? { task.effectiveSuggestedDate }
+    var hasOpenSubtasks: Bool { task.hasOpenSubtasks }
+    var completedAt: Date? { nil }
 }

@@ -6,7 +6,7 @@ import WidgetKit
 
 extension WidgetSnapshot {
     /// The Daily Focus picks from any provider with their open steps, the selected workspace's open
-    /// dated tasks, and the tasks it finished on their day. Widgets never list an unscheduled task.
+    /// dated tasks, and the tasks it finished today out of Today. Widgets never list an unscheduled task.
     init(
         tasks: [TaskItem],
         focus: DailyFocus?,
@@ -26,12 +26,10 @@ extension WidgetSnapshot {
             places.append(WidgetFocusPlace(position: index + 1, taskIDs: chain.map(\.widgetTaskID)))
             inFocus.formUnion(chain.map(ObjectIdentifier.init))
         }
-        let today = calendar.startOfDay(for: referenceDate)
-        func isOn(_ date: Date?) -> Bool { date.map { calendar.startOfDay(for: $0) == today } ?? false }
         let shown = tasks.filter { task in
             if inFocus.contains(ObjectIdentifier(task)) { return true }
             guard task.belongs(to: workspace), !task.isDeleted else { return false }
-            if task.status == .done { return isOn(task.scheduledDay) || isOn(task.deadline) }
+            if task.status == .done { return Today.finishedReason(for: task, at: referenceDate, calendar: calendar) != nil }
             return task.scheduledDay != nil || task.deadline != nil || (task.isSubtask && task.effectiveSuggestedDate != nil)
         }
         self.init(
@@ -61,6 +59,7 @@ private extension WidgetTask {
             status: task.status,
             scheduledDay: task.scheduledDay,
             deadline: task.deadline,
+            completedAt: task.completedAt,
             deadlineHasTime: task.deadlineHasTime,
             parentID: task.parentId,
             suggestedDate: task.isSubtask ? task.effectiveSuggestedDate : nil,
