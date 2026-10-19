@@ -27,6 +27,7 @@ final class WidgetDayTests: XCTestCase {
         let tasks = [passport, brief, launch, slides, release, invoice, plants, dentist, rent, contract]
         let focus = DailyFocus(day: at(day: 16), storageWorkspaceID: "notion-workspace")
         focus.picks = [brief.dailyFocusPick, launch.dailyFocusPick, release.dailyFocusPick]
+        focus.confirm()
 
         let day = WidgetDay(
             snapshot: WidgetSnapshot(tasks: tasks, focus: focus, workspace: workspace, at: now, calendar: calendar),
@@ -121,6 +122,39 @@ final class WidgetDayTests: XCTestCase {
 
         XCTAssertEqual(day.nowPick?.title, "Ship the release")
         XCTAssertEqual(day.nowPickPlace, "2 of 3")
+    }
+
+    func testAnUnconfirmedDailyFocusListsItsPicksForReviewWithNothingToComplete() {
+        let snapshot = WidgetSnapshot(workspaceID: "notion-workspace", focusDay: at(day: 16), focusLimit: 3, focusPickCount: 3, isFocusConfirmed: false, focusPlaces: [place(1, "Draft the brief"), place(2, "Ship the release"), place(3, "Water the plants")], tasks: [
+            widgetTask("Water the plants", scheduled: at(day: 16)),
+            widgetTask("Draft the brief", deadline: at(day: 16)),
+            widgetTask("Ship the release", deadline: at(day: 17)),
+        ])
+
+        let day = WidgetDay(snapshot: snapshot, at: now, calendar: calendar)
+
+        XCTAssertTrue(day.awaitsConfirmation)
+        XCTAssertEqual(day.confirmHeading, "3 things to confirm")
+        XCTAssertEqual(day.unconfirmedPicks.map(\.title), ["Draft the brief", "Ship the release", "Water the plants"])
+        XCTAssertEqual(day.picks, [])
+        XCTAssertEqual(day.openPicks, [])
+        XCTAssertNil(day.nowPick)
+        XCTAssertNil(day.nowPickPlace)
+    }
+
+    func testTodayAndTheRingCountUnconfirmedPicksAsOrdinaryTodayTasks() {
+        let snapshot = WidgetSnapshot(workspaceID: "notion-workspace", focusDay: at(day: 16), focusLimit: 3, focusPickCount: 3, isFocusConfirmed: false, focusPlaces: [place(1, "Water the plants"), place(2, "Ship the release"), place(3, "Draft the brief")], tasks: [
+            widgetTask("Water the plants", scheduled: at(day: 16)),
+            widgetTask("Draft the brief", deadline: at(day: 16)),
+            widgetTask("Ship the release", deadline: at(day: 17)),
+            widgetTask("Renew the passport", deadline: at(day: 15)),
+        ])
+
+        let day = WidgetDay(snapshot: snapshot, at: now, calendar: calendar)
+
+        XCTAssertEqual(day.today.map(\.title), ["Renew the passport", "Draft the brief", "Water the plants"])
+        XCTAssertEqual(day.comingUp.map(\.title), ["Ship the release"])
+        XCTAssertEqual(day.ringSections, Array(repeating: RingSection(isFocus: false, isDone: false), count: 3))
     }
 
     func testAOnePickFocusReadsOneThingToDo() {

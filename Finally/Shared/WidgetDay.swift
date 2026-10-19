@@ -8,6 +8,9 @@ struct WidgetDay {
     /// Today's Daily Focus picks in pick order, finished ones included. Two picks can show one
     /// task, such as a picked step that is also its picked parent's next step.
     let picks: [WidgetTask]
+    /// The picks of a Daily Focus the personal agent proposed and the user has yet to confirm, in
+    /// pick order, each task once. They are not picks until the user confirms them.
+    let unconfirmedPicks: [WidgetTask]
     /// Each pick's place in Daily Focus, matching `picks` by index.
     private let pickPositions: [Int]
     /// The rest of Today in Today order, never repeating a pick.
@@ -27,8 +30,13 @@ struct WidgetDay {
                 place.taskIDs.first.flatMap { tasksByID[$0] }.map { (position: place.position, task: $0) }
             }
             : []
-        let picks = places.map(\.task)
-        pickPositions = places.map(\.position)
+        let confirmedPlaces = snapshot.isFocusConfirmed ? places : []
+        var seenUnconfirmed: Set<String> = []
+        unconfirmedPicks = snapshot.isFocusConfirmed
+            ? []
+            : places.map(\.task).filter { seenUnconfirmed.insert($0.id).inserted }
+        let picks = confirmedPlaces.map(\.task)
+        pickPositions = confirmedPlaces.map(\.position)
         let pickIDs = Set(picks.map(\.id))
         // Picks span workspaces. Everything else matches the Today tab's selected workspace.
         let scoped = snapshot.tasks.filter { $0.providerWorkspaceID == snapshot.workspaceID }
@@ -58,6 +66,15 @@ struct WidgetDay {
     }
 
     var focusHeading: String { DailyFocusHeading.text(focusLimit: focusLimit) }
+
+    /// Today's Daily Focus waits for the user's confirmation, so the focus and now widgets show its
+    /// picks for review instead of work to do.
+    var awaitsConfirmation: Bool { !unconfirmedPicks.isEmpty }
+
+    /// The review heading, such as "3 things to confirm".
+    var confirmHeading: String {
+        unconfirmedPicks.count == 1 ? "1 thing to confirm" : "\(unconfirmedPicks.count) things to confirm"
+    }
 
     /// The open picks, each task once.
     var openPicks: [WidgetTask] {
