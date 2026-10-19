@@ -7,6 +7,8 @@ struct TaskDetailView: View {
     @Bindable var task: TaskItem
     @Environment(\.modelContext) private var modelContext
     @Environment(TaskProviderCoordinator.self) private var taskProvider
+    @Environment(DailyFocusService.self) private var dailyFocusService
+    @Environment(\.dismiss) private var dismiss
 
     @State private var showDatePicker = false
     @State private var showScheduledDayPicker = false
@@ -16,6 +18,7 @@ struct TaskDetailView: View {
     @State private var showRecurrencePicker = false
     @State private var showRemindMeAt = false
     @State private var newSubtaskTitle = ""
+    @State private var confirmsDelete = false
 
     /// The deadline picker's time toggle. The deadline changes when the picker commits a date.
     @State private var deadlinePickerHasTime = false
@@ -132,6 +135,25 @@ struct TaskDetailView: View {
             }
             .paperList(background: Palette.sheet)
             .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Menu {
+                        Button("Delete task", systemImage: "trash", role: .destructive) {
+                            confirmsDelete = true
+                        }
+                        .accessibilityIdentifier("task-detail-delete")
+                    } label: {
+                        Image(systemName: "ellipsis")
+                    }
+                    .accessibilityLabel("More")
+                    .accessibilityIdentifier("task-detail-more")
+                }
+            }
+            .confirmationDialog("Delete this task?", isPresented: $confirmsDelete, titleVisibility: .visible) {
+                Button("Delete task", role: .destructive, action: deleteTask)
+            } message: {
+                Text("It leaves its provider and any Daily Focus that holds it.")
+            }
         }
         .presentationBackground(Palette.sheet)
         .onDisappear(perform: submitPendingEdits)
@@ -233,6 +255,29 @@ struct TaskDetailView: View {
                 syncErrorMessage = error.localizedDescription
             }
         }
+    }
+
+    /// Marks the task deleted, lets every Daily Focus drop its pick, and closes the sheet. Closing
+    /// submits the deletion to the task's own provider workspace.
+    private func deleteTask() {
+        NotificationService.shared.cancelRemindersForTask(task, modelContext: modelContext)
+        let store = modelContext
+        do {
+            let changed = try task.delete(in: store)
+            try store.save()
+            let sessions = try store.fetch(FetchDescriptor<UserSession>())
+            let service = dailyFocusService
+            for (workspaceID, focuses) in Dictionary(grouping: changed, by: \.storageWorkspaceID) {
+                let workspace = sessions.first { $0.workspaceId == workspaceID }
+                Task { try? await service.save(focuses, workspace: workspace, store: store) }
+            }
+        } catch {
+            syncErrorMessage = error.localizedDescription
+            return
+        }
+        NotificationService.shared.rescheduleAllReminders(modelContext: store)
+        try? WidgetPublisher.publish(store: store)
+        dismiss()
     }
 
     private func addSubtask() {

@@ -226,6 +226,20 @@ extension TaskItem {
 }
 
 extension TaskItem {
+    /// The user deletes the task. The task stays marked for its provider to retire, and every
+    /// Daily Focus that picked it lets the pick go. Returns the Daily Focus records that changed,
+    /// for the caller to save.
+    func delete(in store: ModelContext) throws -> [DailyFocus] {
+        isDeleted = true
+        isDirty = true
+        let pick = dailyFocusPick
+        let changed = try store.fetch(FetchDescriptor<DailyFocus>()).filter { $0.picks.contains(pick) }
+        changed.forEach { $0.remove(pick) }
+        return changed
+    }
+}
+
+extension TaskItem {
     /// Gives the task a new provider identity and repoints every Daily Focus pick at it. A Daily
     /// Focus stored on Finally Server is marked for its next write.
     func replaceExternalTaskID(with newID: String, in store: ModelContext) throws {
