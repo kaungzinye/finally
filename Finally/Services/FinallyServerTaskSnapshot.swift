@@ -73,12 +73,14 @@ extension TaskItem {
     func resolveServerConflict(keepingPhoneEdits: Bool) {
         guard let current = conflictingServerMutation else { return }
         let localStatus = status
+        let localCompletedAt = completedAt
         let local = serverMutation
         let fields = local.differences(from: acceptedServerMutation ?? current)
         applyServerMutation(current, fields: ["title", "done", "start_date", "due_date", "priority", "deadline_has_time", "reminder_rules"])
         if keepingPhoneEdits {
             applyServerMutation(local, fields: fields)
             if status != .done && localStatus == .inProgress { status = .inProgress }
+            if status == .done && localStatus == .done { completedAt = localCompletedAt }
         }
         else { isDeleted = false }
         serverSnapshotJSON = current.json

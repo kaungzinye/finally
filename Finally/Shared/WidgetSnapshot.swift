@@ -79,14 +79,14 @@ extension WidgetSnapshot {
         return [now] + Set(deadlines).sorted() + [midnight]
     }
 
-    /// Shows a widget completion at `date`: the task turns done, a parent whose last open step finished
-    /// returns to Today, and a finished step hands its Daily Focus place to the next open task in
-    /// its pick, as the app does.
-    mutating func complete(_ completion: WidgetCompletion, at date: Date = Date()) {
+    /// Shows a widget completion at its tap time: the task turns done, a parent whose last open step
+    /// finished returns to Today, and a finished step hands its Daily Focus place to the next open
+    /// task in its pick, as the app does.
+    mutating func complete(_ completion: WidgetCompletion) {
         for index in tasks.indices where tasks[index].providerWorkspaceID == completion.providerWorkspaceID
             && tasks[index].externalTaskID == completion.externalTaskID && tasks[index].isOpen {
             tasks[index].status = .done
-            tasks[index].completedAt = date
+            tasks[index].completedAt = completion.completedAt
             if let parentID = tasks[index].parentID {
                 refreshOpenSteps(ofParent: parentID, in: completion.providerWorkspaceID)
             }
@@ -122,6 +122,11 @@ extension WidgetSnapshot {
 struct WidgetCompletion: Codable, Hashable {
     let providerWorkspaceID: String
     let externalTaskID: String
+    /// When the user tapped, which is when the task finished.
+    var completedAt = Date()
+
+    /// The `id` of the `WidgetTask` this completion finishes.
+    var taskID: String { "\(providerWorkspaceID):\(externalTaskID)" }
 }
 
 /// A widget completion as stored: one file per tap, named by `id`.

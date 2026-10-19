@@ -11,10 +11,11 @@ final class WidgetCompletionTests: XCTestCase {
             widgetTask("release", "Ship the release"),
         ])
 
-        storage.complete(WidgetCompletion(providerWorkspaceID: "notion-workspace", externalTaskID: "brief"))
+        let tap = Date()
+        storage.complete(WidgetCompletion(providerWorkspaceID: "notion-workspace", externalTaskID: "brief", completedAt: tap))
 
         XCTAssertEqual(storage.pendingCompletions.map(\.completion), [
-            WidgetCompletion(providerWorkspaceID: "notion-workspace", externalTaskID: "brief"),
+            WidgetCompletion(providerWorkspaceID: "notion-workspace", externalTaskID: "brief", completedAt: tap),
         ])
         let day = WidgetDay(snapshot: storage.snapshot!, at: Date())
         XCTAssertEqual(day.openPicks.map(\.title), ["Ship the release"])
@@ -68,6 +69,32 @@ final class WidgetCompletionTests: XCTestCase {
         XCTAssertEqual(day.ringSections.filter(\.isDone).count, 1)
     }
 
+    func testTheAppFinishesAWidgetCompletionAtTheTap() throws {
+        let storage = makeStorage()
+        let context = try makeContext()
+        let brief = insertTask("brief", "Draft the brief", into: context)
+        try context.save()
+        let tap = Calendar.current.startOfDay(for: Date()).addingTimeInterval(-3600)
+
+        storage.complete(WidgetCompletion(providerWorkspaceID: "notion-workspace", externalTaskID: "brief", completedAt: tap))
+        try WidgetPublisher.applyPendingCompletions(store: context, storage: storage)
+
+        XCTAssertEqual(brief.completedAt, tap)
+    }
+
+    func testPublishingAPendingWidgetCompletionKeepsItsTapTime() throws {
+        let storage = makeStorage()
+        let context = try makeContext()
+        _ = insertTask("brief", "Draft the brief", into: context)
+        try context.save()
+        let tap = Date().addingTimeInterval(-600)
+
+        storage.complete(WidgetCompletion(providerWorkspaceID: "notion-workspace", externalTaskID: "brief", completedAt: tap))
+        try WidgetPublisher.publish(store: context, storage: storage)
+
+        XCTAssertEqual(storage.snapshot?.tasks.first { $0.externalTaskID == "brief" }?.completedAt, tap)
+    }
+
     func testACompletionForAFinishedOrMissingTaskChangesNothing() throws {
         let storage = makeStorage()
         let context = try makeContext()
@@ -90,12 +117,11 @@ final class WidgetCompletionTests: XCTestCase {
         app.complete(WidgetCompletion(providerWorkspaceID: "notion-workspace", externalTaskID: "brief"))
 
         let read = app.pendingCompletions
-        widget.complete(WidgetCompletion(providerWorkspaceID: "notion-workspace", externalTaskID: "release"))
+        let release = WidgetCompletion(providerWorkspaceID: "notion-workspace", externalTaskID: "release")
+        widget.complete(release)
         app.removePendingCompletions(read)
 
-        XCTAssertEqual(app.pendingCompletions.map(\.completion), [
-            WidgetCompletion(providerWorkspaceID: "notion-workspace", externalTaskID: "release"),
-        ])
+        XCTAssertEqual(app.pendingCompletions.map(\.completion), [release])
     }
 
     func testRepeatedTapsCompleteARecurringObligationOnce() throws {

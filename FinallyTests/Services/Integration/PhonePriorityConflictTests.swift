@@ -62,6 +62,32 @@ final class PhonePriorityConflictTests: XCTestCase {
         XCTAssertFalse(task.isDirty)
     }
 
+    func testCompletionDuringAwaitedPushKeepsItsFinishTime() async throws {
+        let (_, context, workspace, api, task) = try fixture()
+        task.title = "Outgoing title"
+        task.isDirty = true
+        let finishedAt = Date(timeIntervalSince1970: 1_900_000_000)
+        api.updateHook = {
+            task.complete(at: finishedAt)
+            api.updateHook = nil
+        }
+        try await FinallyServerTaskProviderAdapter(api: api).synchronize(.push, workspace: workspace, store: context)
+        XCTAssertEqual(task.status, .done)
+        XCTAssertEqual(task.completedAt, finishedAt)
+        XCTAssertTrue(task.isDirty)
+    }
+
+    func testKeepingPhoneCompletionInAConflictKeepsItsFinishTime() throws {
+        let (_, _, _, _, task) = try fixture()
+        let finishedAt = Date(timeIntervalSince1970: 1_900_000_000)
+        task.complete(at: finishedAt)
+        task.serverConflictJSON = FinallyServerTaskMutation(title: "Another phone title", isCompleted: false).json
+        task.serverConflictFields = ["title"]
+        task.resolveServerConflict(keepingPhoneEdits: true)
+        XCTAssertEqual(task.status, .done)
+        XCTAssertEqual(task.completedAt, finishedAt)
+    }
+
     func testCompletionAndEditedTitleShareOneConditionalWrite() async throws {
         let (_, context, workspace, api, task) = try fixture()
         task.title = "Finished proposal"

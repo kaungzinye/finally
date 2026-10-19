@@ -148,10 +148,12 @@ final class FinallyServerTaskProviderAdapter: TaskProviderAdapter {
             }
             let editsDuringPush = task.serverMutation
             let statusDuringPush = task.status
+            let completedAtDuringPush = task.completedAt
             try apply(remote, to: task, workspaceID: workspaceID, store: store)
             let acknowledged = task.serverMutation
             task.applyServerMutation(editsDuringPush, fields: editsDuringPush.differences(from: outgoing))
             if statusDuringPush != outgoingStatus { task.status = statusDuringPush }
+            if task.status == .done, statusDuringPush == .done { task.completedAt = completedAtDuringPush }
             task.isDirty = !task.serverMutation.differences(from: acknowledged).isEmpty || task.isDeleted
             task.lastSyncedAt = Date()
             try store.save()
