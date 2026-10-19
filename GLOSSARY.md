@@ -115,6 +115,7 @@ _Avoid_: kanban
 - One provider owns each task, and one workspace belongs to one mode.
 - Provider workspaces remain separate even when a Daily Focus references tasks from more than one provider.
 - Scheduled days, deadlines, Daily Focus picks, and work sessions remain distinct concepts.
+- A scheduled day never falls after its deadline's day. Rescheduling stops at the deadline day and never moves the deadline.
 - Deadlines are facts. The personal agent proposes scheduled days and work sessions freely and never invents a deadline.
 - Today and every widget read the same definition of Today.
 - Only a missed deadline is overdue. A missed scheduled day stays visible without alarm.

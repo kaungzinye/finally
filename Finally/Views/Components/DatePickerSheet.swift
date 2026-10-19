@@ -17,6 +17,8 @@ struct DatePickerSheet: View {
     @Binding var selectedDate: Date?
     @Binding var hasTime: Bool
     private let field: Field
+    /// The last day a scheduled day may take: its task's deadline.
+    private var latest: Date?
     @Environment(\.dismiss) private var dismiss
 
     @State private var pickerDate = Date()
@@ -27,10 +29,11 @@ struct DatePickerSheet: View {
         field = .deadline
     }
 
-    init(scheduledDay: Binding<Date?>) {
+    init(scheduledDay: Binding<Date?>, latest: Date? = nil) {
         _selectedDate = scheduledDay
         _hasTime = .constant(false)
         field = .scheduled
+        self.latest = latest
     }
 
     var body: some View {
@@ -39,6 +42,7 @@ struct DatePickerSheet: View {
                 DatePicker(
                     field.title,
                     selection: $pickerDate,
+                    in: Date.distantPast...(latest ?? .distantFuture),
                     displayedComponents: hasTime ? [.date, .hourAndMinute] : [.date]
                 )
                 .datePickerStyle(.graphical)

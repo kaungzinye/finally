@@ -12,6 +12,25 @@ final class TaskDetailEditTests: XCTestCase {
         calendar.date(from: DateComponents(year: 2026, month: 6, day: value))!
     }
 
+    func testReschedule_PastTheDeadlineStopsOnTheDeadlineDay() {
+        let task = TaskItem(externalTaskID: "late", title: "Ship the release notes")
+        task.deadline = day(12)
+
+        task.reschedule(to: day(15), calendar: calendar)
+
+        XCTAssertEqual(task.scheduledDay, day(12))
+        XCTAssertTrue(task.isDirty)
+    }
+
+    func testReschedule_BeforeTheDeadlineKeepsTheChosenDay() {
+        let task = TaskItem(externalTaskID: "early", title: "Ship the release notes")
+        task.deadline = day(12)
+
+        task.reschedule(to: day(9), calendar: calendar)
+
+        XCTAssertEqual(task.scheduledDay, day(9))
+    }
+
     func testToggleCompletion_TickedStepBecomesDirtyEdit() {
         let step = TaskItem(externalTaskID: "step", title: "Draft the outline")
 

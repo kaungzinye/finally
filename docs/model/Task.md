@@ -25,4 +25,4 @@ A task may carry a [[Deadline]], the day or time it must be done.
 - Tapping the ring on a row completes the task in one tap.
 - Status cycles on each tap of the status chip in task detail and on Board cards.
 - A row shows one date. It shows the deadline when there is one, otherwise the scheduled day.
-- Swiping Reschedule on a row moves the scheduled day. It never moves the deadline.
+- Swiping Reschedule on a row moves the scheduled day, up to the deadline day. It never moves the deadline.

@@ -63,7 +63,7 @@ struct TaskRowView: View {
             .tint(Palette.high)
         }
         .sheet(isPresented: $showDatePicker) {
-            DatePickerSheet(scheduledDay: scheduledDayBinding)
+            DatePickerSheet(scheduledDay: scheduledDayBinding, latest: task.deadline)
         }
     }
 
@@ -111,9 +111,7 @@ struct TaskRowView: View {
         Binding(
             get: { task.scheduledDay },
             set: { day in
-                task.scheduledDay = day
-                task.isDirty = true
-                SubtaskScheduler.distributeSubtaskDates(parent: task)
+                task.reschedule(to: day)
                 NotificationService.shared.rescheduleAllReminders(modelContext: modelContext)
                 submitTaskMutation()
             }

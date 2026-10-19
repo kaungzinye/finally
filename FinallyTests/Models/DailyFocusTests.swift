@@ -236,7 +236,7 @@ final class DailyFocusTests: XCTestCase {
         let scheduled = day.addingTimeInterval(86_400 * 5)
 
         try focus.replan(task.dailyFocusPick, decision: .schedule(scheduled), task: task)
-        XCTAssertEqual(task.scheduledDay, Calendar.current.startOfDay(for: scheduled))
+        XCTAssertEqual(task.scheduledDay, Calendar.current.startOfDay(for: deadline))
         XCTAssertEqual(task.deadline, deadline)
         XCTAssertTrue(task.isDirty)
         XCTAssertTrue(focus.picks.isEmpty)

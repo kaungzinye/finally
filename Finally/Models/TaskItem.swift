@@ -202,6 +202,15 @@ final class TaskItem {
 
     // MARK: - Actions
 
+    /// Moves the scheduled day as a dirty edit and spreads the steps' suggested dates again.
+    /// A day after the deadline stops on the deadline's day, and nil clears the scheduled day.
+    func reschedule(to day: Date?, calendar: Calendar = .current) {
+        scheduledDay = day.map { calendar.startOfDay(for: $0) }
+        validateScheduledDay(calendar: calendar)
+        isDirty = true
+        SubtaskScheduler.distributeSubtaskDates(parent: self)
+    }
+
     /// The dirty edits task detail submits on close: the task when dirty, then its dirty steps,
     /// such as a step added under a clean parent.
     var pendingEdits: [TaskItem] {

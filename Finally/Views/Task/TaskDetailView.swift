@@ -139,7 +139,7 @@ struct TaskDetailView: View {
             DatePickerSheet(deadline: deadlineBinding, hasTime: $deadlinePickerHasTime)
         }
         .sheet(isPresented: $showScheduledDayPicker) {
-            DatePickerSheet(scheduledDay: scheduledDayBinding)
+            DatePickerSheet(scheduledDay: scheduledDayBinding, latest: task.deadline)
         }
         .sheet(isPresented: $showPriorityPicker) {
             PriorityPicker(selection: edit(\.priority))

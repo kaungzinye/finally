@@ -155,13 +155,9 @@ final class DailyFocus {
         case .breakDown:
             guard task.nextActionableSubtask != nil else { throw DailyFocusError.needsSteps }
         case .schedule(let date):
-            task.scheduledDay = Calendar.current.startOfDay(for: date)
-            task.isDirty = true
-            SubtaskScheduler.distributeSubtaskDates(parent: task)
+            task.reschedule(to: date)
         case .deferTask:
-            task.scheduledDay = nil
-            task.isDirty = true
-            SubtaskScheduler.distributeSubtaskDates(parent: task)
+            task.reschedule(to: nil)
         case .drop:
             break
         }
