@@ -169,7 +169,7 @@ final class WidgetDayTests: XCTestCase {
 
     func testComingUpHoldsTheNextSevenDaysByDateThenPriorityThenTitle() {
         var subtask = widgetTask("Draft the slides")
-        subtask.isSubtask = true
+        subtask.parentID = "Prepare the launch"
         subtask.suggestedDate = at(day: 17)
         let snapshot = WidgetSnapshot(workspaceID: "notion-workspace", focusDay: nil, focusLimit: 3, focusPickCount: 0, isFocusConfirmed: false, tasks: [
             widgetTask("Review the contract", scheduled: at(day: 17)),

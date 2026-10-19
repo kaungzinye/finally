@@ -134,7 +134,7 @@ final class WidgetSnapshotTests: XCTestCase {
                 WidgetTask(
                     providerWorkspaceID: "notion-workspace", externalTaskID: "slides", title: "Draft the slides",
                     priority: nil, status: .done, scheduledDay: nil, deadline: nil,
-                    isSubtask: true, suggestedDate: at(day: 16, hour: 11)
+                    parentID: "brief", suggestedDate: at(day: 16, hour: 11)
                 ),
             ]
         )

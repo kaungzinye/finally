@@ -62,7 +62,7 @@ private extension WidgetTask {
             scheduledDay: task.scheduledDay,
             deadline: task.deadline,
             deadlineHasTime: task.deadlineHasTime,
-            isSubtask: task.isSubtask,
+            parentID: task.parentId,
             suggestedDate: task.isSubtask ? task.effectiveSuggestedDate : nil,
             hasOpenSubtasks: task.hasOpenSubtasks
         )
