@@ -231,6 +231,40 @@ final class WidgetCompletionTests: XCTestCase {
         XCTAssertEqual(day.ringSections, [RingSection(isFocus: false, isDone: false), RingSection(isFocus: false, isDone: true)])
     }
 
+    func testCompletingAParentFromAWidgetFinishesItsOpenSteps() throws {
+        let storage = makeStorage()
+        let context = try makeContext()
+        insertParentWithUndatedSteps(into: context)
+        try context.save()
+        try WidgetPublisher.publish(store: context, storage: storage)
+
+        storage.complete(WidgetCompletion(providerWorkspaceID: "notion-workspace", externalTaskID: "launch"))
+
+        let widgetDay = WidgetDay(snapshot: storage.snapshot!, at: Date())
+        XCTAssertEqual(widgetDay.today.map(\.title), [])
+        XCTAssertEqual(widgetDay.ringSections.map(\.isDone), [true, true, true])
+
+        try WidgetPublisher.applyPendingCompletions(store: context, storage: storage)
+
+        let appDay = WidgetDay(snapshot: storage.snapshot!, at: Date())
+        XCTAssertEqual(appDay.today.map(\.title), [])
+        XCTAssertEqual(appDay.ringSections.map(\.isDone), [true, true, true])
+    }
+
+    func testCompletingAPickedParentFromAWidgetFinishesItsPick() throws {
+        let storage = makeStorage()
+        let context = try makeContext()
+        try publishPickedParentWithSteps(into: context, storage: storage)
+
+        storage.complete(WidgetCompletion(providerWorkspaceID: "notion-workspace", externalTaskID: "launch"))
+
+        let day = WidgetDay(snapshot: storage.snapshot!, at: Date())
+        XCTAssertEqual(day.picks.map(\.title), ["Prepare the launch"])
+        XCTAssertNil(day.nowPick)
+        XCTAssertEqual(day.today.map(\.title), [])
+        XCTAssertEqual(day.ringSections, [RingSection(isFocus: true, isDone: true)])
+    }
+
     func testTheAppApplyingAStepCompletionShowsTheNextStep() throws {
         let storage = makeStorage()
         let context = try makeContext()

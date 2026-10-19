@@ -14,7 +14,7 @@ Every widget reads the same Today definition as the Today tab. See `docs/model/T
 
 ## Interactive Elements
 
-- **Complete**: A `Button(intent:)` runs an AppIntent in the widget process. It appends the task's provider workspace and external ID to a pending-completion list in app-group storage, updates the snapshot so the task shows done, and reloads timelines. On launch and on foreground the app applies pending completions as dirty edits, reschedules reminders, and clears the list.
+- **Complete**: A `Button(intent:)` runs an AppIntent in the widget process. It appends the task's provider workspace and external ID to a pending-completion list in app-group storage, updates the snapshot so the task and its open steps show done, and reloads timelines. On launch and on foreground the app applies pending completions as dirty edits, reschedules reminders, and clears the list.
 - **Open task**: Tapping a row opens `finally://tasks/<id>?workspace=<provider workspace>`, so a pick from another provider opens in its own workspace.
 - **Add**: `finally://tasks/new` opens capture.
 
