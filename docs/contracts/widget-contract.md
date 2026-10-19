@@ -6,11 +6,11 @@ Every widget reads the same Today definition as the Today tab. See `docs/model/T
 
 | Family | Name | Content |
 |--------|------|---------|
-| `.systemMedium` | Focus widget | Headed "3 things to do" with the configured focus count. Lists the open Daily Focus picks with priority rings. A finished pick drops off. Tapping a ring completes the task. |
-| `.systemSmall` | Now widget | The first open Daily Focus pick, large, with its deadline, "2 of 3", and a Done button. |
-| `.systemLarge` | Today widget | All of Today, ordered like the Today tab. When room remains, the next seven days follow under "Coming up". When Today overflows, the list ends with "+N more". |
-| `.accessoryCircular` | Lock screen ring | One ring split into one section per task in Today. Daily Focus sections draw in ink and the rest in a second color. A section fills when its task is done. The center shows done out of total. |
-| `.accessoryRectangular` | Lock screen now | The first open Daily Focus pick and its deadline. |
+| `.systemMedium` | Focus widget | Headed "3 things to do" with the configured focus count. Lists the open Daily Focus picks with priority rings. A finished pick drops off. Tapping a ring completes the task. While the personal agent's proposed Daily Focus waits for confirmation, it reads "3 things to confirm" over the proposed titles with no rings, and a tap opens Today. |
+| `.systemSmall` | Now widget | The first open Daily Focus pick, large, with its deadline, "2 of 3", and a Done button. While the Daily Focus waits for confirmation, it reads "3 things to confirm" and "Open to confirm" with no Done button, and a tap opens Today. |
+| `.systemLarge` | Today widget | All of Today, ordered like the Today tab. When room remains, the next seven days follow under "Coming up". When Today overflows, the list ends with "+N more". Unconfirmed picks list as ordinary Today tasks. |
+| `.accessoryCircular` | Lock screen ring | One ring split into one section per task in Today. Daily Focus sections draw in ink and the rest in a second color. A section fills when its task is done. The center shows done out of total. Unconfirmed picks draw in the second color. |
+| `.accessoryRectangular` | Lock screen now | The first open Daily Focus pick and its deadline, or "3 things to confirm" while the Daily Focus waits for confirmation. |
 
 ## Interactive Elements
 
@@ -21,6 +21,6 @@ Every widget reads the same Today definition as the Today tab. See `docs/model/T
 ## Data Source
 
 - **Shared container**: App Group `group.com.kaungzinye.finally`
-- **Storage**: a JSON presentation snapshot in app-group `UserDefaults`, written by the app after every local change and sync. It carries each open dated task's title, priority, status, scheduled day, and deadline for the selected workspace. It also carries every Daily Focus pick, whatever its provider, as its own place holding the picked task and its open steps in order, and each task finished on its scheduled or deadline day, so the lock screen ring can fill their sections.
+- **Storage**: a JSON presentation snapshot in app-group `UserDefaults`, written by the app after every local change and sync. It carries each open dated task's title, priority, status, scheduled day, and deadline for the selected workspace. It also carries every Daily Focus pick, whatever its provider, as its own place holding the picked task and its open steps in order, and each task finished on its scheduled or deadline day, so the lock screen ring can fill their sections. It records whether the user confirmed the Daily Focus.
 - **Shared code**: the widget compiles `Finally/Shared`, which holds the Today query, the row date rule, the snapshot, and the widget selection. The widget and the Today tab read the same code.
 - **Refresh**: the app calls `WidgetCenter.shared.reloadAllTimelines()` after writing the snapshot. The timeline adds an entry at the next midnight so Today rolls over.
