@@ -14,4 +14,5 @@ A date-only deadline reminder fires at the [[Default reminder time]].
 
 - Task detail shows each one as a chip. ✕ removes it and + adds one from a short list.
 - A reminder whose fire time has already passed is skipped.
+- A reminder that would fire after a timed deadline stays silent.
 - Each recurrence cycle keeps the same offsets against the new deadline.

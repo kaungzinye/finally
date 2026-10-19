@@ -9,4 +9,5 @@ Task detail adds an [[Exact reminder]] through "Remind me at".
 ## Rules
 
 - Status is one chip that cycles on each tap.
-- Chips read "Scheduled" and "Deadline".
+- Chips read "Scheduled" and "Deadline". The Scheduled picker stops at the deadline day.
+- The "…" menu holds "Delete task", which asks first. Deleting takes the task out of every Daily Focus.

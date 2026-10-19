@@ -10,5 +10,6 @@ The day or time a task must be done. A deadline is a fact the user states. The s
 
 - A task due today appears in [[Today]].
 - Once the deadline passes with the task still open, the task is [[Overdue]].
-- Every deadline gets [[Default deadline reminders]] when it is first set.
+- A deadline gets [[Default deadline reminders]] when it goes from empty to set. Clearing it drops its deadline reminders.
+- A [[Scheduled day]] never falls after the deadline day.
 - "Due" never appears in the interface. The chip reads "Deadline".
