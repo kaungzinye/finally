@@ -17,3 +17,6 @@ vercel-notion-auth/.vercel/
 *.swp
 *~
 .vercel
+
+# Enso canvas outlines
+Canvases/

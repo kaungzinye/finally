@@ -16,80 +16,74 @@ struct SettingsView: View {
     var body: some View {
         NavigationStack {
             List {
-                Section("Workspaces") {
+                Group {
+                Section {
                     ForEach(sessions, id: \.id) { workspace in
-                        Button {
-                            select(workspace)
-                        } label: {
-                            HStack {
-                                Label(
-                                    workspace.workspaceName,
-                                    systemImage: workspace.providerIdentity == .finallyServer ? "server.rack" : "building.2"
-                                )
-                                Spacer()
-                                if workspace.isSelected {
-                                    Image(systemName: "checkmark")
-                                        .foregroundStyle(.tint)
-                                }
-                            }
+                        CheckRow(isSelected: workspace.isSelected, action: { select(workspace) }) {
+                            Label(
+                                workspace.workspaceName,
+                                systemImage: workspace.providerIdentity == .finallyServer ? "server.rack" : "building.2"
+                            )
                         }
-                        .foregroundStyle(.primary)
                     }
 
                     NavigationLink {
                         FinallyServerConnectView(onConnected: workspaceChanged)
                     } label: {
-                        Label("Add Finally Server", systemImage: "plus.circle")
+                        Label("Add a Finally Server", systemImage: "plus.circle")
                     }
+                } header: {
+                    SectionLabel("Workspaces")
                 }
 
                 Section {
-                    Stepper(value: $focusLimit, in: DailyFocus.focusLimitRange) {
-                        HStack {
-                            Label("Focus limit", systemImage: "scope")
-                            Spacer()
-                            Text("\(focusLimit)")
-                                .foregroundStyle(.secondary)
-                        }
-                    }
-                    .accessibilityIdentifier("focus-limit-stepper")
+                    ChoiceChips(choices: Array(DailyFocus.focusLimitRange), selection: $focusLimit) { "\($0)" }
+                        .padding(.vertical, 6)
+                        .accessibilityIdentifier("focus-limit-choice")
                 } header: {
-                    Text("Daily Focus")
+                    SectionLabel("Things to do each day")
                 } footer: {
-                    Text("New Daily Focus days use this limit, one to five picks. Each existing day keeps its limit.")
+                    SectionNote("How many tasks a new day holds. Days you already planned keep their count.")
                 }
 
-                Section("Notifications") {
+                Section {
+                    NavigationLink {
+                        DefaultDeadlineRemindersView()
+                    } label: {
+                        LabeledContent {
+                            DefaultDeadlineRemindersLabel()
+                        } label: {
+                            Label("Deadline reminders", systemImage: "bell")
+                        }
+                    }
+                    .accessibilityIdentifier("deadline-reminders-setting")
+
                     NavigationLink {
                         NotificationTimePickerView()
                     } label: {
-                        HStack {
-                            Label("Default Reminder Time", systemImage: "clock")
-                            Spacer()
+                        LabeledContent {
                             DefaultReminderTimeLabel()
-                                .foregroundStyle(.secondary)
+                        } label: {
+                            Label("Default reminder time", systemImage: "clock")
                         }
                     }
+                    .accessibilityIdentifier("default-reminder-time-setting")
+                } header: {
+                    SectionLabel("Notifications")
                 }
 
-                Section("Appearance") {
+                Section {
                     NavigationLink {
                         AppearanceSettingView()
                     } label: {
                         Label("Theme", systemImage: "paintbrush")
                     }
+                    .accessibilityIdentifier("theme-setting")
+                } header: {
+                    SectionLabel("Appearance")
                 }
 
-                Section("Notion") {
-                    if let notionSession {
-                        HStack {
-                            Label("Workspace", systemImage: "building.2")
-                            Spacer()
-                            Text(notionSession.workspaceName)
-                                .foregroundStyle(.secondary)
-                        }
-                    }
-
+                Section {
                     Button {
                         Task {
                             let success = await authService.startOAuthFlow(modelContext: modelContext)
@@ -99,7 +93,7 @@ struct SettingsView: View {
                         }
                     } label: {
                         Label(
-                            authService.isAuthenticating ? "Connecting…" : notionSession == nil ? "Connect Notion" : "Update Notion Permissions",
+                            authService.isAuthenticating ? "Connecting…" : notionSession == nil ? "Connect Notion" : "Update Notion permissions",
                             systemImage: "arrow.triangle.2.circlepath"
                         )
                     }
@@ -107,17 +101,20 @@ struct SettingsView: View {
 
                     if let message = authService.errorMessage {
                         Text(message)
-                            .foregroundStyle(.red)
+                            .foregroundStyle(Palette.urgent)
                     }
 
                     NavigationLink {
                         DatabaseSetupGuideView()
                     } label: {
-                        Label("Database Setup Guide", systemImage: "book")
+                        Label("Database setup guide", systemImage: "book")
                     }
+                    .accessibilityIdentifier("database-setup-guide")
+                } header: {
+                    SectionLabel("Notion")
                 }
 
-                Section("Account") {
+                Section {
                     if notionSession != nil {
                         Button(role: .destructive) {
                             disconnectNotion()
@@ -133,8 +130,13 @@ struct SettingsView: View {
                             Label("Remove \(server.workspaceName)", systemImage: "trash")
                         }
                     }
+                } header: {
+                    SectionLabel("Account")
                 }
+                }
+                .cardRow()
             }
+            .foregroundStyle(Palette.ink)
             .paperList()
             .navigationTitle("Settings")
             .toolbar {

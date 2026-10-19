@@ -39,7 +39,7 @@ enum TaskProviderCapability: String, Codable, Hashable, Sendable {
 
 enum CanonicalTaskField: String, Codable, CaseIterable, Hashable, Sendable {
     case title
-    case plannedDay
+    case scheduledDay
     case deadline
     case state
     case project
@@ -119,8 +119,8 @@ extension SyncService: TaskProviderAdapter {
     var fieldSupport: [CanonicalTaskField: TaskProviderFieldSupport] {
         [
             .title: .lossless,
-            .plannedDay: .lossy(
-                reason: "A separate Notion planned-day property is required to preserve every planned-day shape."
+            .scheduledDay: .lossy(
+                reason: "A separate Notion scheduled-day property is required to preserve every scheduled-day shape."
             ),
             .deadline: .lossless,
             .state: .lossless,
@@ -267,7 +267,7 @@ final class TaskProviderCoordinator {
         lastError = nil
         do {
             try await synchronization.value
-            try? WidgetTaskSnapshotStore.publish(store: store)
+            try? WidgetPublisher.publish(store: store)
         } catch is CancellationError {
             return
         } catch {
@@ -335,6 +335,15 @@ final class TaskProviderCoordinator {
         try? await submitPendingChanges(for: tasks, store: store)
     }
 
+    /// Applies the completions recorded from widgets and sends each to the provider workspace
+    /// that owns its task, whichever workspace is selected.
+    @MainActor
+    func submitWidgetCompletions(store: ModelContext, storage: WidgetStorage? = .appGroup) async {
+        let completed = (try? WidgetPublisher.applyPendingCompletions(store: store, storage: storage)) ?? []
+        guard !completed.isEmpty else { return }
+        await submitPendingChangesReportingFailure(for: completed, store: store)
+    }
+
     @MainActor
     func retryPendingChanges(store: ModelContext) async {
         do {
@@ -381,9 +390,26 @@ final class TaskProviderCoordinator {
         }
     }
 
+    /// Saves the version the user chose in conflict review, then refreshes reminders and the
+    /// widget snapshot to match it. A version that still differs from the server stays dirty
+    /// for the caller to push.
+    @MainActor
+    func resolveConflict(
+        for task: TaskItem,
+        keepingPhoneEdits: Bool,
+        store: ModelContext,
+        widgetStorage: WidgetStorage? = .appGroup
+    ) throws {
+        task.resolveServerConflict(keepingPhoneEdits: keepingPhoneEdits)
+        try store.save()
+        lastError = nil
+        try? WidgetPublisher.publish(store: store, storage: widgetStorage)
+        NotificationService.shared.rescheduleAllReminders(modelContext: store)
+    }
+
     func persistPendingChanges(store: ModelContext) throws {
         try store.save()
-        try? WidgetTaskSnapshotStore.publish(store: store)
+        try? WidgetPublisher.publish(store: store)
     }
 
     func clearError() {
@@ -423,12 +449,12 @@ final class TaskProviderCoordinator {
             .map(\.rawValue)
             .sorted()
             .joined(separator: ", ")
-        return "This provider keeps these fields on this device: \(names)."
+        return "These fields stay on this iPhone only: \(names)."
     }
 
     private func populatedFields(in task: TaskItem) -> Set<CanonicalTaskField> {
         var fields: Set<CanonicalTaskField> = [.title, .state]
-        if task.plannedDay != nil { fields.insert(.plannedDay) }
+        if task.scheduledDay != nil { fields.insert(.scheduledDay) }
         if task.deadline != nil { fields.insert(.deadline) }
         if task.project != nil { fields.insert(.project) }
         if !task.tags.isEmpty { fields.insert(.labels) }

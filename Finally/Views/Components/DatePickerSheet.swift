@@ -1,45 +1,65 @@
 import SwiftUI
 
-/// Picks a date. Passing `hasTime` offers an optional time, and omitting it picks a whole day.
+/// Picks a task's scheduled day or its deadline. A deadline offers an optional time, and a
+/// scheduled day is always a whole day. The sheet's title and VoiceOver label name the field.
 struct DatePickerSheet: View {
+    enum Field {
+        case scheduled, deadline
+
+        var title: String {
+            switch self {
+            case .scheduled: "Scheduled"
+            case .deadline: "Deadline"
+            }
+        }
+    }
+
     @Binding var selectedDate: Date?
     @Binding var hasTime: Bool
-    private let offersTime: Bool
+    private let field: Field
+    /// The last day a scheduled day may take: its task's deadline.
+    private var latest: Date?
     @Environment(\.dismiss) private var dismiss
 
     @State private var pickerDate = Date()
 
-    init(selectedDate: Binding<Date?>, hasTime: Binding<Bool>) {
-        _selectedDate = selectedDate
+    init(deadline: Binding<Date?>, hasTime: Binding<Bool>) {
+        _selectedDate = deadline
         _hasTime = hasTime
-        offersTime = true
+        field = .deadline
     }
 
-    init(selectedDate: Binding<Date?>) {
-        _selectedDate = selectedDate
+    init(scheduledDay: Binding<Date?>, latest: Date? = nil) {
+        _selectedDate = scheduledDay
         _hasTime = .constant(false)
-        offersTime = false
+        field = .scheduled
+        self.latest = latest
     }
 
     var body: some View {
         NavigationStack {
-            VStack {
-                if offersTime {
-                    Toggle("Include Time", isOn: $hasTime)
-                        .padding(.horizontal)
-                }
-
+            VStack(alignment: .leading, spacing: 12) {
                 DatePicker(
-                    "Deadline",
+                    field.title,
                     selection: $pickerDate,
+                    in: Date.distantPast...(latest ?? .distantFuture),
                     displayedComponents: hasTime ? [.date, .hourAndMinute] : [.date]
                 )
                 .datePickerStyle(.graphical)
-                .padding()
+                .tint(Palette.ink)
+                .accessibilityLabel(field.title)
 
-                Spacer()
+                if field == .deadline {
+                    FilterChip(title: "Add a time", isOn: $hasTime)
+                        .accessibilityIdentifier("date-picker-add-time")
+                }
+
+                Spacer(minLength: 0)
             }
-            .navigationTitle("Select Date")
+            .padding(.horizontal, 20)
+            .padding(.top, 4)
+            .background(Palette.sheet)
+            .navigationTitle(field.title)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
@@ -51,7 +71,7 @@ struct DatePickerSheet: View {
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Done") {
-                        selectedDate = offersTime ? pickerDate : Calendar.current.startOfDay(for: pickerDate)
+                        selectedDate = field == .deadline ? pickerDate : Calendar.current.startOfDay(for: pickerDate)
                         dismiss()
                     }
                 }
@@ -62,6 +82,7 @@ struct DatePickerSheet: View {
                 pickerDate = selectedDate
             }
         }
-        .presentationDetents([.medium])
+        .presentationDetents([.large])
+        .paperSheet()
     }
 }

@@ -7,10 +7,6 @@ struct ProviderConnectView: View {
     @Environment(\.modelContext) private var modelContext
     @State private var errorMessage: String?
 
-    private var savedWorkspaces: [UserSession] {
-        sessions.filter { ProviderSessionRoute.resolve(selectedWorkspace: $0) == .tasks }
-    }
-
     var body: some View {
         NavigationStack {
             ScrollView {
@@ -18,20 +14,23 @@ struct ProviderConnectView: View {
                     VStack(alignment: .leading, spacing: 16) {
                         Image(systemName: "checkmark.circle.fill")
                             .font(.system(size: 64))
+                            .foregroundStyle(Palette.ink)
                             .accessibilityHidden(true)
                         Text("Finally")
                             .font(.pageTitle)
+                            .foregroundStyle(Palette.ink)
                         Text("Make room for what matters.")
-                            .font(.title2.weight(.medium))
+                            .font(.system(.title2, design: .rounded, weight: .medium))
+                            .foregroundStyle(Palette.ink)
                         Text("Choose where your tasks live.")
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(Palette.muted)
                     }
 
                     if let errorMessage { Callout(message: errorMessage) }
-                    if !savedWorkspaces.isEmpty {
+                    if !sessions.isEmpty {
                         VStack(alignment: .leading, spacing: 16) {
-                            Text("Connected provider workspaces").font(.eyebrow)
-                            ForEach(savedWorkspaces, id: \.id) { workspace in
+                            SectionLabel("Your workspaces")
+                            ForEach(sessions, id: \.id) { workspace in
                                 Button {
                                     do {
                                         sessions.forEach { $0.isSelected = $0.id == workspace.id }
@@ -43,7 +42,9 @@ struct ProviderConnectView: View {
                                 } label: {
                                     providerLabel(
                                         workspace.workspaceName,
-                                        detail: "Open this provider workspace.",
+                                        detail: ProviderSessionRoute.resolve(selectedWorkspace: workspace) == .databaseSetup
+                                            ? "Finish choosing your tasks database."
+                                            : "Open this workspace.",
                                         symbol: workspace.providerIdentity == .finallyServer ? "server.rack" : "building.2"
                                     )
                                 }
@@ -59,7 +60,7 @@ struct ProviderConnectView: View {
                         } label: {
                             providerLabel(
                                 "Notion",
-                                detail: "Connect your workspace and choose a task database.",
+                                detail: "Connect Notion and choose your tasks database.",
                                 symbol: "building.2"
                             )
                         }
@@ -70,7 +71,7 @@ struct ProviderConnectView: View {
                         } label: {
                             providerLabel(
                                 "Finally Server",
-                                detail: "Sign in to your server and choose a provider workspace.",
+                                detail: "Sign in to your server and choose a workspace.",
                                 symbol: "server.rack"
                             )
                         }
@@ -78,9 +79,7 @@ struct ProviderConnectView: View {
                     }
                     .buttonStyle(.plain)
 
-                    Text("Each task provider owns its tasks. Finally keeps your provider workspaces separate.")
-                        .font(.footnote)
-                        .foregroundStyle(.secondary)
+                    SectionNote("Your tasks stay where they live. Notion tasks stay in Notion, and server tasks stay on your server.")
                 }
                 .padding(24)
                 .frame(maxWidth: 560, alignment: .leading)
@@ -103,16 +102,16 @@ struct ProviderConnectView: View {
                     .font(.chip)
                 Text(detail)
                     .font(.subheadline)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Palette.muted)
                     .fixedSize(horizontal: false, vertical: true)
             }
             Spacer(minLength: 0)
             Image(systemName: "chevron.right")
                 .font(.caption.weight(.semibold))
-                .foregroundStyle(.secondary)
+                .foregroundStyle(Palette.muted)
                 .accessibilityHidden(true)
         }
-        .foregroundStyle(.primary)
+        .foregroundStyle(Palette.ink)
         .padding(20)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(Palette.card, in: RoundedRectangle(cornerRadius: 20))

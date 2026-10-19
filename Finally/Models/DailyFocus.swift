@@ -15,15 +15,17 @@ enum DailyFocusError: LocalizedError, Equatable {
     case taskUnavailable
     case needsSteps
     case needsNextDay
+    case dayEnded
 
     var errorDescription: String? {
         switch self {
-        case .full(let limit): "Choose a pick to replace. Daily Focus holds \(limit) picks."
-        case .pickMissing: "This pick has changed. Review Daily Focus and try again."
+        case .full(let limit): "Choose a task to replace. Daily Focus holds \(limit) tasks."
+        case .pickMissing: "This task changed in Daily Focus. Look again and retry."
         case .duplicatePick: "This task is already in Daily Focus."
-        case .taskUnavailable: "This task is unavailable. You can drop its focus pick."
+        case .taskUnavailable: "This task is unavailable. You can drop it from Daily Focus."
         case .needsSteps: "Add an unfinished step to this task, then finish breaking it down."
         case .needsNextDay: "Choose Daily Focus for a later day."
+        case .dayEnded: "A new day started. Pick again for today."
         }
     }
 }
@@ -39,7 +41,7 @@ enum DailyFocusReplanningDecision {
 /// The few tasks picked for one day, bounded by the focus limit.
 @Model
 final class DailyFocus {
-    static let defaultFocusLimit = 3
+    static let defaultFocusLimit = AppConstants.defaultFocusLimit
     static let focusLimitRange = 1...5
 
     var day: Date
@@ -94,6 +96,24 @@ final class DailyFocus {
         picks = current
     }
 
+    /// The user picks a task for this day. Picking schedules the task for the day, so every pick is
+    /// part of Today, and commits the user to the day. A full day takes a pick only by replacing
+    /// the one the user chooses.
+    func pick(_ task: TaskItem, replacing displaced: DailyFocusPick? = nil) throws {
+        if let displaced {
+            try replace(displaced, with: task.dailyFocusPick)
+        } else {
+            try add(task.dailyFocusPick)
+        }
+        let focusDay = Calendar.current.startOfDay(for: day)
+        if task.scheduledDay != focusDay {
+            task.scheduledDay = focusDay
+            task.isDirty = true
+            SubtaskScheduler.distributeSubtaskDates(parent: task)
+        }
+        confirm()
+    }
+
     func remove(_ pick: DailyFocusPick) {
         picks = picks.filter { $0 != pick }
     }
@@ -137,13 +157,9 @@ final class DailyFocus {
         case .breakDown:
             guard task.nextActionableSubtask != nil else { throw DailyFocusError.needsSteps }
         case .schedule(let date):
-            task.plannedDay = Calendar.current.startOfDay(for: date)
-            task.isDirty = true
-            SubtaskScheduler.distributeSubtaskDates(parent: task)
+            task.reschedule(to: date)
         case .deferTask:
-            task.plannedDay = nil
-            task.isDirty = true
-            SubtaskScheduler.distributeSubtaskDates(parent: task)
+            task.reschedule(to: nil)
         case .drop:
             break
         }
@@ -208,5 +224,37 @@ extension TaskItem {
     /// The reference a Daily Focus keeps for this task.
     var dailyFocusPick: DailyFocusPick {
         DailyFocusPick(providerWorkspaceID: providerWorkspaceId ?? "", externalTaskID: externalTaskID)
+    }
+}
+
+extension TaskItem {
+    /// The user deletes the task. The task stays marked for its provider to retire, and every
+    /// Daily Focus that picked it lets the pick go. Returns the Daily Focus records that changed,
+    /// for the caller to save.
+    func delete(in store: ModelContext) throws -> [DailyFocus] {
+        isDeleted = true
+        isDirty = true
+        let pick = dailyFocusPick
+        let changed = try store.fetch(FetchDescriptor<DailyFocus>()).filter { $0.picks.contains(pick) }
+        changed.forEach { $0.remove(pick) }
+        return changed
+    }
+}
+
+extension TaskItem {
+    /// Gives the task a new provider identity and repoints every Daily Focus pick at it. A Daily
+    /// Focus stored on Finally Server is marked for its next write.
+    func replaceExternalTaskID(with newID: String, in store: ModelContext) throws {
+        let previous = dailyFocusPick
+        externalTaskID = newID
+        let replacement = dailyFocusPick
+        guard previous != replacement else { return }
+        let serverWorkspaceIDs = Set(try store.fetch(FetchDescriptor<UserSession>())
+            .filter { $0.providerIdentity == .finallyServer }
+            .map(\.workspaceId))
+        for focus in try store.fetch(FetchDescriptor<DailyFocus>()) where focus.picks.contains(previous) {
+            focus.picks = focus.picks.map { $0 == previous ? replacement : $0 }
+            if serverWorkspaceIDs.contains(focus.storageWorkspaceID) { focus.isDirty = true }
+        }
     }
 }

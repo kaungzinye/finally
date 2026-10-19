@@ -3,8 +3,9 @@ import Foundation
 import SwiftData
 
 /// Seeds an in-memory store for the `-daily-focus-demo` launch argument: a selected Notion
-/// workspace, a Finally Server workspace, open tasks in both, and a full Daily Focus whose picks
-/// span both providers and include one unavailable task.
+/// workspace, a Finally Server workspace, open tasks in both, and a full Daily Focus the personal
+/// agent proposed, whose picks span both providers and include one deleted task. Today also holds
+/// an overdue task, a task due today, a task scheduled today, and a missed scheduled day.
 enum DailyFocusDemoFixture {
     static let notionWorkspaceID = "demo-notion-workspace"
     static let serverWorkspaceID = "demo-server-workspace"
@@ -40,10 +41,19 @@ enum DailyFocusDemoFixture {
         let bank = makeTask("demo-bank", "Call the bank", workspace: notionWorkspaceID, priority: .medium)
         bank.deadline = calendar.date(byAdding: .day, value: 2, to: today)
         let contract = makeTask("demo-contract", "Review the contract", workspace: notionWorkspaceID, priority: nil)
-        contract.plannedDay = calendar.date(byAdding: .day, value: 1, to: today)
+        contract.scheduledDay = calendar.date(byAdding: .day, value: 1, to: today)
         let release = makeTask("demo-release", "Ship the release notes", workspace: serverWorkspaceID, priority: .urgent)
         release.deadline = calendar.date(byAdding: .day, value: 1, to: today)
-        for task in [brief, bank, contract, release] {
+        let changelog = makeTask("demo-changelog", "Update the changelog", workspace: serverWorkspaceID, priority: nil)
+        let passport = makeTask("demo-passport", "Renew the passport", workspace: notionWorkspaceID, priority: .high)
+        passport.deadline = calendar.date(byAdding: .day, value: -1, to: today)
+        let invoice = makeTask("demo-invoice", "Send the invoice", workspace: notionWorkspaceID, priority: .medium)
+        invoice.deadline = today
+        let plants = makeTask("demo-plants", "Water the plants", workspace: notionWorkspaceID, priority: nil)
+        plants.scheduledDay = today
+        let dentist = makeTask("demo-dentist", "Book the dentist", workspace: notionWorkspaceID, priority: nil)
+        dentist.scheduledDay = calendar.date(byAdding: .day, value: -2, to: today)
+        for task in [brief, bank, contract, release, changelog, passport, invoice, plants, dentist] {
             context.insert(task)
         }
 

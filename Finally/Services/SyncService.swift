@@ -14,15 +14,15 @@ enum TaskSyncError: Error, LocalizedError {
     var errorDescription: String? {
         switch self {
         case .permissionDenied:
-            return "You don't have edit access to this database"
+            return "You can't edit this Notion database."
         case .authenticationExpired:
-            return "Your task provider connection has expired. Reconnect it in Settings."
+            return "Your sign-in expired. Reconnect in Settings."
         case .rateLimited:
-            return "Sync is temporarily rate-limited. Try again in a moment."
+            return "Too many changes at once. Try again in a moment."
         case .remoteTaskUnavailable:
-            return "This task is no longer available from its provider. Refresh and try again."
+            return "This task was deleted somewhere else. Pull to refresh and try again."
         case .serviceUnavailable:
-            return "Sync is temporarily unavailable. Try again."
+            return "Finally couldn't save your changes just now. Try again."
         }
     }
 }
@@ -48,9 +48,15 @@ final class SyncService {
 
     var isSyncing = false
     var lastError: String?
+    /// Notion carries no reminder rules, so the phone seeds the defaults when a pull first brings a deadline.
+    private let defaultDeadlineReminders: () -> DefaultDeadlineReminders
 
-    init(api: NotionAPIClient = NotionAPIService()) {
+    init(
+        api: NotionAPIClient = NotionAPIService(),
+        defaultDeadlineReminders: @escaping () -> DefaultDeadlineReminders = { .current() }
+    ) {
         self.api = api
+        self.defaultDeadlineReminders = defaultDeadlineReminders
     }
 
     // MARK: - Sync On Launch
@@ -229,13 +235,17 @@ final class SyncService {
         let properties = buildNotionProperties(for: task, mappings: mappings)
         if task.lastSyncedAt == nil, !session.tasksDatabaseId.isEmpty {
             let created = try await api.createPage(databaseId: session.tasksDatabaseId, properties: properties)
-            task.externalTaskID = created.id
+            try task.replaceExternalTaskID(with: created.id, in: modelContext)
         } else if task.lastSyncedAt == nil {
             return
         } else {
             _ = try await api.updatePage(pageId: task.externalTaskID, properties: properties)
         }
-        task.isDirty = false
+        // An edit made while the request waited is not in what Notion received, so it stays
+        // dirty for the next push.
+        let unchangedDuringRequest = NSDictionary(dictionary: properties)
+            .isEqual(to: buildNotionProperties(for: task, mappings: mappings))
+        task.isDirty = task.isDeleted || !unchangedDuringRequest
         task.lastSyncedAt = Date()
         try modelContext.save()
     }
@@ -329,6 +339,8 @@ final class SyncService {
                let notionStatus = statusProp.status {
                 let mapped = mappings.taskStatus(for: notionStatus) ?? .notStarted
                 print("[Sync] Task '\(title)' status: '\(notionStatus.name)' → \(mapped.rawValue)")
+                // Notion keeps no finish time, so a page newly reported done finished at its last edit.
+                if mapped == .done, task.status != .done { task.completedAt = editedTime }
                 task.status = mapped
             } else {
                 print("[Sync] Task '\(title)' NO STATUS FOUND. Property key: '\(mappings.taskStatusProperty)', available keys: \(Array(page.properties.keys))")
@@ -338,26 +350,22 @@ final class SyncService {
             if let dateProp = page.properties[mappings.taskDeadlineProperty],
                let dateStr = dateProp.date?.start {
                 if let endStr = dateProp.date?.end {
-                    task.plannedDay = parseDate(dateStr).map { Calendar.current.startOfDay(for: $0) }
-                    task.deadline = parseDate(endStr)
-                    task.deadlineHasTime = endStr.contains("T")
+                    task.scheduledDay = parseDate(dateStr).map { Calendar.current.startOfDay(for: $0) }
+                    task.setDeadline(parseDate(endStr), hasTime: endStr.contains("T"), defaults: defaultDeadlineReminders())
                 } else {
-                    task.deadline = parseDate(dateStr)
-                    task.deadlineHasTime = dateStr.contains("T")
+                    task.setDeadline(parseDate(dateStr), hasTime: dateStr.contains("T"), defaults: defaultDeadlineReminders())
                 }
             } else {
-                task.deadline = nil
-                task.deadlineHasTime = false
+                task.setDeadline(nil, hasTime: false, defaults: defaultDeadlineReminders())
             }
 
-            // The optional Notion "Target" property stores the planned day.
-            if let targetKey = mappings.taskPlannedDayProperty,
+            // The optional Notion "Target" property stores the scheduled day.
+            if let targetKey = mappings.taskScheduledDayProperty,
                let targetProp = page.properties[targetKey],
                let targetStr = targetProp.date?.start {
-                task.plannedDay = parseDate(targetStr).map { Calendar.current.startOfDay(for: $0) }
+                task.scheduledDay = parseDate(targetStr).map { Calendar.current.startOfDay(for: $0) }
             }
 
-            task.validatePlannedDay()
             // Priority
             if let priorityKey = mappings.taskPriorityProperty,
                let priorityProp = page.properties[priorityKey],
@@ -471,13 +479,13 @@ final class SyncService {
             "status": ["name": mappings.notionStatusName(for: task.status)]
         ]
 
-        // Deadline and planned day
+        // Deadline and scheduled day
         if let deadline = task.deadline {
             let deadlineString = notionDateString(deadline, hasTime: task.deadlineHasTime)
-            if mappings.taskPlannedDayProperty == nil, let plannedDay = task.plannedDay {
+            if mappings.taskScheduledDayProperty == nil, let scheduledDay = task.scheduledDay {
                 props[mappings.taskDeadlineProperty] = [
                     "date": [
-                        "start": notionDateString(plannedDay, hasTime: false),
+                        "start": notionDateString(scheduledDay, hasTime: false),
                         "end": deadlineString,
                     ]
                 ]
@@ -493,11 +501,11 @@ final class SyncService {
         }
 
         // Optional Notion "Target" property
-        if let targetKey = mappings.taskPlannedDayProperty {
-            if let plannedDay = task.plannedDay {
+        if let targetKey = mappings.taskScheduledDayProperty {
+            if let scheduledDay = task.scheduledDay {
                 props[targetKey] = [
                     "date": [
-                        "start": notionDateString(plannedDay, hasTime: false)
+                        "start": notionDateString(scheduledDay, hasTime: false)
                     ]
                 ]
             } else {

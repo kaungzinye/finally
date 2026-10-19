@@ -2,9 +2,12 @@ import SwiftUI
 import SwiftData
 
 struct SearchFilterView: View {
-    @Query(sort: \TaskItem.deadline) private var allTasks: [TaskItem]
+    @Query(filter: #Predicate<TaskItem> { $0.isDeleted == false }, sort: \TaskItem.deadline)
+    private var allTasks: [TaskItem]
     @Query private var sessions: [UserSession]
     @State private var searchText = ""
+    @State private var isSearching = false
+    @State private var selectedTask: TaskItem?
 
     private var filteredTasks: [TaskItem] {
         guard !searchText.isEmpty else { return [] }
@@ -19,21 +22,30 @@ struct SearchFilterView: View {
             List {
                 ForEach(filteredTasks, id: \.externalTaskID) { task in
                     TaskRowView(task: task)
+                        .contentShape(Rectangle())
+                        .onTapGesture { selectedTask = task }
                 }
             }
+            .paperList(background: Palette.sheet)
             .navigationTitle("Search")
-            .searchable(text: $searchText, prompt: "Search tasks...")
+            .searchable(text: $searchText, isPresented: $isSearching, prompt: "Search tasks")
+            .onAppear { isSearching = true }
             .overlay {
                 if searchText.isEmpty {
                     ContentUnavailableView(
-                        "Search Tasks",
+                        "Search tasks",
                         systemImage: "magnifyingglass",
-                        description: Text("Type to search by task name")
+                        description: Text("Type part of a task's name.")
                     )
                 } else if filteredTasks.isEmpty {
                     ContentUnavailableView.search(text: searchText)
                 }
             }
+            .sheet(item: $selectedTask) { task in
+                TaskDetailView(task: task)
+                    .presentationDetents([.fraction(0.8)])
+            }
         }
+        .paperSheet()
     }
 }

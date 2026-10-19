@@ -13,17 +13,17 @@ final class Phase6BNotificationServiceTests: XCTestCase {
         return ModelContext(container)
     }
 
-    func testScheduleReminder_WithAnchoredTaskReminder_SchedulesNotification() async throws {
+    func testScheduleReminder_WithDeadlineReminder_SchedulesNotification() async throws {
         let ctx = try makeContext()
         let scheduler = MockNotificationScheduler()
         let now = referenceDate
 
         let task = TaskItem(externalTaskID: "t-1", title: "Buy milk")
-        task.deadline = now.addingTimeInterval(3600)
+        task.deadline = now.addingTimeInterval(7200)
         task.deadlineHasTime = true
         ctx.insert(task)
 
-        let reminder = TaskReminder.presetThirtyMinutesBeforeDeadline()
+        let reminder = TaskReminder.deadline(DeadlineReminder(offset: .hourBefore))
         task.taskReminders = [reminder]
         try ctx.save()
 
@@ -43,7 +43,7 @@ final class Phase6BNotificationServiceTests: XCTestCase {
         let task = TaskItem(externalTaskID: "t-2", title: "Future task")
         task.deadline = now.addingTimeInterval(2 * 86_400)
         task.deadlineHasTime = true
-        task.taskReminders = [TaskReminder.presetOneDayBeforeDeadline()]
+        task.taskReminders = [TaskReminder.deadline(DeadlineReminder(offset: .daysBefore(1)))]
         ctx.insert(task)
         try ctx.save()
 
@@ -54,12 +54,12 @@ final class Phase6BNotificationServiceTests: XCTestCase {
         XCTAssertEqual(scheduler.addedRequests.count, 1)
     }
 
-    func testCancelRemindersForTask_RemovesAnchoredNotificationIds() async throws {
+    func testCancelRemindersForTask_RemovesDeadlineAndExactNotificationIds() async throws {
         let scheduler = MockNotificationScheduler()
         let task = TaskItem(externalTaskID: "t-3", title: "Task")
         task.taskReminders = [
-            TaskReminder.presetThirtyMinutesBeforeDeadline(),
-            .explicitDate(ExplicitDateReminder(dateTime: referenceDate.addingTimeInterval(5000))),
+            TaskReminder.deadline(DeadlineReminder(offset: .hourBefore)),
+            .exact(ExactReminder(at: referenceDate.addingTimeInterval(5000))),
         ]
 
         let service = NotificationService(center: scheduler)

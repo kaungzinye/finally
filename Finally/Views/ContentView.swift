@@ -17,6 +17,10 @@ struct ContentView: View {
     }
     @State private var showCreator = false
 
+    private var inboxCount: Int {
+        TasksList(tasks: tasks, projects: [], workspace: sessions.selectedProviderWorkspace).inbox.count
+    }
+
     var body: some View {
         @Bindable var router = router
 
@@ -36,15 +40,11 @@ struct ContentView: View {
                         .tabItem { Label("Upcoming", systemImage: "calendar") }
                         .tag(NavigationRouter.Tab.upcoming)
 
-                    BoardView()
+                    TasksView()
                         .addTaskButton(isHidden: showCreator, action: openCreator)
-                        .tabItem { Label("Board", systemImage: "rectangle.split.3x1") }
-                        .tag(NavigationRouter.Tab.board)
-
-                    BrowseProjectsView()
-                        .addTaskButton(isHidden: showCreator, action: openCreator)
-                        .tabItem { Label("Browse", systemImage: "square.grid.2x2") }
-                        .tag(NavigationRouter.Tab.browse)
+                        .tabItem { Label("Tasks", systemImage: "checklist") }
+                        .badge(inboxCount)
+                        .tag(NavigationRouter.Tab.tasks)
                 }
             }
             .background(Palette.paper.ignoresSafeArea())
@@ -80,12 +80,12 @@ struct ContentView: View {
     @ViewBuilder
     private var callouts: some View {
         if !networkService.isOnline {
-            Callout(icon: "wifi.slash", message: "You're offline. Changes will sync when connection returns.")
+            Callout(icon: "wifi.slash", message: "You're offline. Your changes save when you're back online.")
                 .transition(.move(edge: .top).combined(with: .opacity))
         }
 
         if let conflict = tasks.first(where: { $0.providerWorkspaceId == sessions.selectedProviderWorkspace?.workspaceId && ($0.serverConflictJSON != nil || $0.serverTaskMissing) }) {
-            Button("Review conflict: \(conflict.title)") { presentedTask = .conflict(conflict) }
+            Button("\(conflict.title) changed in two places") { presentedTask = .conflict(conflict) }
                 .buttonStyle(InkButtonStyle())
         }
 
@@ -100,7 +100,7 @@ struct ContentView: View {
             Callout(message: message, onRetry: { NotificationService.shared.rescheduleAllReminders(modelContext: modelContext) })
         }
         if NotificationService.shared.deferredCount > 0 {
-            Callout(icon: "bell.badge", message: "\(NotificationService.shared.deferredCount) reminders stay queued. The nearest reminders are scheduled; opening the app refreshes the queue.")
+            Callout(icon: "bell.badge", message: "\(NotificationService.shared.deferredCount) more reminders are waiting. iPhone holds the nearest ones, and opening Finally adds the rest.")
         }
 
         if let message = taskProvider.lastError {
@@ -154,10 +154,12 @@ private extension View {
                         .foregroundStyle(Palette.ink)
                         .frame(width: 56, height: 56)
                         .glassSurface(in: Circle())
+                        .contentShape(Circle())
                 }
                 .buttonStyle(.plain)
                 .padding(16)
                 .accessibilityLabel("Add a task")
+                .accessibilityIdentifier("add-task")
                 .transition(.opacity.combined(with: .scale(scale: 0.8)))
             }
         }

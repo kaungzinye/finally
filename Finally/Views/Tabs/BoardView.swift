@@ -1,6 +1,9 @@
 import SwiftUI
 import SwiftData
 
+/// The Board: the Tasks tab's columns of Not started, In progress, and Complete.
+/// The status bar names every column with its count, jumps to it on tap, and takes dropped cards,
+/// so each column stays reachable without scrolling sideways.
 struct BoardView: View {
     @Query(filter: #Predicate<TaskItem> { $0.isDeleted == false }) private var allTasks: [TaskItem]
     @Query private var sessions: [UserSession]
@@ -8,265 +11,274 @@ struct BoardView: View {
     @Environment(\.modelContext) private var modelContext
 
     @State private var selectedTask: TaskItem?
-    @State private var showSearch = false
     @State private var showFilterSheet = false
-    @State private var draggingTaskId: String?
     @State private var filterProjects: Set<String> = []
     @State private var filterPriorities: Set<String> = []
+    @State private var visibleStatus: TaskStatus? = .notStarted
+    @State private var targetedStatus: TaskStatus?
 
-    private var topLevelTasks: [TaskItem] {
-        allTasks.filter {
-            $0.belongs(to: sessions.selectedProviderWorkspace) && !$0.isSubtask
-        }
-    }
-
-    private var filteredTasks: [TaskItem] {
-        topLevelTasks.filter { task in
-            (filterProjects.isEmpty || filterProjects.contains(task.project?.externalProjectID ?? "")) &&
-            (filterPriorities.isEmpty || filterPriorities.contains(task.priorityRaw ?? ""))
-        }
+    private var board: BoardColumns {
+        BoardColumns(
+            tasks: allTasks, workspace: sessions.selectedProviderWorkspace,
+            projects: filterProjects, priorities: filterPriorities
+        )
     }
 
     private var hasActiveFilters: Bool {
         !filterProjects.isEmpty || !filterPriorities.isEmpty
     }
 
-    private var notStartedTasks: [TaskItem] {
-        filteredTasks.filter { $0.status == .notStarted }
+    var body: some View {
+        Group {
+            if taskProvider.isSyncing && allTasks.isEmpty {
+                VStack(spacing: 12) {
+                    ProgressView()
+                    Text("Getting your tasks…")
+                        .font(.meta)
+                        .foregroundStyle(Palette.muted)
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else {
+                let board = board
+                VStack(spacing: 8) {
+                    statusBar(board)
+                        .padding(.horizontal, 16)
+                    GeometryReader { geo in
+                        columns(board, in: geo.size)
+                    }
+                }
+            }
+        }
+        .background(Palette.paper)
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                Button { showFilterSheet = true } label: {
+                    Image(systemName: hasActiveFilters ? "line.3.horizontal.decrease.circle.fill" : "line.3.horizontal.decrease.circle")
+                }
+                .accessibilityLabel("Filter")
+            }
+        }
+        .sheet(isPresented: $showFilterSheet) {
+            BoardFilterView(filterProjects: $filterProjects, filterPriorities: $filterPriorities)
+        }
+        .sheet(item: $selectedTask) { task in
+            TaskDetailView(task: task)
+                .presentationDetents([.fraction(0.8)])
+        }
     }
 
-    private var inProgressTasks: [TaskItem] {
-        filteredTasks.filter { $0.status == .inProgress }
+    // MARK: - Status bar
+
+    private func statusBar(_ board: BoardColumns) -> some View {
+        HStack(spacing: 4) {
+            ForEach(board.columns) { column in
+                let isVisible = visibleStatus == column.status
+                let isTargeted = targetedStatus == column.status
+                Button {
+                    withAnimation(.snappy) { visibleStatus = column.status }
+                } label: {
+                    HStack(spacing: 6) {
+                        Text(column.title)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.8)
+                        Text("\(column.tasks.count)")
+                            .foregroundStyle(isVisible ? Palette.onInk.opacity(0.7) : Palette.muted)
+                    }
+                    .font(.chip)
+                    .foregroundStyle(isVisible ? Palette.onInk : Palette.ink)
+                    .frame(maxWidth: .infinity, minHeight: 36)
+                    .background(
+                        isVisible ? Palette.ink : (isTargeted ? Palette.selection : Color.clear),
+                        in: Capsule()
+                    )
+                    .contentShape(Capsule())
+                }
+                .buttonStyle(.plain)
+                .accessibilityIdentifier("board-status-\(Self.key(column.status))")
+                .accessibilityAddTraits(isVisible ? .isSelected : [])
+                .dropDestination(for: String.self) { ids, _ in
+                    drop(ids, on: column.status)
+                } isTargeted: { targeted in
+                    targetedStatus = targeted ? column.status : (targetedStatus == column.status ? nil : targetedStatus)
+                }
+            }
+        }
+        .padding(4)
+        .background(Palette.wash, in: Capsule())
     }
 
-    private var doneTasks: [TaskItem] {
-        filteredTasks.filter { $0.status == .done }
+    // MARK: - Columns
+
+    /// Portrait shows one column at a time with the next one peeking. Landscape fits all three.
+    private func columns(_ board: BoardColumns, in size: CGSize) -> some View {
+        let isLandscape = size.width > size.height
+        let spacing: CGFloat = 12
+        let columnWidth = isLandscape
+            ? (size.width - 32 - spacing * 2) / 3
+            : size.width - 32 - 40
+
+        return ScrollView(.vertical) {
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(alignment: .top, spacing: spacing) {
+                    ForEach(board.columns) { column in
+                        columnView(column)
+                            .frame(width: columnWidth)
+                            .id(column.status)
+                    }
+                }
+                .scrollTargetLayout()
+                .padding(.horizontal, 16)
+            }
+            .scrollTargetBehavior(.viewAligned)
+            .scrollPosition(id: $visibleStatus, anchor: .leading)
+            .padding(.bottom, 72)
+        }
+        .refreshable {
+            try? await taskProvider.synchronize(.launch, store: modelContext)
+        }
+    }
+
+    /// A column grows only as tall as its cards.
+    private func columnView(_ column: BoardColumns.Column) -> some View {
+        let isTargeted = targetedStatus == column.status
+        return VStack(alignment: .leading, spacing: 8) {
+            SectionLabel(title: column.title) { Text("\(column.tasks.count)") }
+                .padding(.horizontal, 6)
+                .padding(.top, 4)
+
+            if column.tasks.isEmpty {
+                Text("Drop a card here")
+                    .font(.meta)
+                    .foregroundStyle(Palette.muted)
+                    .frame(maxWidth: .infinity, minHeight: 64)
+                    .background {
+                        RoundedRectangle(cornerRadius: 14, style: .continuous)
+                            .strokeBorder(Palette.hairline, style: StrokeStyle(lineWidth: 1, dash: [4, 3]))
+                    }
+            } else {
+                ForEach(column.tasks, id: \.externalTaskID) { task in
+                    BoardCard(task: task, onOpen: { selectedTask = task }, onCycle: { submit(task) })
+                        .draggable(task.externalTaskID) {
+                            BoardCard(task: task, onOpen: {}, onCycle: {})
+                                .frame(width: 240)
+                                .onAppear { UIImpactFeedbackGenerator(style: .medium).impactOccurred() }
+                        }
+                }
+            }
+        }
+        .padding(8)
+        .background(
+            isTargeted ? Palette.selection : Palette.wash,
+            in: RoundedRectangle(cornerRadius: 20, style: .continuous)
+        )
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier("board-column-\(Self.key(column.status))")
+        .dropDestination(for: String.self) { ids, _ in
+            drop(ids, on: column.status)
+        } isTargeted: { targeted in
+            targetedStatus = targeted ? column.status : (targetedStatus == column.status ? nil : targetedStatus)
+        }
+    }
+
+    // MARK: - Moves
+
+    private func drop(_ ids: [String], on status: TaskStatus) -> Bool {
+        targetedStatus = nil
+        guard let id = ids.first,
+              let task = board.card(withID: id),
+              task.status != status else { return false }
+        withAnimation(.snappy) {
+            let recycled = task.move(to: status)
+            if task.status == .done, !recycled {
+                NotificationService.shared.cancelRemindersForTask(task, modelContext: modelContext)
+            } else {
+                NotificationService.shared.rescheduleAllReminders(modelContext: modelContext)
+            }
+        }
+        UINotificationFeedbackGenerator().notificationOccurred(.success)
+        submit(task)
+        return true
+    }
+
+    private func submit(_ task: TaskItem) {
+        Task {
+            await taskProvider.submitPendingChangesReportingFailure(for: task.pendingEdits, store: modelContext)
+        }
+    }
+
+    /// A stable accessibility key for a status, free of spaces.
+    static func key(_ status: TaskStatus) -> String {
+        switch status {
+        case .notStarted: "notStarted"
+        case .inProgress: "inProgress"
+        case .done: "complete"
+        }
+    }
+}
+
+// MARK: - Card
+
+/// One task on the Board: its priority ring and title, then its status chip, date, and project.
+/// A card in the window between scheduled day and deadline carries the orange deadline tint.
+private struct BoardCard: View {
+    @Bindable var task: TaskItem
+    let onOpen: () -> Void
+    let onCycle: () -> Void
+
+    private var isDone: Bool { task.status == .done }
+    private var isTinted: Bool { task.isInActiveWindow }
+    private var rowDate: TaskRowDate? { TaskRowDate(for: task, at: Date()) }
+
+    private func color(for date: TaskRowDate) -> Color {
+        guard date.kind == .deadline else { return Palette.muted }
+        if task.isOverdue { return Palette.urgent }
+        if task.isInActiveWindow { return Palette.high }
+        return Palette.muted
     }
 
     var body: some View {
-        NavigationStack {
-            Group {
-                if taskProvider.isSyncing && allTasks.isEmpty {
-                    // First-load sync: replace content entirely
-                    VStack(spacing: 12) {
-                        ProgressView()
-                        Text("Syncing your tasks…")
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
-                    }
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                } else {
-                    GeometryReader { geo in
-                        let isLandscape = geo.size.width > geo.size.height
-                        let columnWidth = isLandscape ? geo.size.width * 0.32 : geo.size.width * 0.48
+        let shape = RoundedRectangle(cornerRadius: 14, style: .continuous)
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(alignment: .top, spacing: 10) {
+                PriorityRing(color: task.priority?.color ?? Palette.low, isDone: isDone, diameter: 18)
+                    .padding(.top, 1)
+                    .accessibilityHidden(true)
+                Text(task.title)
+                    .font(.subheadline)
+                    .lineLimit(2)
+                    .strikethrough(isDone, color: Palette.hairline)
+                    .foregroundStyle(isDone ? Palette.muted : Palette.ink)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
 
-                        ScrollView(.horizontal, showsIndicators: false) {
-                            HStack(alignment: .top, spacing: 12) {
-                                boardColumn("To Do", color: Palette.hairline, status: .notStarted, tasks: notStartedTasks, width: columnWidth, isLandscape: isLandscape)
-                                boardColumn("In Progress", color: Palette.muted, status: .inProgress, tasks: inProgressTasks, width: columnWidth, isLandscape: isLandscape)
-                                boardColumn("Done", color: Palette.ink, status: .done, tasks: doneTasks, width: columnWidth, isLandscape: isLandscape)
-                            }
-                            .padding(.horizontal, 16)
-                            .padding(.bottom, 20)
-                        }
-                    }
-                }
-            }
-            .background(Palette.paper)
-            .navigationTitle("Board")
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    HStack(spacing: 12) {
-                        Button { showFilterSheet = true } label: {
-                            Image(systemName: hasActiveFilters ? "line.3.horizontal.decrease.circle.fill" : "line.3.horizontal.decrease.circle")
-                        }
-                        Button { showSearch = true } label: {
-                            Image(systemName: "magnifyingglass")
-                        }
-                    }
-                }
-            }
-            .sheet(isPresented: $showSearch) {
-                SearchFilterView()
-            }
-            .sheet(isPresented: $showFilterSheet) {
-                BoardFilterView(
-                    filterProjects: $filterProjects,
-                    filterPriorities: $filterPriorities
-                )
-            }
-            .sheet(item: $selectedTask) { task in
-                TaskDetailView(task: task)
-                    .presentationDetents([.fraction(0.8)])
-            }
-        }
-    }
-
-    // MARK: - Column
-
-    @ViewBuilder
-    private func boardColumn(_ title: String, color: Color, status: TaskStatus, tasks: [TaskItem], width: CGFloat, isLandscape: Bool) -> some View {
-        VStack(alignment: .leading, spacing: 0) {
-            // Column header
-            HStack {
-                Circle()
-                    .fill(color)
-                    .frame(width: 8, height: 8)
-                Text(title)
-                    .font(.system(.subheadline, design: .rounded, weight: .semibold))
-                    .foregroundStyle(Palette.ink)
-                Text("\(tasks.count)")
-                    .font(.meta)
-                    .foregroundStyle(Palette.muted)
-                    .padding(.horizontal, 6)
-                    .padding(.vertical, 2)
-                    .background(Palette.wash, in: Capsule())
-                Spacer()
-            }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 10)
-
-            // Cards
-            ScrollView(.vertical, showsIndicators: false) {
-                LazyVStack(spacing: 8) {
-                    ForEach(tasks, id: \.externalTaskID) { task in
-                                boardCard(task, isLandscape: isLandscape)
-                            .draggable(task.externalTaskID) {
-                                // Drag preview
-                                Text(task.title)
-                                    .font(.caption)
-                                    .padding(8)
-                                    .background(Palette.card, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
-                                    .shadow(radius: 4)
-                                    .onAppear {
-                                        let generator = UIImpactFeedbackGenerator(style: .medium)
-                                        generator.impactOccurred()
-                                        draggingTaskId = task.externalTaskID
-                                    }
-                            }
-                            .opacity(draggingTaskId == task.externalTaskID ? 0.4 : 1.0)
-                    }
-                }
-                .padding(.horizontal, 8)
-                .padding(.bottom, 12)
-            }
-            .refreshable {
-                try? await taskProvider.synchronize(.launch, store: modelContext)
-            }
-        }
-        .frame(width: width)
-        .background(Palette.ink.opacity(0.04), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
-        .dropDestination(for: String.self) { droppedIds, _ in
-            guard let taskId = droppedIds.first,
-                  let task = topLevelTasks.first(where: { $0.externalTaskID == taskId }) else { return false }
-            withAnimation {
-                task.status = status
-                task.isDirty = true
-            }
-            Task {
-                await taskProvider.submitPendingChangesReportingFailure(for: [task], store: modelContext)
-            }
-            draggingTaskId = nil
-            let generator = UINotificationFeedbackGenerator()
-            generator.notificationOccurred(.success)
-            return true
-        } isTargeted: { isTargeted in
-            // Could highlight the column when targeted
-        }
-    }
-
-    // MARK: - Card
-
-    @ViewBuilder
-    private func boardCard(_ task: TaskItem, isLandscape: Bool) -> some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text(task.title)
-                .font(.subheadline)
-                .lineLimit(1)
-                .foregroundStyle(task.status == .done ? Palette.muted : Palette.ink)
-                .strikethrough(task.status == .done, color: Palette.hairline)
-
-            HStack(spacing: 6) {
-                // Match the deadline order used in Today and Upcoming.
-                if let deadline = task.deadline {
-                    HStack(spacing: 2) {
-                        Image(systemName: "calendar")
-                            .font(.caption2)
-                        Text(formatDate(deadline))
-                            .font(.caption2)
-                            .lineLimit(1)
-                            .truncationMode(.tail)
-                    }
-                    .foregroundStyle(task.isOverdue ? Palette.urgent : (task.isInActiveWindow ? Palette.high : Palette.muted))
-                }
-
-                // Priority
-                if let priority = task.priority {
-                    Image(systemName: priority.icon)
-                        .font(.caption2)
-                        .foregroundStyle(priority.color)
-                }
-
+            HStack(spacing: 8) {
+                StatusChip(task: task, onCycle: onCycle)
                 Spacer(minLength: 0)
-
-                // Vertical (portrait) Board: only show project in the trailing side
-                if !isLandscape {
-                    if let emoji = task.project?.iconEmoji {
-                        Text(emoji)
-                            .font(.caption2)
-                    } else if let projectTitle = task.project?.title {
-                        Text(projectTitle)
-                            .font(.caption2)
-                            .foregroundStyle(Palette.muted)
-                            .lineLimit(1)
-                            .truncationMode(.tail)
-                    }
-                } else {
-                    // Horizontal (landscape) Board: show full set of properties like Today/Upcoming
-                    HStack(spacing: 6) {
-                        if let emoji = task.project?.iconEmoji {
-                            Text(emoji)
-                                .font(.caption2)
-                        } else if let projectTitle = task.project?.title {
-                            Text(projectTitle)
-                                .font(.caption2)
-                                .foregroundStyle(Palette.muted)
-                                .lineLimit(1)
-                                .truncationMode(.tail)
-                        }
-
-                        if !task.tags.isEmpty {
-                            ForEach(Array(task.tags.prefix(1).enumerated()), id: \.offset) { index, tag in
-                                let colorName = index < task.tagColors.count ? task.tagColors[index] : "default"
-                                Text(tag)
-                                    .font(.caption2)
-                                    .foregroundStyle(TaskTagColor.swiftUIColor(for: colorName))
-                                    .lineLimit(1)
-                                    .truncationMode(.tail)
-                            }
-                        }
-                    }
+                if let rowDate {
+                    Text(rowDate.text)
+                        .foregroundStyle(color(for: rowDate))
+                }
+                if let emoji = task.project?.iconEmoji {
+                    Text(emoji)
+                } else if let projectTitle = task.project?.title {
+                    Text(projectTitle)
+                        .frame(maxWidth: 80, alignment: .trailing)
                 }
             }
+            .font(.meta)
+            .foregroundStyle(Palette.muted)
+            .lineLimit(1)
         }
-        .padding(10)
-        .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
-        .background(Palette.card, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .strokeBorder(Palette.hairline, lineWidth: 1)
-        )
-        .contentShape(Rectangle())
-        .onTapGesture {
-            selectedTask = task
+        .padding(12)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background {
+            shape.fill(Palette.card)
+            if isTinted { shape.fill(Palette.high.opacity(0.1)) }
         }
-    }
-
-    private func formatDate(_ date: Date) -> String {
-        let calendar = Calendar.current
-        if calendar.isDateInToday(date) { return "Today" }
-        if calendar.isDateInTomorrow(date) { return "Tomorrow" }
-        if calendar.isDateInYesterday(date) { return "Yesterday" }
-        return date.formatted(.dateTime.month(.abbreviated).day())
+        .overlay(shape.strokeBorder(isTinted ? Palette.high.opacity(0.45) : Palette.hairline, lineWidth: 1))
+        .contentShape(shape)
+        .onTapGesture(perform: onOpen)
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier("board-card-\(task.externalTaskID)")
     }
 }

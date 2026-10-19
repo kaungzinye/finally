@@ -12,28 +12,13 @@ struct TaskRowView: View {
 
     private var isDone: Bool { task.status == .done }
 
-    private var deadlineLabel: String? {
-        guard let deadline = task.deadline else { return nil }
+    private var rowDate: TaskRowDate? { TaskRowDate(for: task, at: Date()) }
 
-        let calendar = Calendar.current
-        let time = task.deadlineHasTime
-            ? " \(deadline.formatted(date: .omitted, time: .shortened))"
-            : ""
-        if calendar.isDateInToday(deadline) {
-            return "Today\(time)"
-        } else if calendar.isDateInTomorrow(deadline) {
-            return "Tomorrow\(time)"
-        } else if calendar.isDateInYesterday(deadline) {
-            return "Yesterday\(time)"
-        }
-        let daysFromNow = calendar.dateComponents([.day], from: calendar.startOfDay(for: Date()), to: deadline).day ?? 0
-        if daysFromNow > 0 && daysFromNow <= 6 {
-            return deadline.formatted(.dateTime.weekday(.abbreviated)) + time
-        }
-        return deadline.formatted(.dateTime.month(.abbreviated).day()) + time
-    }
+    /// A missed scheduled day carries no alarm, so its row reads in muted text.
+    private var isMissedScheduledDay: Bool { Today.reason(for: task, at: Date()) == .missedScheduledDay }
 
-    private var deadlineColor: Color {
+    private func color(for date: TaskRowDate) -> Color {
+        guard date.kind == .deadline else { return Palette.muted }
         if task.isOverdue { return Palette.urgent }
         if task.isInActiveWindow { return Palette.high }
         return Palette.muted
@@ -54,7 +39,7 @@ struct TaskRowView: View {
                 .lineLimit(1)
                 .truncationMode(.tail)
                 .strikethrough(isDone, color: Palette.hairline)
-                .foregroundStyle(isDone ? Palette.muted : Palette.ink)
+                .foregroundStyle(isDone || isMissedScheduledDay ? Palette.muted : Palette.ink)
                 .frame(maxWidth: .infinity, alignment: .leading)
 
             trailing
@@ -78,7 +63,7 @@ struct TaskRowView: View {
             .tint(Palette.high)
         }
         .sheet(isPresented: $showDatePicker) {
-            DatePickerSheet(selectedDate: deadlineBinding, hasTime: deadlineHasTimeBinding)
+            DatePickerSheet(scheduledDay: scheduledDayBinding, latest: task.deadline)
         }
     }
 
@@ -95,9 +80,9 @@ struct TaskRowView: View {
                 Label("\(progress.done)/\(progress.total)", systemImage: "checkmark")
                     .labelStyle(.titleAndIcon)
             }
-            if let deadlineLabel {
-                Text(deadlineLabel)
-                    .foregroundStyle(deadlineColor)
+            if let rowDate {
+                Text(rowDate.text)
+                    .foregroundStyle(color(for: rowDate))
             }
         }
         .font(.meta)
@@ -119,25 +104,23 @@ struct TaskRowView: View {
         submitTaskMutation()
     }
 
-    // MARK: - Bindings that mark task dirty on change
+    // MARK: - Reschedule
 
-    private var deadlineBinding: Binding<Date?> {
+    /// Reschedule moves the scheduled day and never the deadline.
+    private var scheduledDayBinding: Binding<Date?> {
         Binding(
-            get: { task.deadline },
-            set: { task.deadline = $0; task.isDirty = true; submitTaskMutation() }
-        )
-    }
-
-    private var deadlineHasTimeBinding: Binding<Bool> {
-        Binding(
-            get: { task.deadlineHasTime },
-            set: { task.deadlineHasTime = $0; task.isDirty = true; submitTaskMutation() }
+            get: { task.scheduledDay },
+            set: { day in
+                task.reschedule(to: day)
+                NotificationService.shared.rescheduleAllReminders(modelContext: modelContext)
+                submitTaskMutation()
+            }
         )
     }
 
     private func submitTaskMutation() {
         Task {
-            await taskProvider.submitPendingChangesReportingFailure(for: [task], store: modelContext)
+            await taskProvider.submitPendingChangesReportingFailure(for: task.pendingEdits, store: modelContext)
         }
     }
 }

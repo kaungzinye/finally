@@ -31,56 +31,48 @@ struct TagPicker: View {
     var body: some View {
         NavigationStack {
             List {
-                Section {
-                    HStack {
-                        Image(systemName: "magnifyingglass")
-                            .foregroundStyle(.secondary)
-                        TextField("Search or create tag", text: $query)
-                            .textInputAutocapitalization(.words)
-                            .autocorrectionDisabled()
-                    }
-                }
-
-                if canCreateNewTag {
+                Group {
                     Section {
-                        Button {
-                            let trimmed = query.trimmingCharacters(in: .whitespaces)
-                            guard !trimmed.isEmpty else { return }
-                            if !selectedTags.contains(trimmed) {
-                                selectedTags.append(trimmed)
-                            }
-                            query = ""
-                        } label: {
-                            HStack {
-                                Image(systemName: "plus.circle.fill")
-                                    .foregroundStyle(Color.accentColor)
-                                Text("Create tag \"\(query.trimmingCharacters(in: .whitespaces))\"")
-                            }
+                        HStack {
+                            Image(systemName: "magnifyingglass")
+                                .foregroundStyle(Palette.muted)
+                            TextField("Find or add a tag", text: $query)
+                                .textInputAutocapitalization(.words)
+                                .autocorrectionDisabled()
                         }
                     }
-                }
 
-                Section("Available Tags") {
-                    ForEach(filteredTags, id: \.self) { tag in
-                        Button {
-                            if selectedTags.contains(tag) {
-                                selectedTags.removeAll { $0 == tag }
-                            } else {
-                                selectedTags.append(tag)
-                            }
-                        } label: {
-                            HStack {
-                                Text(tag)
-                                Spacer()
-                                if selectedTags.contains(tag) {
-                                    Image(systemName: "checkmark")
-                                        .foregroundStyle(.primary)
+                    if canCreateNewTag {
+                        Section {
+                            Button {
+                                let trimmed = query.trimmingCharacters(in: .whitespaces)
+                                guard !trimmed.isEmpty else { return }
+                                if !selectedTags.contains(trimmed) {
+                                    selectedTags.append(trimmed)
                                 }
+                                query = ""
+                            } label: {
+                                Label("Add \"\(query.trimmingCharacters(in: .whitespaces))\"", systemImage: "plus")
+                                    .foregroundStyle(Palette.ink)
                             }
                         }
                     }
+
+                    Section {
+                        ForEach(filteredTags, id: \.self) { tag in
+                            CheckRow(isSelected: selectedTags.contains(tag), action: { toggle(tag) }) {
+                                Text(tag)
+                            }
+                        }
+                    } header: {
+                        if !filteredTags.isEmpty {
+                            SectionLabel("Your tags")
+                        }
+                    }
                 }
+                .cardRow()
             }
+            .paperList(background: Palette.sheet)
             .navigationTitle("Tags")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -88,11 +80,16 @@ struct TagPicker: View {
                     Button("Done") { dismiss() }
                 }
             }
-            .onAppear {
-                // Start with an empty query so all tags show
-                query = ""
-            }
         }
         .presentationDetents([.medium, .large])
+        .paperSheet()
+    }
+
+    private func toggle(_ tag: String) {
+        if selectedTags.contains(tag) {
+            selectedTags.removeAll { $0 == tag }
+        } else {
+            selectedTags.append(tag)
+        }
     }
 }

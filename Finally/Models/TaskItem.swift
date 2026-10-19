@@ -6,9 +6,11 @@ final class TaskItem {
     var externalTaskID: String
     var title: String
     var statusRaw: String = TaskStatus.notStarted.rawValue
+    /// When the task finished, or nil while it is open or when its provider gives no finish time.
+    var completedAt: Date?
     var deadline: Date?
     var deadlineHasTime: Bool = false
-    var plannedDay: Date?
+    var scheduledDay: Date?
     var priorityRaw: String?
     var tags: [String] = []
     var tagColors: [String] = []
@@ -45,11 +47,58 @@ final class TaskItem {
 
     var hasReminders: Bool { !taskReminders.isEmpty }
 
+    var deadlineReminderOffsets: [DeadlineReminderOffset] {
+        taskReminders.compactMap { reminder in
+            if case .deadline(let rule) = reminder { rule.offset } else { nil }
+        }
+    }
+
+    /// What the + chip offers: the short list minus the task's own chips. "1 hour before"
+    /// needs a timed deadline.
+    var addableDeadlineReminderOffsets: [DeadlineReminderOffset] {
+        guard deadline != nil else { return [] }
+        let present = deadlineReminderOffsets
+        return DeadlineReminderOffset.menu.filter { offset in
+            !present.contains(offset) && (deadlineHasTime || offset != .hourBefore)
+        }
+    }
+
+    /// Sets the deadline from a local edit. A deadline going from empty to set receives the
+    /// default deadline reminders, and clearing it drops its deadline reminders. A deadline
+    /// gaining a time receives the default hour-before reminder. Moving a deadline keeps the
+    /// task's own list.
+    func setDeadline(_ newDeadline: Date?, hasTime: Bool, defaults: DefaultDeadlineReminders) {
+        let hadDeadline = deadline != nil
+        let hadTime = deadlineHasTime
+        deadline = newDeadline
+        deadlineHasTime = newDeadline != nil && hasTime
+        if newDeadline == nil {
+            taskReminders.removeAll { if case .deadline = $0 { true } else { false } }
+        } else if !hadDeadline {
+            defaults.offsets(deadlineHasTime: deadlineHasTime).forEach(addDeadlineReminder)
+        } else if deadlineHasTime, !hadTime, defaults.offsets.contains(.hourBefore) {
+            addDeadlineReminder(.hourBefore)
+        }
+    }
+
+    /// Adds a deadline reminder. A task holds at most one rule per offset.
+    func addDeadlineReminder(_ offset: DeadlineReminderOffset) {
+        guard offset.isValid, !deadlineReminderOffsets.contains(offset) else { return }
+        taskReminders.append(.deadline(DeadlineReminder(offset: offset)))
+    }
+
+    func removeReminder(id: UUID) {
+        taskReminders.removeAll { $0.id == id }
+    }
+
     // MARK: - Computed Properties
 
     var status: TaskStatus {
         get { TaskStatus(rawValue: statusRaw) ?? .notStarted }
-        set { statusRaw = newValue.rawValue }
+        set {
+            if newValue != .done { completedAt = nil }
+            statusRaw = newValue.rawValue
+        }
     }
 
     var priority: TaskPriority? {
@@ -69,13 +118,13 @@ final class TaskItem {
 
     var isOverdue: Bool {
         guard let deadline, status != .done else { return false }
-        return deadline < Calendar.current.startOfDay(for: Date())
+        return Today.isOverdue(deadline: deadline, hasTime: deadlineHasTime, at: Date())
     }
 
     var isInActiveWindow: Bool {
-        guard let plannedDay, let deadline, status != .done else { return false }
+        guard let scheduledDay, let deadline, status != .done else { return false }
         let today = Calendar.current.startOfDay(for: Date())
-        return today >= Calendar.current.startOfDay(for: plannedDay)
+        return today >= Calendar.current.startOfDay(for: scheduledDay)
             && today <= Calendar.current.startOfDay(for: deadline)
     }
 
@@ -126,46 +175,16 @@ final class TaskItem {
         self.title = title
     }
 
-    // MARK: - Anchor helpers
-
-    func anchorDate(for anchor: ReminderAnchor) -> Date? {
-        switch anchor {
-        case .deadline: return deadline
-        case .plannedDay: return plannedDay
-        }
-    }
-
-    func hasTimeForAnchor(_ anchor: ReminderAnchor) -> Bool {
-        switch anchor {
-        case .deadline: return deadlineHasTime
-        case .plannedDay: return false
-        }
-    }
-
-    func adjustedAnchorDate(_ anchorDate: Date, hasTime: Bool, defaultReminderMinutes: Int?) -> Date {
-        if hasTime || isSubtask {
-            return anchorDate
-        }
-        let storedMinutes = defaultReminderMinutes
-            ?? UserDefaults.standard.integer(forKey: AppConstants.defaultReminderTimeMinutesKey)
-        let preferredMinutes = storedMinutes > 0 ? storedMinutes : AppConstants.defaultReminderTimeMinutes
-        let hour = preferredMinutes / 60
-        let minute = preferredMinutes % 60
-        var comps = Calendar.current.dateComponents([.year, .month, .day], from: anchorDate)
-        comps.hour = hour
-        comps.minute = minute
-        comps.second = 0
-        return Calendar.current.date(from: comps) ?? anchorDate
-    }
-
+    /// A step's day spread across its parent's open steps. A finished step takes its place among
+    /// them as though it were open, so it keeps the Today membership it finished in.
     var computedSuggestedDate: Date? {
         guard isSubtask, let parent else { return nil }
         let sorted = parent.activeSubtasks
-            .filter { $0.status != .done }
+            .filter { $0.status != .done || $0 === self }
             .sorted { $0.sortIndex < $1.sortIndex }
         guard let index = sorted.firstIndex(where: { $0.externalTaskID == externalTaskID }) else { return nil }
 
-        let planningDate = parent.plannedDay ?? parent.deadline
+        let planningDate = parent.scheduledDay ?? parent.deadline
         guard let planningDate else { return nil }
 
         let start = max(Date(), Calendar.current.startOfDay(for: Date()))
@@ -178,20 +197,85 @@ final class TaskItem {
         return start.addingTimeInterval(totalInterval * fraction)
     }
 
-    func validatePlannedDay() {
-        guard let plannedDay, let deadline else { return }
-        if plannedDay >= deadline {
-            self.plannedDay = Calendar.current.date(byAdding: .day, value: -1, to: deadline)
+    /// A scheduled day may fall on its deadline's day. One that falls after it moves back to
+    /// the deadline's day.
+    func validateScheduledDay(calendar: Calendar = .current) {
+        guard let scheduledDay, let deadline else { return }
+        let deadlineDay = calendar.startOfDay(for: deadline)
+        if calendar.startOfDay(for: scheduledDay) > deadlineDay {
+            self.scheduledDay = deadlineDay
         }
     }
 
     // MARK: - Actions
 
+    /// Moves the scheduled day as a dirty edit and spreads the steps' suggested dates again.
+    /// A day after the deadline stops on the deadline's day, and nil clears the scheduled day.
+    func reschedule(to day: Date?, calendar: Calendar = .current) {
+        scheduledDay = day.map { calendar.startOfDay(for: $0) }
+        validateScheduledDay(calendar: calendar)
+        isDirty = true
+        SubtaskScheduler.distributeSubtaskDates(parent: self)
+    }
+
+    /// The dirty edits task detail submits on close: the task when dirty, then its dirty steps,
+    /// such as a step added under a clean parent.
+    var pendingEdits: [TaskItem] {
+        (isDirty ? [self] : []) + subtasks.filter(\.isDirty).sorted { $0.sortIndex < $1.sortIndex }
+    }
+
+    /// Applies one task detail edit to the task. The task becomes a dirty edit. An edit that
+    /// changes the scheduled day or deadline keeps the scheduled day on or before the deadline's
+    /// day. Any other edit leaves a scheduled day the user placed after the deadline alone.
+    func edit(calendar: Calendar = .current, _ change: (TaskItem) -> Void) {
+        let datesBefore = (scheduledDay, deadline)
+        change(self)
+        if datesBefore != (scheduledDay, deadline) {
+            validateScheduledDay(calendar: calendar)
+        }
+        isDirty = true
+    }
+
+    /// One tap of the status chip: Not started, then In progress, then Complete, then Not
+    /// started again. Reaching Complete takes the same path as the row ring, so a recurring
+    /// obligation starts its next cycle. Returns true when it did.
     @discardableResult
-    func complete() -> Bool {
+    func cycleStatus() -> Bool {
+        switch status {
+        case .notStarted:
+            status = .inProgress
+        case .inProgress:
+            return complete()
+        case .done:
+            status = .notStarted
+        }
+        isDirty = true
+        return false
+    }
+
+    /// One tap of a step's ring in task detail: an open step completes and a finished one
+    /// reopens, as a dirty edit either way.
+    func toggleCompletion() {
+        move(to: status == .done ? .notStarted : .done)
+    }
+
+    /// A card dropped on a Board column takes that column's status as a dirty edit.
+    /// Dropping it on its own column changes nothing. Dropping it on Complete takes the same
+    /// path as the row ring, so a recurring obligation starts its next cycle. Returns true when it did.
+    @discardableResult
+    func move(to status: TaskStatus) -> Bool {
+        guard status != self.status else { return false }
+        if status == .done { return complete() }
+        self.status = status
+        isDirty = true
+        return false
+    }
+
+    @discardableResult
+    func complete(at date: Date = Date()) -> Bool {
         if recurrence != .none, let deadline {
             let previousDeadline = deadline
-            let previousPlannedDay = plannedDay
+            let previousScheduledDay = scheduledDay
 
             let nextDate: Date?
             if recurrence == .custom, let rule = customRecurrenceRule {
@@ -202,10 +286,10 @@ final class TaskItem {
 
             if let nextDate {
                 self.deadline = nextDate
-                if let previousPlannedDay {
-                    let offset = previousDeadline.timeIntervalSince(previousPlannedDay)
-                    self.plannedDay = nextDate.addingTimeInterval(-offset)
-                    validatePlannedDay()
+                if let previousScheduledDay {
+                    let offset = previousDeadline.timeIntervalSince(previousScheduledDay)
+                    self.scheduledDay = nextDate.addingTimeInterval(-offset)
+                    validateScheduledDay()
                 }
                 self.status = .notStarted
                 self.isDirty = true
@@ -220,8 +304,11 @@ final class TaskItem {
 
         for subtask in subtasks where subtask.status != .done {
             subtask.status = .done
+            subtask.completedAt = date
+            subtask.isDirty = true
         }
         self.status = .done
+        self.completedAt = date
         self.isDirty = true
         return false
     }
@@ -238,12 +325,8 @@ enum DeadlineDemoFixture {
         task.priority = .urgent
         task.tags = ["Launch", "Client"]
         task.recurrence = .weekly
-        task.plannedDay = calendar.date(byAdding: .day, value: 9, to: referenceDate)
-        task.deadline = calendar.date(byAdding: .day, value: 20, to: referenceDate)
-        task.taskReminders = [
-            .anchored(AnchoredReminder(anchor: .plannedDay, value: 1, unit: .days)),
-            .anchored(AnchoredReminder(anchor: .deadline, value: 2, unit: .hours)),
-        ]
+        task.scheduledDay = calendar.date(byAdding: .day, value: 9, to: referenceDate)
+        task.setDeadline(calendar.date(byAdding: .day, value: 20, to: referenceDate), hasTime: false, defaults: .standard)
 
         let subtaskDefinitions: [(String, Int, TaskStatus)] = [
             ("Confirm scope and milestones", 0, .done),

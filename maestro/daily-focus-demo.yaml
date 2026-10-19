@@ -1,33 +1,71 @@
 # The runner launches the in-memory fixture with -daily-focus-demo first.
 appId: com.kaungzinye.finally
 ---
+# The personal agent proposed the day, so it waits for Confirm.
 - extendedWaitUntil:
-    visible: "Proposed Daily Focus"
+    visible: "3 things to do"
     timeout: 10000
-- assertVisible: "3 of 3 picks · Awaiting confirmation"
+- assertVisible: "0 of 3 done"
 - assertVisible: "Draft the brief"
 - assertVisible: "Ship the release notes"
-- assertVisible: "Task unavailable"
+- assertVisible: "Deleted"
+- assertVisible:
+    id: "daily-focus-confirm"
+- assertNotVisible: "NOW"
+
+# The rest of Today, overdue first and the missed scheduled day last.
+- scrollUntilVisible:
+    element: "Book the dentist"
+    direction: DOWN
+    centerElement: true
+- assertVisible: "Renew the passport"
+- assertVisible: "Yesterday"
+- assertVisible: "Send the invoice"
+- assertVisible: "Water the plants"
+- assertVisible: "from (Mon|Tue|Wed|Thu|Fri|Sat|Sun)"
+- assertNotVisible: "Call the bank"
+
+# Reschedule moves the scheduled day. Clearing it takes the missed day out of Today, and the
+# overdue task stays because its deadline never moves.
+- swipe:
+    from:
+      text: "Book the dentist"
+    direction: LEFT
+- tapOn: "Reschedule"
+- tapOn: "Clear"
+- assertNotVisible: "Book the dentist"
+- swipe:
+    from:
+      text: "Renew the passport"
+    direction: LEFT
+- tapOn: "Reschedule"
+- tapOn: "Clear"
+- assertVisible: "Renew the passport"
+- assertVisible: "Yesterday"
+
+# Picking from Today into a full day replaces the chosen pick and confirms the day.
 - scrollUntilVisible:
     element:
       id: "daily-focus-add-pick"
-    direction: DOWN
+    direction: UP
     centerElement: true
 - tapOn:
     id: "daily-focus-add-pick"
-- tapOn: "Call the bank"
-- assertVisible: "Choose a pick to replace"
-- tapOn: "Unavailable task"
+- assertVisible: "Water the plants"
+- assertVisible: "Call the bank"
+- tapOn: "Water the plants"
+- assertVisible: "Choose a task to replace"
+- tapOn: "Deleted"
 - extendedWaitUntil:
-    visible: "Call the bank"
+    visible:
+      id: "daily-focus-current-task"
     timeout: 5000
-- assertNotVisible: "Task unavailable"
-- assertVisible: "3 of 3 picks · Awaiting confirmation"
-- tapOn:
+- assertNotVisible:
     id: "daily-focus-confirm"
-- assertVisible: "Current"
-- assertVisible: "Next"
-- assertVisible: "3 of 3 picks · Confirmed"
+- assertNotVisible: "Deleted"
+- assertVisible: "0 of 3 done"
+
+# Replanning drops a pick, which returns to Other tasks.
 - scrollUntilVisible:
     element:
       id: "daily-focus-review-day"
@@ -36,37 +74,12 @@ appId: com.kaungzinye.finally
 - tapOn:
     id: "daily-focus-review-day"
 - tapOn:
-    text: "Drop focus pick"
+    id: "daily-focus-drop-pick"
     index: 0
 - tapOn: "Done"
-- assertVisible: "2 of 3 picks · Confirmed"
-- scrollUntilVisible:
-    element:
-      id: "daily-focus-add-pick"
-    direction: DOWN
-    centerElement: true
-- tapOn:
-    id: "daily-focus-add-pick"
-- assertVisible: "Draft the brief"
-- tapOn: "Cancel"
-- tapOn:
-    id: "daily-focus-tomorrow"
-- assertVisible: "Proposed Daily Focus"
-- assertVisible: "0 of 3 picks · Awaiting confirmation"
-- scrollUntilVisible:
-    element:
-      id: "daily-focus-add-pick"
-    direction: DOWN
-    centerElement: true
-- tapOn:
-    id: "daily-focus-add-pick"
-- tapOn: "Review the contract"
-- tapOn:
-    id: "daily-focus-confirm"
-- assertVisible: "Current"
-- assertVisible: "Review the contract"
-- assertVisible: "1 of 3 picks · Confirmed"
+- assertVisible: "0 of 2 done"
 
+# A pick can come from another provider workspace, and picking an unscheduled task schedules it.
 - scrollUntilVisible:
     element:
       id: "daily-focus-add-pick"
@@ -76,6 +89,19 @@ appId: com.kaungzinye.finally
     id: "daily-focus-add-pick"
 - tapOn: "Demo Notion"
 - tapOn: "Demo Server"
-- tapOn: "Ship the release notes"
-- assertVisible: "2 of 3 picks · Confirmed"
-- assertVisible: "Ship the release notes"
+- tapOn: "Update the changelog"
+- assertVisible: "0 of 3 done"
+
+# Finishing the current pick moves the one counter.
+- scrollUntilVisible:
+    element:
+      id: "daily-focus-current-task"
+    direction: UP
+    centerElement: true
+- tapOn: "Done"
+- assertVisible: "1 of 3 done"
+- tapOn: "Update the changelog"
+- extendedWaitUntil:
+    visible: "Deadline"
+    timeout: 5000
+- assertNotVisible: "Scheduled"

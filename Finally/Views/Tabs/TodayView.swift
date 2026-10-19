@@ -1,6 +1,7 @@
 import SwiftData
 import SwiftUI
 
+/// The first tab. It leads with the Daily Focus and lists the rest of Today under Other tasks.
 struct TodayView: View {
     @Query private var sessions: [UserSession]
     @Query private var focuses: [DailyFocus]
@@ -12,7 +13,6 @@ struct TodayView: View {
     @AppStorage(AppConstants.focusLimitKey) private var focusLimit = DailyFocus.defaultFocusLimit
 
     @State private var day = Calendar.current.startOfDay(for: Date())
-    @State private var currentDay = Calendar.current.startOfDay(for: Date())
     @State private var dailyFocus: DailyFocus?
     @State private var selectedTask: TaskItem?
     @State private var replanningFocus: DailyFocus?
@@ -23,103 +23,101 @@ struct TodayView: View {
     private var workspace: UserSession? { sessions.selectedProviderWorkspace }
     private var loadID: String { "\(workspace?.workspaceId ?? "")/\(DailyFocus.dayKey(for: day))" }
     private var unfinishedDays: [DailyFocus] {
-        let today = Calendar.current.startOfDay(for: Date())
-        return focuses.filter { focus in
-            focus.storageWorkspaceID == (workspace?.workspaceId ?? "") && focus.day < today && focus.resolvedPicks(among: tasks).contains {
+        focuses.filter { focus in
+            focus.storageWorkspaceID == (workspace?.workspaceId ?? "") && focus.day < day && focus.resolvedPicks(among: tasks).contains {
                 $0.task == nil || $0.task?.status != .done
             }
         }.sorted { $0.day < $1.day }
     }
 
+    /// No save or sheet is in flight, so Today can move to another day.
+    private var isIdle: Bool { !isSaving && replanningFocus == nil && !showPicker && !showEditor }
+
+    private var otherTasks: [Today.Member<TaskItem>] {
+        let scoped = tasks.scoped(to: workspace)
+        guard let dailyFocus else { return Today.members(of: scoped, at: Date()) }
+        return dailyFocus.otherTasks(among: scoped, at: Date())
+    }
+
     var body: some View {
         NavigationStack {
             List {
-                Section {
-                    DatePicker("Focus day", selection: $day, in: Calendar.current.startOfDay(for: Date())..., displayedComponents: .date)
-                        .accessibilityIdentifier("daily-focus-day")
-                    if !Calendar.current.isDateInToday(day) {
-                        Text("Review the picks for this day. Confirmation keeps each task's planned day and deadline.")
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
-                    }
+                TodayHeader(day: day)
+                    .paperRow()
+                if let dailyFocus {
+                    DailyFocusSection(
+                        focus: dailyFocus,
+                        onChange: { save(dailyFocus) },
+                        onSelectTask: { selectedTask = $0 },
+                        onAddPick: {
+                            // A new day reloads Today, and the user picks into the new day's focus.
+                            guard !moveToCurrentDay() else { return }
+                            showPicker = true
+                        },
+                        onEditPicks: { showEditor = true },
+                        onReviewDay: { replanningFocus = dailyFocus }
+                    )
+                    .disabled(isSaving)
+                } else {
+                    ProgressView()
+                        .frame(maxWidth: .infinity)
+                        .paperRow()
                 }
                 ForEach(unfinishedDays) { focus in
                     Section {
                         Button {
                             replanningFocus = focus
                         } label: {
-                            Label("Replan \(focus.day.formatted(date: .abbreviated, time: .omitted))", systemImage: "arrow.triangle.branch")
+                            Label("Replan \(focus.day.formatted(.dateTime.weekday(.wide)))", systemImage: "arrow.triangle.branch")
                         }
+                        .foregroundStyle(Palette.ink)
                         .accessibilityIdentifier("daily-focus-unfinished-day")
+                        .cardRow()
                     } footer: {
-                        Text("Choose what happens to each unfinished pick.")
+                        SectionNote("Choose what happens to each unfinished task.")
                     }
                 }
-                if let dailyFocus {
-                    DailyFocusSection(
-                        focus: dailyFocus,
-                        onChange: { save(dailyFocus) },
-                        onSelectTask: { selectedTask = $0 },
-                        onAddPick: { showPicker = true },
-                        onEditPicks: { showEditor = true }
-                    )
-                    .disabled(isSaving)
-                    if Calendar.current.isDateInToday(day), !dailyFocus.picks.isEmpty {
-                        Section {
-                            Button {
-                                replanningFocus = dailyFocus
-                            } label: {
-                                Label("Review the day", systemImage: "arrow.triangle.branch")
-                            }
-                            .accessibilityIdentifier("daily-focus-review-day")
+                if !otherTasks.isEmpty {
+                    Section {
+                        ForEach(otherTasks, id: \.task.persistentModelID) { member in
+                            TaskRowView(task: member.task)
+                                .contentShape(Rectangle())
+                                .onTapGesture { selectedTask = member.task }
+                        }
+                    } header: {
+                        SectionLabel(title: "Other tasks") {
+                            Text("\(otherTasks.count)")
                         }
                     }
-                } else {
-                    ProgressView("Loading Daily Focus…")
-                }
-                Section {
-                    NavigationLink {
-                        DeadlineReviewView()
-                    } label: {
-                        Label("Review deadlines", systemImage: "calendar.badge.exclamationmark")
-                    }
-                    .accessibilityIdentifier("daily-focus-deadlines")
                 }
             }
             .paperList()
-            .navigationTitle("Daily Focus")
-            .toolbar {
-                ToolbarItem(placement: .topBarLeading) {
-                    NavigationLink { SettingsView() } label: {
-                        Image(systemName: "gearshape")
-                    }
-                    .accessibilityLabel("Settings")
-                }
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button("Tomorrow") {
-                        day = Calendar.current.date(byAdding: .day, value: 1, to: Calendar.current.startOfDay(for: Date())) ?? Date()
-                    }
-                    .accessibilityIdentifier("daily-focus-tomorrow")
-                }
-            }
+            .toolbar(.hidden, for: .navigationBar)
             .disabled(isSaving)
             .task(id: loadID) { await load() }
             .onChange(of: scenePhase) { _, phase in
-                if phase == .active && !isSaving && replanningFocus == nil && !showPicker && !showEditor {
-                    let today = Calendar.current.startOfDay(for: Date())
-                    if day < today || day == currentDay { day = today }
-                    currentDay = today
+                if phase == .active && isIdle {
+                    moveToCurrentDay()
                     Task { await load() }
                 }
             }
+            // Midnight passing while the app stays open moves Today to the new day. A sheet or
+            // save open across midnight defers the move until it finishes.
+            .onReceive(NotificationCenter.default.publisher(for: UIApplication.significantTimeChangeNotification)) { _ in
+                if isIdle { moveToCurrentDay() }
+            }
+            .onChange(of: isIdle) { _, idle in
+                if idle { moveToCurrentDay() }
+            }
             .refreshable {
+                moveToCurrentDay()
                 try? await taskProvider.synchronize(.launch, store: modelContext)
                 await load()
             }
         }
         .sheet(isPresented: $showPicker) {
             if let dailyFocus {
-                DailyFocusPickerView(focus: dailyFocus, onPick: { save(dailyFocus) })
+                DailyFocusPickerView(focus: dailyFocus, onPick: { picked($0, into: dailyFocus) })
             }
         }
         .sheet(isPresented: $showEditor) {
@@ -134,6 +132,14 @@ struct TodayView: View {
         .sheet(item: $replanningFocus) { focus in
             DailyFocusReplanningView(focus: focus)
         }
+    }
+
+    /// Moves Today to the current calendar day. Returns whether the day changed.
+    @discardableResult
+    private func moveToCurrentDay() -> Bool {
+        guard let current = Today.dayChange(from: day, at: Date()) else { return false }
+        day = current
+        return true
     }
 
     private func load() async {
@@ -164,5 +170,34 @@ struct TodayView: View {
                 dailyFocusService.lastError = error.localizedDescription
             }
         }
+    }
+
+    /// Picking scheduled the task for the day, so the task's edit syncs alongside the focus.
+    private func picked(_ task: TaskItem, into focus: DailyFocus) {
+        save(focus)
+        guard task.isDirty else { return }
+        NotificationService.shared.rescheduleAllReminders(modelContext: modelContext)
+        Task {
+            await taskProvider.submitPendingChangesReportingFailure(for: task.pendingEdits, store: modelContext)
+        }
+    }
+}
+
+/// The page heading: the weekday and the date.
+private struct TodayHeader: View {
+    let day: Date
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text("Today · \(day.formatted(.dateTime.weekday(.wide)))".uppercased())
+                .font(.eyebrow)
+                .tracking(0.5)
+                .foregroundStyle(Palette.muted)
+            Text(day.formatted(.dateTime.day().month(.wide)))
+                .font(.pageTitle)
+                .foregroundStyle(Palette.ink)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.top, 8)
     }
 }

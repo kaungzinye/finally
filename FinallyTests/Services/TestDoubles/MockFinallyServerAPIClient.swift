@@ -17,6 +17,8 @@ final class MockFinallyServerAPIClient: FinallyServerAPIClient {
     private(set) var dailyFocusOperations: [String] = []
     var dailyFocusReadHook: (@MainActor () async -> Void)?
     var dailyFocusWriteHook: (@MainActor () async -> Void)?
+    /// Runs before a write reaches the stored record, standing in for a request still on its way.
+    var dailyFocusWriteGate: (@MainActor () async -> Void)?
 
     func login(username: String, password: String) async throws -> String {
         loginRequests += 1
@@ -43,7 +45,7 @@ final class MockFinallyServerAPIClient: FinallyServerAPIClient {
             projectID: projectID,
             title: mutation.title,
             isCompleted: mutation.isCompleted,
-            plannedDay: mutation.plannedDay,
+            scheduledDay: mutation.scheduledDay,
             deadline: mutation.deadline,
             priority: mutation.priority,
             deadlineHasTime: mutation.deadlineHasTime,
@@ -71,7 +73,7 @@ final class MockFinallyServerAPIClient: FinallyServerAPIClient {
             id: current.id, projectID: current.projectID,
             title: fields.contains("title") ? mutation.title : current.title,
             isCompleted: fields.contains("done") ? mutation.isCompleted : current.isCompleted,
-            plannedDay: fields.contains("start_date") ? mutation.plannedDay : current.plannedDay,
+            scheduledDay: fields.contains("start_date") ? mutation.scheduledDay : current.scheduledDay,
             deadline: fields.contains("due_date") ? mutation.deadline : current.deadline,
             priority: fields.contains("priority") ? mutation.priority : current.priority,
             revision: current.revision + 1,
@@ -93,7 +95,7 @@ final class MockFinallyServerAPIClient: FinallyServerAPIClient {
             projectID: current.projectID,
             title: current.title,
             isCompleted: true,
-            plannedDay: current.plannedDay,
+            scheduledDay: current.scheduledDay,
             deadline: current.deadline,
             priority: current.priority,
             deadlineHasTime: current.deadlineHasTime,
@@ -125,6 +127,7 @@ final class MockFinallyServerAPIClient: FinallyServerAPIClient {
     ) async throws -> FinallyServerDailyFocus {
         dailyFocusOperations.append("write")
         if let error { throw error }
+        await dailyFocusWriteGate?()
         let record = FinallyServerDailyFocus(
             projectID: projectID,
             day: day,

@@ -1,42 +1,5 @@
 import SwiftUI
 
-// MARK: - TaskStatus
-
-enum TaskStatus: String, Codable, CaseIterable {
-    case notStarted = "Not started"
-    case inProgress = "In progress"
-    case done = "Complete"
-}
-
-// MARK: - TaskPriority
-
-enum TaskPriority: String, Codable, CaseIterable {
-    case urgent = "Urgent"
-    case high = "High"
-    case medium = "Medium"
-    case low = "Low"
-
-    var color: Color { Palette.priority(named: rawValue) }
-
-    var icon: String {
-        switch self {
-        case .urgent: return "flag.fill"
-        case .high: return "flag.fill"
-        case .medium: return "flag.fill"
-        case .low: return "flag.fill"
-        }
-    }
-
-    var sortOrder: Int {
-        switch self {
-        case .urgent: return 0
-        case .high: return 1
-        case .medium: return 2
-        case .low: return 3
-        }
-    }
-}
-
 // MARK: - Tag Color Mapping
 
 enum TaskTagColor {
@@ -143,83 +106,6 @@ struct SortStack: Codable, Equatable {
             return .default
         }
         return stack
-    }
-}
-
-// MARK: - Reminder Offset
-
-enum ReminderOffset: String, CaseIterable, Identifiable {
-    case atTime = "At time of event"
-    case fiveMin = "5 minutes before"
-    case fifteenMin = "15 minutes before"
-    case thirtyMin = "30 minutes before"
-    case oneHour = "1 hour before"
-    case oneDay = "1 day before"
-    case oneWeek = "1 week before"
-
-    var id: String { rawValue }
-
-    var intervalSeconds: Int {
-        switch self {
-        case .atTime: return 0
-        case .fiveMin: return 300
-        case .fifteenMin: return 900
-        case .thirtyMin: return 1800
-        case .oneHour: return 3600
-        case .oneDay: return 86400
-        case .oneWeek: return 604800
-        }
-    }
-
-    func toTaskReminder(hasPlannedDay: Bool) -> TaskReminder {
-        switch self {
-        case .atTime:
-            return .anchored(AnchoredReminder(anchor: .deadline, value: 0, unit: .minutes, direction: .before))
-        case .fiveMin:
-            return .anchored(AnchoredReminder(anchor: .deadline, value: 5, unit: .minutes, direction: .before))
-        case .fifteenMin:
-            return .anchored(AnchoredReminder(anchor: .deadline, value: 15, unit: .minutes, direction: .before))
-        case .thirtyMin:
-            return TaskReminder.presetThirtyMinutesBeforeDeadline()
-        case .oneHour:
-            return .anchored(AnchoredReminder(anchor: .deadline, value: 1, unit: .hours, direction: .before))
-        case .oneDay:
-            return TaskReminder.presetOneDayBeforeDeadline()
-        case .oneWeek:
-            return hasPlannedDay
-                ? TaskReminder.presetWeekBeforePlannedDay()
-                : .anchored(AnchoredReminder(anchor: .deadline, value: 1, unit: .weeks, direction: .before))
-        }
-    }
-}
-
-// MARK: - Reminder Choice (for InlineTaskCreator)
-
-enum ReminderChoice: Equatable, Identifiable {
-    case preset(ReminderOffset)
-    case custom(Date)
-
-    var id: String {
-        switch self {
-        case .preset(let offset): return "preset-\(offset.rawValue)"
-        case .custom(let date): return "custom-\(Int(date.timeIntervalSince1970))"
-        }
-    }
-
-    var displayLabel: String {
-        switch self {
-        case .preset(let offset): return offset.rawValue
-        case .custom(let date): return date.formatted(date: .abbreviated, time: .shortened)
-        }
-    }
-
-    func toTaskReminder(hasPlannedDay: Bool) -> TaskReminder {
-        switch self {
-        case .preset(let offset):
-            return offset.toTaskReminder(hasPlannedDay: hasPlannedDay)
-        case .custom(let date):
-            return .explicitDate(ExplicitDateReminder(dateTime: date))
-        }
     }
 }
 

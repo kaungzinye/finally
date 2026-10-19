@@ -5,8 +5,7 @@ final class NavigationRouter {
     enum Tab: Int, CaseIterable {
         case today = 0
         case upcoming
-        case board
-        case browse
+        case tasks
     }
 
     var selectedTab: Tab = .today
@@ -30,14 +29,18 @@ final class NavigationRouter {
         case "oauth-callback":
             let components = URLComponents(url: url, resolvingAgainstBaseURL: false)
             pendingOAuthCode = components?.queryItems?.first(where: { $0.name == "code" })?.value
+        case "today":
+            selectedTab = .today
         case "tasks":
             if path == "/new" || path == "new" {
                 showNewTaskSheet = true
             } else {
-                // Path is the task ID: /taskNotionPageId
+                // Path is the task ID: /taskNotionPageId. A `workspace` query item names the
+                // task's provider workspace, otherwise the selected one.
                 let taskId = path.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
                 if !taskId.isEmpty {
-                    deepLinkWorkspaceId = nil
+                    deepLinkWorkspaceId = URLComponents(url: url, resolvingAgainstBaseURL: false)?
+                        .queryItems?.first(where: { $0.name == "workspace" })?.value
                     deepLinkTaskId = taskId
                 }
             }

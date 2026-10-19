@@ -182,26 +182,25 @@ final class FinallyServerConnectionIntegrationTests: XCTestCase {
         XCTAssertEqual(try context.fetchCount(FetchDescriptor<TaskItem>()), 2)
     }
 
-    func testPresentationSummariesUseSelectedWorkspaceAcrossProviders() throws {
+    func testWidgetSnapshotUsesSelectedWorkspaceAcrossProviders() throws {
         let notion = UserSession(workspaceId: "notion-workspace", workspaceName: "Shared", providerIdentity: .notion)
         let server = makeServerWorkspace()
         server.isSelected = true
         notion.isSelected = false
         let notionTask = TaskItem(externalTaskID: "same-id", title: "Notion task")
         notionTask.providerWorkspaceId = notion.workspaceId
+        notionTask.scheduledDay = Date()
         let serverTask = TaskItem(externalTaskID: "same-id", title: "Server task")
         serverTask.providerWorkspaceId = server.workspaceId
+        serverTask.scheduledDay = Date()
 
-        let summaries = TaskPresentationQuery.summaries(
-            from: [notionTask, serverTask],
-            workspace: server
-        )
+        let snapshot = WidgetSnapshot(tasks: [notionTask, serverTask], focus: nil, workspace: server)
 
-        XCTAssertEqual(summaries.map(\.title), ["Server task"])
-        XCTAssertEqual(summaries.map(\.id), ["server-workspace:same-id"])
+        XCTAssertEqual(snapshot.tasks.map(\.title), ["Server task"])
+        XCTAssertEqual(snapshot.tasks.map(\.id), ["server-workspace:same-id"])
     }
 
-    func testPresentationSummariesRetainTasksForUnavailableProvider() {
+    func testWidgetSnapshotRetainsTasksForUnavailableProvider() {
         let unavailable = UserSession(
             workspaceId: "offline-workspace",
             workspaceName: "Offline",
@@ -209,10 +208,11 @@ final class FinallyServerConnectionIntegrationTests: XCTestCase {
         )
         let task = TaskItem(externalTaskID: "task-1", title: "Available offline")
         task.providerWorkspaceId = unavailable.workspaceId
+        task.scheduledDay = Date()
 
-        let summaries = TaskPresentationQuery.summaries(from: [task], workspace: unavailable)
+        let snapshot = WidgetSnapshot(tasks: [task], focus: nil, workspace: unavailable)
 
-        XCTAssertEqual(summaries.map(\.title), ["Available offline"])
+        XCTAssertEqual(snapshot.tasks.map(\.title), ["Available offline"])
     }
 
     func testProviderConfigurationsShareOneCanonicalSessionPayloadWithoutLeakingFields() {
@@ -262,7 +262,7 @@ final class FinallyServerConnectionIntegrationTests: XCTestCase {
         context.insert(workspace)
         let task = TaskItem(externalTaskID: UUID().uuidString, title: "Plan tomorrow")
         task.providerWorkspaceId = workspace.workspaceId
-        task.plannedDay = Calendar.current.startOfDay(for: Date(timeIntervalSince1970: 1_780_000_000))
+        task.scheduledDay = Calendar.current.startOfDay(for: Date(timeIntervalSince1970: 1_780_000_000))
         task.deadline = Date(timeIntervalSince1970: 1_780_086_400)
         task.priority = .urgent
         task.isDirty = true
@@ -273,7 +273,7 @@ final class FinallyServerConnectionIntegrationTests: XCTestCase {
         XCTAssertEqual(task.externalTaskID, "1")
         XCTAssertFalse(task.isDirty)
         XCTAssertEqual(api.tasks["1"]?.title, "Plan tomorrow")
-        XCTAssertEqual(api.tasks["1"]?.plannedDay, task.plannedDay)
+        XCTAssertEqual(api.tasks["1"]?.scheduledDay, task.scheduledDay)
         XCTAssertEqual(api.tasks["1"]?.deadline, task.deadline)
         XCTAssertEqual(api.tasks["1"]?.priority, .urgent)
 
@@ -587,6 +587,112 @@ final class FinallyServerConnectionIntegrationTests: XCTestCase {
         XCTAssertEqual(requestedPages, ["1", "2"])
         XCTAssertEqual(tasks.map(\.id), ["1", "2"])
         XCTAssertEqual(tasks.map(\.title), ["First", "Second"])
+    }
+
+    func testURLClientCarriesTheScheduledDayAsTheServerStartDate() async throws {
+        let configuration = URLSessionConfiguration.ephemeral
+        configuration.protocolClasses = [MockURLProtocol.self]
+        let session = URLSession(configuration: configuration)
+        var sentBody: [String: Any] = [:]
+        MockURLProtocol.handler = { request in
+            XCTAssertEqual(request.url?.path, "/api/v2/finally/projects/42/tasks")
+            sentBody = try XCTUnwrap(
+                JSONSerialization.jsonObject(with: Self.bodyData(of: request)) as? [String: Any]
+            )
+            let body = #"{"id":7,"project_id":42,"title":"Plan the week","revision":1,"deadline_has_time":false,"reminder_rules":[],"done":false,"start_date":"2026-06-10T00:00:00Z"}"#
+            return (
+                HTTPURLResponse(url: request.url!, statusCode: 201, httpVersion: nil, headerFields: nil)!,
+                Data(body.utf8)
+            )
+        }
+        let client = URLSessionFinallyServerAPIClient(
+            baseURL: URL(string: "https://tasks.example.com")!,
+            token: "jwt-token",
+            session: session
+        )
+
+        let created = try await client.createTask(
+            projectID: 42,
+            mutation: FinallyServerTaskMutation(
+                title: "Plan the week",
+                scheduledDay: Date(timeIntervalSince1970: 1_781_049_600)
+            )
+        )
+
+        XCTAssertEqual(sentBody["start_date"] as? String, "2026-06-10T00:00:00.000Z")
+        XCTAssertEqual(created.scheduledDay, Date(timeIntervalSince1970: 1_781_049_600))
+    }
+
+    func testURLClientCarriesReminderRulesInTheContractShape() async throws {
+        let configuration = URLSessionConfiguration.ephemeral
+        configuration.protocolClasses = [MockURLProtocol.self]
+        let session = URLSession(configuration: configuration)
+        let morningID = try XCTUnwrap(UUID(uuidString: "0D6C1F7A-4B6E-4E8B-9C55-2F3A1B7D9E01"))
+        let daysID = try XCTUnwrap(UUID(uuidString: "6E2B9D41-8A3C-4F27-B1D0-7C5E4A2F8B12"))
+        let exactID = try XCTUnwrap(UUID(uuidString: "A9F04C3B-2D1E-4B6A-8E7F-5C0D9B1A3E23"))
+        var sentRules: [NSDictionary] = []
+        MockURLProtocol.handler = { request in
+            let sent = try XCTUnwrap(
+                JSONSerialization.jsonObject(with: Self.bodyData(of: request)) as? [String: Any]
+            )
+            sentRules = try XCTUnwrap(sent["reminder_rules"] as? [NSDictionary])
+            let body = """
+            {"id":8,"project_id":42,"title":"File taxes","revision":1,"done":false,
+             "due_date":"2026-10-23T17:00:00Z","deadline_has_time":true,
+             "reminder_rules":[
+               {"id":"\(morningID.uuidString)","kind":"deadline","offset":"morningOf"},
+               {"id":"\(daysID.uuidString)","kind":"deadline","offset":"daysBefore","value":2},
+               {"id":"\(exactID.uuidString)","kind":"exact","at":"2026-10-20T15:00:00.000Z"}
+             ]}
+            """
+            return (
+                HTTPURLResponse(url: request.url!, statusCode: 201, httpVersion: nil, headerFields: nil)!,
+                Data(body.utf8)
+            )
+        }
+        let client = URLSessionFinallyServerAPIClient(
+            baseURL: URL(string: "https://tasks.example.com")!,
+            token: "jwt-token",
+            session: session
+        )
+        let exactInstant = try XCTUnwrap(FinallyServerTimestamp.date(from: "2026-10-20T15:00:00.000Z"))
+        let rules: [TaskReminder] = [
+            .deadline(DeadlineReminder(id: morningID, offset: .morningOf)),
+            .deadline(DeadlineReminder(id: daysID, offset: .daysBefore(2))),
+            .exact(ExactReminder(id: exactID, at: exactInstant)),
+        ]
+
+        let created = try await client.createTask(
+            projectID: 42,
+            mutation: FinallyServerTaskMutation(
+                title: "File taxes",
+                deadline: FinallyServerTimestamp.date(from: "2026-10-23T17:00:00Z"),
+                deadlineHasTime: true,
+                reminders: rules
+            )
+        )
+
+        XCTAssertEqual(sentRules, [
+            ["id": morningID.uuidString, "kind": "deadline", "offset": "morningOf"],
+            ["id": daysID.uuidString, "kind": "deadline", "offset": "daysBefore", "value": 2],
+            ["id": exactID.uuidString, "kind": "exact", "at": "2026-10-20T15:00:00.000Z"],
+        ])
+        XCTAssertEqual(created.reminders, rules)
+    }
+
+    private static func bodyData(of request: URLRequest) throws -> Data {
+        if let body = request.httpBody { return body }
+        let stream = try XCTUnwrap(request.httpBodyStream)
+        stream.open()
+        defer { stream.close() }
+        var data = Data()
+        var buffer = [UInt8](repeating: 0, count: 1024)
+        while stream.hasBytesAvailable {
+            let count = stream.read(&buffer, maxLength: buffer.count)
+            guard count > 0 else { break }
+            data.append(buffer, count: count)
+        }
+        return data
     }
 
     func testLoginForbiddenResponseReportsInvalidCredentialsWithRetryGuidance() async throws {

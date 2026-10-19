@@ -19,73 +19,92 @@ struct FinallyServerConnectView: View {
 
     var body: some View {
         Form {
-            Section("Workspace") {
-                TextField("Workspace name", text: $name)
-                    .textContentType(.organizationName)
-                    .accessibilityIdentifier("server-workspace-name")
-                    .disabled(isWorking)
-                TextField("https://tasks.example.com", text: $address)
-                    .textContentType(.URL)
-                    .textInputAutocapitalization(.never)
-                    .autocorrectionDisabled()
-                    .keyboardType(.URL)
-                    .accessibilityIdentifier("server-address")
-                    .disabled(isWorking || authenticatedAccount != nil)
+            Group {
+                Section {
+                    TextField("Workspace name", text: $name)
+                        .textContentType(.organizationName)
+                        .accessibilityIdentifier("server-workspace-name")
+                        .disabled(isWorking)
+                    TextField("https://tasks.example.com", text: $address)
+                        .textContentType(.URL)
+                        .textInputAutocapitalization(.never)
+                        .autocorrectionDisabled()
+                        .keyboardType(.URL)
+                        .accessibilityIdentifier("server-address")
+                        .disabled(isWorking || authenticatedAccount != nil)
+                } header: {
+                    SectionLabel("Server")
+                }
 
                 if let account = authenticatedAccount {
-                    Picker("Workspace", selection: $selectedProject) {
-                        Text("Select a workspace").tag(Optional<FinallyServerProject>.none)
+                    Section {
                         ForEach(account.projects) { project in
-                            Text(project.title).tag(Optional(project))
+                            CheckRow(isSelected: selectedProject == project, action: { selectedProject = project }) {
+                                Text(project.title)
+                            }
+                            .disabled(isWorking)
                         }
+                    } header: {
+                        SectionLabel("Workspace")
                     }
-                    .disabled(isWorking)
                     .accessibilityIdentifier("server-workspace-picker")
                 }
-            }
 
-            Section("Account") {
-                TextField("Username", text: $username)
-                    .textContentType(.username)
-                    .textInputAutocapitalization(.never)
-                    .autocorrectionDisabled()
-                    .accessibilityIdentifier("server-username")
-                    .disabled(isWorking || authenticatedAccount != nil)
-                SecureField("Password", text: $password)
-                    .textContentType(.password)
-                    .accessibilityIdentifier("server-password")
-                    .focused($passwordIsFocused)
-                    .submitLabel(.done)
-                    .onSubmit { passwordIsFocused = false }
-                    .disabled(isWorking || authenticatedAccount != nil)
+                Section {
+                    TextField("Username", text: $username)
+                        .textContentType(.username)
+                        .textInputAutocapitalization(.never)
+                        .autocorrectionDisabled()
+                        .accessibilityIdentifier("server-username")
+                        .disabled(isWorking || authenticatedAccount != nil)
+                    SecureField("Password", text: $password)
+                        .textContentType(.password)
+                        .accessibilityIdentifier("server-password")
+                        .focused($passwordIsFocused)
+                        .submitLabel(.done)
+                        .onSubmit { passwordIsFocused = false }
+                        .disabled(isWorking || authenticatedAccount != nil)
 
-                if authenticatedAccount != nil {
-                    Button("Use a different account") {
-                        authenticatedAccount = nil
-                        selectedProject = nil
-                        password = ""
-                        errorMessage = nil
+                    if authenticatedAccount != nil {
+                        Button("Use a different account") {
+                            authenticatedAccount = nil
+                            selectedProject = nil
+                            password = ""
+                            errorMessage = nil
+                        }
+                        .foregroundStyle(Palette.ink)
+                        .disabled(isWorking)
                     }
-                    .disabled(isWorking)
+                } header: {
+                    SectionLabel("Account")
                 }
             }
+            .cardRow()
 
             if let errorMessage {
                 Section {
-                    Text(errorMessage)
-                        .foregroundStyle(.red)
+                    Callout(message: errorMessage)
                         .accessibilityIdentifier("finally-server-connection-error")
+                        .paperRow()
                 }
             }
 
             Section {
-                primaryButton
+                Button(action: primaryAction) {
+                    primaryLabel
+                }
+                .buttonStyle(.ink)
+                .disabled(!canContinue || isWorking)
+                .accessibilityIdentifier("server-connect-action")
+                .listRowBackground(Color.clear)
+                .listRowInsets(EdgeInsets())
             } footer: {
-                Text("Finally stores the server token in Keychain. Your password is used only to sign in.")
+                SectionNote("Finally keeps the server's sign-in token in your Keychain. Your password is only used to sign in.")
+                    .padding(.top, 8)
             }
         }
         .paperList()
-        .navigationTitle("Connect Server")
+        .navigationTitle("Connect a server")
         .navigationBarTitleDisplayMode(.inline)
         .onDisappear {
             connectionTask?.cancel()
@@ -99,35 +118,15 @@ struct FinallyServerConnectView: View {
     }
 
     @ViewBuilder
-    private var primaryButton: some View {
-        if #available(iOS 26, *) {
-            Button(action: primaryAction) {
-                primaryLabel
-            }
-            .buttonStyle(.glassProminent)
-            .disabled(!canContinue || isWorking)
-            .accessibilityIdentifier("server-connect-action")
-        } else {
-            Button(action: primaryAction) {
-                primaryLabel
-            }
-            .buttonStyle(.borderedProminent)
-            .disabled(!canContinue || isWorking)
-            .accessibilityIdentifier("server-connect-action")
-        }
-    }
-
-    @ViewBuilder
     private var primaryLabel: some View {
         if isWorking {
             HStack {
                 ProgressView()
+                    .tint(Palette.onInk)
                 Text(authenticatedAccount == nil ? "Finding workspaces…" : "Connecting…")
             }
-            .frame(maxWidth: .infinity)
         } else {
-            Text(authenticatedAccount == nil ? "Find Workspaces" : "Connect")
-                .frame(maxWidth: .infinity)
+            Text(authenticatedAccount == nil ? "Find workspaces" : "Connect")
         }
     }
 
@@ -173,7 +172,7 @@ struct FinallyServerConnectView: View {
                 )
                 guard !Task.isCancelled else { return }
                 guard !account.projects.isEmpty else {
-                    errorMessage = "This account has no writable workspaces."
+                    errorMessage = "This account has no workspaces you can edit."
                     isWorking = false
                     return
                 }

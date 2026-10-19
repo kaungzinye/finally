@@ -73,7 +73,9 @@ Finally/
 │   ├── Models/
 │   │   ├── TaskItem.swift               # SwiftData @Model
 │   │   ├── ProjectItem.swift
-│   │   ├── ReminderItem.swift
+│   │   ├── TaskReminder.swift           # Deadline and exact reminders, and their fire dates
+│   │   ├── DefaultDeadlineReminders.swift # The defaults a new deadline receives
+│   │   ├── ModelContainer+Shared.swift  # App Group container config
 │   │   └── UserSession.swift
 │   ├── Services/
 │   │   ├── NotionAuthService.swift      # OAuth + ASWebAuthenticationSession
@@ -84,16 +86,16 @@ Finally/
 │   │   └── KeychainHelper.swift         # Thin wrapper over Security framework
 │   ├── Views/
 │   │   ├── Tabs/
-│   │   │   ├── InboxView.swift
 │   │   │   ├── TodayView.swift
 │   │   │   ├── UpcomingView.swift
-│   │   │   ├── SearchFilterView.swift
-│   │   │   └── BrowseProjectsView.swift
+│   │   │   ├── TasksView.swift          # Inbox, projects, and the List/Board switch
+│   │   │   ├── BoardView.swift
+│   │   │   └── SearchFilterView.swift
 │   │   ├── Task/
 │   │   │   ├── TaskRowView.swift        # Single task row with checkbox + chips
 │   │   │   ├── TaskDetailView.swift     # Full task editing sheet
 │   │   │   ├── InlineTaskCreator.swift  # Bottom bar with quick-action buttons
-│   │   │   └── ReminderListView.swift   # Manage reminders for a task
+│   │   │   └── ReminderSection.swift    # Reminder chips and "Remind me at" in task detail
 │   │   ├── Components/
 │   │   │   ├── ChipView.swift           # Tappable colored pill
 │   │   │   ├── PriorityPicker.swift
@@ -107,17 +109,19 @@ Finally/
 │   │   │   └── SchemaErrorView.swift
 │   │   └── Settings/
 │   │       ├── SettingsView.swift
+│   │       ├── DefaultDeadlineRemindersView.swift # Edits the default deadline reminders
 │   │       ├── AppearanceSettingView.swift
 │   │       └── DatabaseSetupGuideView.swift
-│   └── Shared/
-│       ├── ModelContainer+Shared.swift  # App Group container config
-│       └── Constants.swift              # App Group ID, URL scheme, API URLs
+│   └── Shared/                          # Compiled by the app and the widget
+│       ├── Constants.swift              # App Group ID, URL scheme, API URLs
+│       ├── Today.swift                  # The one Today query
+│       ├── TaskRowDate.swift            # The date a task row shows
+│       ├── WidgetSnapshot.swift         # Snapshot and pending widget completions
+│       └── WidgetDay.swift              # What each widget draws from the snapshot
 ├── FinallyWidget/        # Widget extension target
-│   ├── TaskListWidget.swift             # Widget definition + timeline provider
-│   ├── WidgetViews.swift                # Small/Medium/Large layouts
-│   └── ToggleTaskCompleteIntent.swift   # AppIntent for checkbox
-├── Shared/                              # Shared between app + widget
-│   └── SharedConstants.swift            # App Group ID, shared model config
+│   ├── FinallyWidget.swift              # Widget definition + timeline provider
+│   ├── FinallyWidgetViews.swift         # Now, focus, today, and lock screen layouts
+│   └── CompleteTaskIntent.swift         # AppIntent behind each ring and Done button
 └── vercel-notion-auth/                  # Vercel serverless function
     ├── api/
     │   └── notion/

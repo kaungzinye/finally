@@ -3,21 +3,23 @@ import SwiftUI
 struct AppearanceSettingView: View {
     @AppStorage("appearanceMode") private var appearanceMode: Int = 0
 
+    private let modes = [(0, "Match iPhone"), (1, "Light"), (2, "Dark")]
+
     var body: some View {
         List {
             Section {
-                Picker("Appearance", selection: $appearanceMode) {
-                    Text("System").tag(0)
-                    Text("Light").tag(1)
-                    Text("Dark").tag(2)
+                ForEach(modes, id: \.0) { mode, title in
+                    CheckRow(isSelected: appearanceMode == mode, action: { appearanceMode = mode }) {
+                        Text(title)
+                    }
+                    .accessibilityIdentifier("theme-\(mode)")
                 }
-                .pickerStyle(.inline)
-                .labelsHidden()
             } footer: {
-                Text("Choose how Finally appears. \"System\" follows your device settings.")
+                SectionNote("Match iPhone follows your Light and Dark setting.")
             }
         }
-        .navigationTitle("Appearance")
+        .paperList()
+        .navigationTitle("Theme")
         .navigationBarTitleDisplayMode(.inline)
     }
 }

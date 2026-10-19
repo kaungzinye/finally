@@ -16,8 +16,8 @@ final class FinallyServerTaskProviderAdapter: TaskProviderAdapter {
     ]
     static let canonicalFieldSupport: [CanonicalTaskField: TaskProviderFieldSupport] = [
         .title: .lossless,
-        .plannedDay: .lossy(
-            reason: "Finally Server carries planned days as timestamps, so a remotely edited planned day arrives timed."
+        .scheduledDay: .lossy(
+            reason: "Finally Server carries scheduled days as timestamps, so a remotely edited scheduled day arrives timed."
         ),
         .deadline: .lossless,
         .state: .lossy(
@@ -59,93 +59,112 @@ final class FinallyServerTaskProviderAdapter: TaskProviderAdapter {
             throw FinallyServerClientError.invalidResponse
         }
 
+        var awaitingDecision: [FinallyServerClientError] = []
         switch intent {
         case .push:
-            try await pushChanges(workspaceID: workspace.workspaceId, projectID: projectID, store: store)
+            awaitingDecision = try await pushChanges(workspaceID: workspace.workspaceId, projectID: projectID, store: store)
         case .launch, .incremental:
-            try await pushChanges(workspaceID: workspace.workspaceId, projectID: projectID, store: store)
+            awaitingDecision = try await pushChanges(workspaceID: workspace.workspaceId, projectID: projectID, store: store)
             try await pullTasks(workspaceID: workspace.workspaceId, projectID: projectID, store: store)
         case .full:
             try await pullTasks(workspaceID: workspace.workspaceId, projectID: projectID, store: store)
         }
+        if let first = awaitingDecision.first { throw first }
     }
 
-    private func pushChanges(workspaceID: String, projectID: Int64, store: ModelContext) async throws {
+    /// Pushes every dirty task of the workspace. A task that holds a conflict or has left the
+    /// server waits for the user's decision while the rest keep syncing. Returns those tasks' errors.
+    private func pushChanges(workspaceID: String, projectID: Int64, store: ModelContext) async throws -> [FinallyServerClientError] {
         let tasks = try store.fetch(FetchDescriptor<TaskItem>()).filter {
             $0.providerWorkspaceId == workspaceID && $0.isDirty
         }
+        var awaitingDecision: [FinallyServerClientError] = []
         for task in tasks {
-            if task.serverTaskMissing { throw FinallyServerClientError.notFound }
-            if task.serverConflictJSON != nil {
-                do {
-                    let current = try await api.readTask(id: task.externalTaskID)
-                    storeConflict(current, fields: task.serverConflictFields, task: task)
-                    try store.save()
-                    throw FinallyServerClientError.conflict(current: current, fields: task.serverConflictFields)
-                } catch FinallyServerClientError.notFound {
-                    task.serverTaskMissing = true
-                    try store.save()
-                    throw FinallyServerClientError.notFound
-                }
-            }
-            if task.isDeleted {
-                if task.lastSyncedAt != nil {
-                    do { try await api.deleteTask(id: task.externalTaskID, revision: task.serverRevision) }
-                    catch FinallyServerClientError.notFound {
-                        store.delete(task)
-                        try store.save()
-                        continue
-                    }
-                    catch FinallyServerClientError.conflict(let current, let fields) {
-                        storeConflict(current, fields: fields, task: task)
-                        try store.save()
-                        throw FinallyServerClientError.conflict(current: current, fields: fields)
-                    }
-                }
-                store.delete(task)
-                try store.save()
-                continue
-            }
-            let outgoingStatus = task.status
-            let outgoing = task.serverMutation
-            var mutation = outgoing
-            mutation.baseRevision = task.serverRevision
-            if let baseline = task.acceptedServerMutation {
-                mutation.changedFields = outgoing.differences(from: baseline)
-            } else if task.lastSyncedAt != nil {
-                throw FinallyServerClientError.invalidResponse
-            }
-            if mutation.changedFields?.isEmpty == true {
-                task.isDirty = false
-                try store.save()
-                continue
-            }
             do {
-                let remote: FinallyServerTask
-                if task.lastSyncedAt == nil {
-                    remote = try await api.createTask(projectID: projectID, mutation: mutation)
-                    task.externalTaskID = remote.id
-                } else {
-                    remote = try await api.updateTask(id: task.externalTaskID, mutation: mutation)
+                try await push(task, workspaceID: workspaceID, projectID: projectID, store: store)
+            } catch let error as FinallyServerClientError {
+                switch error {
+                case .conflict, .notFound: awaitingDecision.append(error)
+                default: throw error
                 }
-                let editsDuringPush = task.serverMutation
-                let statusDuringPush = task.status
-                try apply(remote, to: task, workspaceID: workspaceID, store: store)
-                let acknowledged = task.serverMutation
-                task.applyServerMutation(editsDuringPush, fields: editsDuringPush.differences(from: outgoing))
-                if statusDuringPush != outgoingStatus { task.status = statusDuringPush }
-                task.isDirty = !task.serverMutation.differences(from: acknowledged).isEmpty || task.isDeleted
-                task.lastSyncedAt = Date()
+            }
+        }
+        return awaitingDecision
+    }
+
+    private func push(_ task: TaskItem, workspaceID: String, projectID: Int64, store: ModelContext) async throws {
+        if task.serverTaskMissing { throw FinallyServerClientError.notFound }
+        if task.serverConflictJSON != nil {
+            do {
+                let current = try await api.readTask(id: task.externalTaskID)
+                storeConflict(current, fields: task.serverConflictFields, task: task)
                 try store.save()
+                throw FinallyServerClientError.conflict(current: current, fields: task.serverConflictFields)
             } catch FinallyServerClientError.notFound {
                 task.serverTaskMissing = true
                 try store.save()
                 throw FinallyServerClientError.notFound
-            } catch FinallyServerClientError.conflict(let current, let fields) {
-                storeConflict(current, fields: fields, task: task)
-                try store.save()
-                throw FinallyServerClientError.conflict(current: current, fields: fields)
             }
+        }
+        if task.isDeleted {
+            if task.lastSyncedAt != nil {
+                do { try await api.deleteTask(id: task.externalTaskID, revision: task.serverRevision) }
+                catch FinallyServerClientError.notFound {
+                    store.delete(task)
+                    try store.save()
+                    return
+                }
+                catch FinallyServerClientError.conflict(let current, let fields) {
+                    storeConflict(current, fields: fields, task: task)
+                    try store.save()
+                    throw FinallyServerClientError.conflict(current: current, fields: fields)
+                }
+            }
+            store.delete(task)
+            try store.save()
+            return
+        }
+        let outgoingStatus = task.status
+        let outgoing = task.serverMutation
+        var mutation = outgoing
+        mutation.baseRevision = task.serverRevision
+        if let baseline = task.acceptedServerMutation {
+            mutation.changedFields = outgoing.differences(from: baseline)
+        } else if task.lastSyncedAt != nil {
+            throw FinallyServerClientError.invalidResponse
+        }
+        if mutation.changedFields?.isEmpty == true {
+            task.isDirty = false
+            try store.save()
+            return
+        }
+        do {
+            let remote: FinallyServerTask
+            if task.lastSyncedAt == nil {
+                remote = try await api.createTask(projectID: projectID, mutation: mutation)
+                try task.replaceExternalTaskID(with: remote.id, in: store)
+            } else {
+                remote = try await api.updateTask(id: task.externalTaskID, mutation: mutation)
+            }
+            let editsDuringPush = task.serverMutation
+            let statusDuringPush = task.status
+            let completedAtDuringPush = task.completedAt
+            try apply(remote, to: task, workspaceID: workspaceID, store: store)
+            let acknowledged = task.serverMutation
+            task.applyServerMutation(editsDuringPush, fields: editsDuringPush.differences(from: outgoing))
+            if statusDuringPush != outgoingStatus { task.status = statusDuringPush }
+            if task.status == .done, statusDuringPush == .done { task.completedAt = completedAtDuringPush }
+            task.isDirty = !task.serverMutation.differences(from: acknowledged).isEmpty || task.isDeleted
+            task.lastSyncedAt = Date()
+            try store.save()
+        } catch FinallyServerClientError.notFound {
+            task.serverTaskMissing = true
+            try store.save()
+            throw FinallyServerClientError.notFound
+        } catch FinallyServerClientError.conflict(let current, let fields) {
+            storeConflict(current, fields: fields, task: task)
+            try store.save()
+            throw FinallyServerClientError.conflict(current: current, fields: fields)
         }
     }
 
@@ -207,8 +226,8 @@ final class FinallyServerTaskProviderAdapter: TaskProviderAdapter {
     ) throws {
         task.title = remote.title
         task.status = canonicalStatus(remoteIsCompleted: remote.isCompleted, local: task.status)
-        // A planned day is date-only, so the server's timestamp reads as its calendar day.
-        task.plannedDay = remote.plannedDay.map { Calendar.current.startOfDay(for: $0) }
+        // A scheduled day is date-only, so the server's timestamp reads as its calendar day.
+        task.scheduledDay = remote.scheduledDay.map { Calendar.current.startOfDay(for: $0) }
         task.deadline = remote.deadline
         task.deadlineHasTime = remote.deadlineHasTime
         task.taskReminders = remote.reminders

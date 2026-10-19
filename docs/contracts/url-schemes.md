@@ -11,8 +11,9 @@
 | URL | Source | Action |
 |-----|--------|--------|
 | `finally://oauth-callback?code={code}` | Notion OAuth redirect | Extract `code`, exchange for token via Vercel function |
+| `finally://today` | Widget review state for an unconfirmed Daily Focus | Open app on the Today tab |
 | `finally://tasks/new` | Widget "+" button | Open app, present inline task creation |
-| `finally://tasks/{externalTaskID}` | Notification tap, widget task tap | Open app, navigate to the task inside the selected provider workspace |
+| `finally://tasks/{externalTaskID}?workspace={workspaceID}` | Notification tap, widget task tap | Open app, navigate to the task inside the named provider workspace, or the selected one when `workspace` is absent |
 
 ### Handling
 

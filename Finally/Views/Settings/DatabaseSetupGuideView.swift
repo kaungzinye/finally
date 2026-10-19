@@ -3,37 +3,44 @@ import SwiftUI
 struct DatabaseSetupGuideView: View {
     var body: some View {
         List {
-            Section {
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("Your Notion workspace needs two databases for Finally to work properly.")
+            Group {
+                Section {
+                    Text("Finally reads your tasks from one Notion database, and your projects from a second one if you have it.")
                         .font(.subheadline)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(Palette.muted)
+                }
+
+                Section {
+                    propertyRow(name: "Name", type: "Title", required: true, note: "The task's name. Every database has one.")
+                    propertyRow(name: "Status", type: "Status", required: true, note: "Not started, In progress, and Complete")
+                    propertyRow(name: "Due Date", type: "Date", required: true, note: "The task's deadline, when it must be done")
+                    propertyRow(name: "Priority", type: "Select", required: false, note: "Urgent, High, Medium, and Low")
+                    propertyRow(name: "Tags", type: "Multi-select", required: false, note: "Any tags you like")
+                    propertyRow(name: "Project", type: "Relation", required: false, note: "Links to your projects database")
+                    propertyRow(name: "Recurrence", type: "Select", required: false, note: "None, Daily, Weekly, Monthly, and Yearly")
+                } header: {
+                    SectionLabel("Tasks database")
+                }
+
+                Section {
+                    propertyRow(name: "Name", type: "Title", required: true, note: "The project's name")
+                } header: {
+                    SectionLabel("Projects database, if you want one")
+                }
+
+                Section {
+                    step(number: 1, text: "Open Notion and make a database, or use one you have.")
+                    step(number: 2, text: "Add the properties listed above.")
+                    step(number: 3, text: "Connect Notion from Finally and share your databases with it.")
+                    step(number: 4, text: "Choose your tasks database. Finally checks its properties for you.")
+                } header: {
+                    SectionLabel("Steps")
                 }
             }
-
-            Section("Tasks Database (Required)") {
-                propertyRow(name: "Name", type: "Title", required: true, note: "Task name (auto-created)")
-                propertyRow(name: "Status", type: "Status", required: true, note: "Options: Not Started, In Progress, Complete")
-                propertyRow(name: "Due Date", type: "Date", required: true, note: "Task deadline")
-                propertyRow(name: "Priority", type: "Select", required: false, note: "Options: Urgent, High, Medium, Low")
-                propertyRow(name: "Tags", type: "Multi-select", required: false, note: "Custom tags for filtering")
-                propertyRow(name: "Project", type: "Relation", required: false, note: "Link to Projects database")
-                propertyRow(name: "Recurrence", type: "Select", required: false, note: "Options: None, Daily, Weekly, Monthly, Yearly")
-            }
-
-            Section("Projects Database (Optional)") {
-                propertyRow(name: "Name", type: "Title", required: true, note: "Project name (auto-created)")
-            }
-
-            Section("Setup Steps") {
-                step(number: 1, text: "Open Notion and create a new database (or use an existing one)")
-                step(number: 2, text: "Add the required properties listed above")
-                step(number: 3, text: "Create a Notion integration at notion.so/my-integrations")
-                step(number: 4, text: "Share your databases with the integration")
-                step(number: 5, text: "Connect from the app — databases will be auto-detected")
-            }
+            .cardRow()
         }
-        .navigationTitle("Database Setup")
+        .paperList()
+        .navigationTitle("Database setup guide")
         .navigationBarTitleDisplayMode(.inline)
     }
 
@@ -42,22 +49,23 @@ struct DatabaseSetupGuideView: View {
             HStack {
                 Text(name)
                     .fontWeight(.medium)
+                    .foregroundStyle(Palette.ink)
                 Spacer()
                 Text(type)
-                    .font(.caption)
+                    .font(.meta)
+                    .foregroundStyle(Palette.ink)
                     .padding(.horizontal, 8)
                     .padding(.vertical, 2)
-                    .background(.secondary.opacity(0.1))
-                    .clipShape(Capsule())
+                    .background(Palette.wash, in: Capsule())
                 if required {
                     Text("Required")
-                        .font(.caption2)
-                        .foregroundStyle(Palette.urgent)
+                        .font(.meta)
+                        .foregroundStyle(Palette.muted)
                 }
             }
             Text(note)
-                .font(.caption)
-                .foregroundStyle(.secondary)
+                .font(.meta)
+                .foregroundStyle(Palette.muted)
         }
         .padding(.vertical, 2)
     }
@@ -65,12 +73,13 @@ struct DatabaseSetupGuideView: View {
     private func step(number: Int, text: String) -> some View {
         HStack(alignment: .top, spacing: 12) {
             Text("\(number)")
-                .font(.caption.bold())
+                .font(.meta.bold())
+                .foregroundStyle(Palette.ink)
                 .frame(width: 24, height: 24)
-                .background(.secondary.opacity(0.1))
-                .clipShape(Circle())
+                .background(Palette.wash, in: Circle())
             Text(text)
                 .font(.subheadline)
+                .foregroundStyle(Palette.ink)
         }
     }
 }

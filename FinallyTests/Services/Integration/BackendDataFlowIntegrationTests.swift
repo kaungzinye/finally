@@ -76,6 +76,60 @@ final class BackendDataFlowIntegrationTests: XCTestCase {
         XCTAssertNotNil(properties[session.propertyMappings.taskDeadlineProperty])
     }
 
+    func testNotionEditDuringAwaitedPushStaysDirtyForTheNextPush() async throws {
+        let mock = MockNotionAPIClient()
+        let syncService = SyncService(api: mock)
+        let context = try makeInMemoryContext()
+        let session = UserSession(workspaceId: "ws-1", workspaceName: "Workspace", providerIdentity: .notion)
+        session.tasksDatabaseId = "tasks-db"
+        context.insert(session)
+        let task = TaskItem(externalTaskID: "page-1", title: "Proposal")
+        task.providerWorkspaceId = session.workspaceId
+        task.lastSyncedAt = Date()
+        task.deadline = Date(timeIntervalSince1970: 1_780_000_000)
+        task.isDirty = true
+        context.insert(task)
+        try context.save()
+        mock.updatePageHook = {
+            task.edit { $0.title = "Proposal draft" }
+            mock.updatePageHook = nil
+        }
+
+        try await syncService.pushDirtyChanges(session: session, modelContext: context)
+
+        XCTAssertEqual(task.title, "Proposal draft")
+        XCTAssertTrue(task.isDirty)
+        try await syncService.pushDirtyChanges(session: session, modelContext: context)
+        let sent = try XCTUnwrap(mock.updatedPages.last?.properties[session.propertyMappings.taskTitleProperty] as? [String: Any])
+        let text = try XCTUnwrap((sent["title"] as? [[String: Any]])?.first?["text"] as? [String: String])
+        XCTAssertEqual(text["content"], "Proposal draft")
+        XCTAssertFalse(task.isDirty)
+    }
+
+    func testNotionDeletionDuringAwaitedPushStaysDirty() async throws {
+        let mock = MockNotionAPIClient()
+        let syncService = SyncService(api: mock)
+        let context = try makeInMemoryContext()
+        let session = UserSession(workspaceId: "ws-1", workspaceName: "Workspace", providerIdentity: .notion)
+        session.tasksDatabaseId = "tasks-db"
+        context.insert(session)
+        let task = TaskItem(externalTaskID: "page-1", title: "Proposal")
+        task.providerWorkspaceId = session.workspaceId
+        task.lastSyncedAt = Date()
+        task.isDirty = true
+        context.insert(task)
+        try context.save()
+        mock.updatePageHook = {
+            task.isDeleted = true
+            task.isDirty = true
+            mock.updatePageHook = nil
+        }
+
+        try await syncService.pushDirtyChanges(session: session, modelContext: context)
+
+        XCTAssertTrue(task.isDirty)
+    }
+
     func testNotionPushPreservesDateOnlyAndTimedPlanningSemantics() async throws {
         let mock = MockNotionAPIClient()
         let syncService = SyncService(api: mock)
@@ -89,7 +143,7 @@ final class BackendDataFlowIntegrationTests: XCTestCase {
         context.insert(session)
         let task = TaskItem(externalTaskID: UUID().uuidString, title: "Timed deadline")
         task.providerWorkspaceId = session.workspaceId
-        task.plannedDay = Date(timeIntervalSince1970: 1_780_000_000)
+        task.scheduledDay = Date(timeIntervalSince1970: 1_780_000_000)
         task.deadline = Date(timeIntervalSince1970: 1_780_086_400)
         task.deadlineHasTime = true
         task.isDirty = true
@@ -153,7 +207,7 @@ final class BackendDataFlowIntegrationTests: XCTestCase {
             guard case .permissionDenied = error else {
                 return XCTFail("Expected permissionDenied, received \(error)")
             }
-            XCTAssertEqual(error.localizedDescription, "You don't have edit access to this database")
+            XCTAssertEqual(error.localizedDescription, "You can't edit this Notion database.")
         }
 
         XCTAssertTrue(task.isDirty)

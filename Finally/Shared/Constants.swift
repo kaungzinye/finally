@@ -3,6 +3,8 @@ import Foundation
 enum AppConstants {
     static let appGroupID = "group.com.kaungzinye.finally"
     static let urlScheme = "finally"
+    /// Opens the app on the Today tab.
+    static let todayURL = URL(string: "\(urlScheme)://today")!
     static let keychainService = "com.kaungzinye.finally"
     static let keychainTokenAccount = "notion_access_token"
 
@@ -28,11 +30,14 @@ enum AppConstants {
     static let defaultReminderTimeMinutesKey = "defaultReminderTimeMinutes"
     /// Default: 9:00 AM = 540 minutes from midnight.
     static let defaultReminderTimeMinutes = 540
+    /// UserDefaults key for the default deadline reminders new deadlines receive.
+    static let defaultDeadlineRemindersKey = "defaultDeadlineReminders"
 
     // Daily Focus
     /// UserDefaults key for the focus limit applied to new Daily Focus records.
     static let focusLimitKey = "focusLimit"
+    static let defaultFocusLimit = 3
 
     // Widget
-    static let widgetKind = "TaskListWidget"
+    static let widgetKind = "FinallyWidget"
 }

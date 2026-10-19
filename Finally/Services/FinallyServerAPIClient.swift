@@ -8,7 +8,7 @@ struct FinallyServerTask: Equatable, Sendable {
     let projectID: Int64
     let title: String
     let isCompleted: Bool
-    let plannedDay: Date?
+    let scheduledDay: Date?
     let deadline: Date?
     let priority: TaskPriority?
 
@@ -17,7 +17,7 @@ struct FinallyServerTask: Equatable, Sendable {
         projectID: Int64,
         title: String,
         isCompleted: Bool,
-        plannedDay: Date? = nil,
+        scheduledDay: Date? = nil,
         deadline: Date? = nil,
         priority: TaskPriority? = nil,
         revision: Int64 = 0,
@@ -31,7 +31,7 @@ struct FinallyServerTask: Equatable, Sendable {
         self.projectID = projectID
         self.title = title
         self.isCompleted = isCompleted
-        self.plannedDay = plannedDay
+        self.scheduledDay = scheduledDay
         self.deadline = deadline
         self.priority = priority
     }
@@ -44,14 +44,14 @@ struct FinallyServerTaskMutation: Codable, Equatable, Sendable {
     let reminders: [TaskReminder]
     let title: String
     let isCompleted: Bool
-    let plannedDay: Date?
+    let scheduledDay: Date?
     let deadline: Date?
     let priority: TaskPriority?
 
     init(
         title: String,
         isCompleted: Bool = false,
-        plannedDay: Date? = nil,
+        scheduledDay: Date? = nil,
         deadline: Date? = nil,
         priority: TaskPriority? = nil,
         deadlineHasTime: Bool = false,
@@ -61,7 +61,7 @@ struct FinallyServerTaskMutation: Codable, Equatable, Sendable {
         self.reminders = reminders
         self.title = title
         self.isCompleted = isCompleted
-        self.plannedDay = plannedDay
+        self.scheduledDay = scheduledDay
         self.deadline = deadline
         self.priority = priority
     }
@@ -216,7 +216,7 @@ final class URLSessionFinallyServerAPIClient: FinallyServerAPIClient {
                     projectID: projectID,
                     title: title,
                     isCompleted: done,
-                    plannedDay: Self.parseDate(startDate),
+                    scheduledDay: Self.parseDate(startDate),
                     deadline: Self.parseDate(deadline),
                     priority: Self.taskPriority(priority ?? 0),
                     revision: revision,
@@ -352,7 +352,7 @@ final class URLSessionFinallyServerAPIClient: FinallyServerAPIClient {
         return [
             "title": mutation.title,
             "done": mutation.isCompleted,
-            "start_date": mutation.plannedDay.map { FinallyServerTimestamp.string(from: $0) } as String?,
+            "start_date": mutation.scheduledDay.map { FinallyServerTimestamp.string(from: $0) } as String?,
             "due_date": mutation.deadline.map { FinallyServerTimestamp.string(from: $0) } as String?,
             "priority": providerPriority(mutation.priority),
             "deadline_has_time": mutation.deadlineHasTime,

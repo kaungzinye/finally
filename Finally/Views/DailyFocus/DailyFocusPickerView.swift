@@ -1,12 +1,14 @@
 import SwiftData
 import SwiftUI
 
-/// Adds a task, with a user-chosen displacement when Daily Focus is full.
+/// Picks a task for the day, listing Today's tasks first. A full day takes a pick only by
+/// replacing the one the user chooses.
 struct DailyFocusPickerView: View {
     let focus: DailyFocus
-    let onPick: () -> Void
+    let onPick: (TaskItem) -> Void
 
     @Environment(\.dismiss) private var dismiss
+    @Environment(DailyFocusService.self) private var dailyFocusService
     @Query(
         filter: #Predicate<TaskItem> { task in
             task.statusRaw != "Complete" && task.isDeleted == false
@@ -38,108 +40,153 @@ struct DailyFocusPickerView: View {
         }
     }
 
+    private var todayCandidates: [TaskItem] {
+        Today.members(of: candidates, at: Date()).map(\.task)
+    }
+
+    private var otherCandidates: [TaskItem] {
+        let today = Set(todayCandidates.map(\.persistentModelID))
+        return candidates.filter { !today.contains($0.persistentModelID) }
+    }
+
     var body: some View {
         NavigationStack {
             List {
-                Section {
-                    Picker("Task provider workspace", selection: Binding(
-                        get: { sourceWorkspaceID ?? focus.storageWorkspaceID },
-                        set: { sourceWorkspaceID = $0 }
-                    )) {
-                        ForEach(sessions, id: \.workspaceId) { workspace in
-                            Text(workspace.workspaceName).tag(workspace.workspaceId)
+                if sessions.count > 1 {
+                    Section {
+                        ChoiceChips(
+                            choices: sessions.map(\.workspaceId),
+                            selection: Binding(
+                                get: { sourceWorkspaceID ?? focus.storageWorkspaceID },
+                                set: { sourceWorkspaceID = $0 }
+                            )
+                        ) { id in
+                            sessions.first { $0.workspaceId == id }?.workspaceName ?? id
                         }
+                        .accessibilityIdentifier("daily-focus-source-workspace")
+                        .paperRow()
+                    } header: {
+                        SectionLabel("Workspace")
                     }
-                    .pickerStyle(.menu)
-                    .accessibilityIdentifier("daily-focus-source-workspace")
-                    .cardRow()
                 }
                 if let errorMessage {
-                    Text(errorMessage).foregroundStyle(.red)
+                    Callout(message: errorMessage)
+                        .paperRow()
                 }
-                ForEach(candidates) { task in
-                    Button {
-                        pick(task)
-                    } label: {
-                        HStack {
-                            Text(task.title)
-                                .foregroundStyle(.primary)
-                            Spacer()
-                            if let deadline = task.deadline {
-                                Text(deadline, style: .date)
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
-                            }
-                        }
+                if !todayCandidates.isEmpty {
+                    Section {
+                        ForEach(todayCandidates) { candidateRow($0) }
+                    } header: {
+                        SectionLabel("Today")
+                    }
+                }
+                if !otherCandidates.isEmpty {
+                    Section {
+                        ForEach(otherCandidates) { candidateRow($0) }
+                    } header: {
+                        SectionLabel("Everything else")
                     }
                 }
             }
-            .paperList()
+            .paperList(background: Palette.sheet)
             .searchable(text: $searchText, prompt: "Search tasks")
             .safeAreaInset(edge: .bottom) {
                 if candidates.isEmpty {
                     ContentUnavailableView(
                         "Nothing to pick",
                         systemImage: "scope",
-                        description: Text(searchText.isEmpty ? "Choose an open task or an actionable step in this provider workspace." : "Try another search.")
+                        description: Text(searchText.isEmpty ? "Open tasks and next steps in this workspace show up here." : "Try another search.")
                     )
                 }
             }
-            .navigationTitle("Add to Daily Focus")
+            .navigationTitle("Pick a task")
             .navigationBarTitleDisplayMode(.inline)
             .sheet(item: $replacementTask) { task in
                 NavigationStack {
-                    List(focus.resolvedPicks(among: allTasks)) { item in
-                        Button {
-                            do {
-                                try focus.replace(item.pick, with: task.dailyFocusPick)
-                                onPick()
-                                replacementTask = nil
-                                dismiss()
-                            } catch {
-                                errorMessage = error.localizedDescription
-                                replacementTask = nil
+                    List {
+                        Section {
+                            ForEach(focus.resolvedPicks(among: allTasks)) { item in
+                                Button {
+                                    guard focusIsCurrent() else { return }
+                                    do {
+                                        try focus.pick(task, replacing: item.pick)
+                                        onPick(task)
+                                        replacementTask = nil
+                                        dismiss()
+                                    } catch {
+                                        errorMessage = error.localizedDescription
+                                        replacementTask = nil
+                                    }
+                                } label: {
+                                    Label(item.task?.title ?? "Deleted", systemImage: "arrow.left.arrow.right")
+                                        .foregroundStyle(Palette.ink)
+                                }
+                                .cardRow()
                             }
-                        } label: {
-                            Label(item.task?.title ?? "Unavailable task", systemImage: "arrow.left.arrow.right")
+                        } header: {
+                            SectionNote("Make room for \(task.title). The task you replace keeps its dates.")
                         }
                     }
-                    .navigationTitle("Choose a pick to replace")
+                    .paperList(background: Palette.sheet)
+                    .navigationTitle("Choose a task to replace")
                     .navigationBarTitleDisplayMode(.inline)
-                    .safeAreaInset(edge: .top) {
-                        Text("Make room for \(task.title). The displaced task stays in its provider.")
-                            .font(.subheadline).foregroundStyle(.secondary).padding()
-                    }
                     .toolbar {
                         ToolbarItem(placement: .cancellationAction) {
                             Button("Cancel") { replacementTask = nil }
                         }
                     }
                 }
+                .paperSheet()
             }
             .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Text("\(focus.picks.count) of \(focus.focusLimit)")
-                        .foregroundStyle(.secondary)
-                }
                 ToolbarItem(placement: .topBarLeading) {
                     Button("Cancel") { dismiss() }
                 }
             }
         }
+        .paperSheet()
+    }
+
+    /// A pick lands in the day the focus belongs to. Once midnight passes, the picker closes so
+    /// Today moves to the new day, and the user picks again there.
+    private func focusIsCurrent() -> Bool {
+        guard Today.dayChange(from: focus.day, at: Date()) != nil else { return true }
+        dailyFocusService.lastError = DailyFocusError.dayEnded.errorDescription
+        replacementTask = nil
+        dismiss()
+        return false
     }
 
     private func pick(_ task: TaskItem) {
+        guard focusIsCurrent() else { return }
         if focus.isFull {
             replacementTask = task
             return
         }
         do {
-            try focus.add(task.dailyFocusPick)
-            onPick()
+            try focus.pick(task)
+            onPick(task)
             dismiss()
         } catch {
             errorMessage = error.localizedDescription
         }
+    }
+
+    private func candidateRow(_ task: TaskItem) -> some View {
+        Button {
+            pick(task)
+        } label: {
+            HStack {
+                Text(task.title)
+                    .foregroundStyle(Palette.ink)
+                Spacer()
+                if let date = TaskRowDate(for: task, at: Date()) {
+                    Text(date.text)
+                        .font(.meta)
+                        .foregroundStyle(Palette.muted)
+                }
+            }
+        }
+        .cardRow()
     }
 }

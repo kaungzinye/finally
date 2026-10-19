@@ -26,6 +26,15 @@ struct FinallyApp: App {
             .font: UIFont.rounded(.headline, weight: .semibold),
             .foregroundColor: UIColor(Palette.ink),
         ]
+        // Color carries priority, deadlines, and warnings, so a count badge draws in ink.
+        let tabBar = UITabBarAppearance()
+        tabBar.configureWithDefaultBackground()
+        for item in [tabBar.stackedLayoutAppearance, tabBar.inlineLayoutAppearance, tabBar.compactInlineLayoutAppearance] {
+            item.normal.badgeBackgroundColor = UIColor(Palette.ink)
+            item.normal.badgeTextAttributes = [.foregroundColor: UIColor(Palette.onInk)]
+        }
+        UITabBar.appearance().standardAppearance = tabBar
+        UITabBar.appearance().scrollEdgeAppearance = tabBar
     }
 
     var body: some Scene {
@@ -35,6 +44,8 @@ struct FinallyApp: App {
                     DeadlineDemoView()
                 } else if isDailyFocusDemoMode {
                     DailyFocusDemoView()
+                } else if isTasksDemoMode {
+                    TasksDemoView()
                 } else if isLoading {
                     ProgressView("Loading...")
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -87,7 +98,7 @@ struct FinallyApp: App {
                 Task { await checkSession() }
             }
             .task {
-                if isDeadlineDemoMode || isDailyFocusDemoMode { return }
+                if isDeadlineDemoMode || isDailyFocusDemoMode || isTasksDemoMode { return }
                 await checkSession()
                 await startForegroundSyncLoop()
             }
@@ -121,6 +132,14 @@ struct FinallyApp: App {
 #endif
     }
 
+    private var isTasksDemoMode: Bool {
+#if DEBUG
+        ProcessInfo.processInfo.arguments.contains("-tasks-demo")
+#else
+        false
+#endif
+    }
+
     // MARK: - Session Check
 
     @MainActor
@@ -133,7 +152,6 @@ struct FinallyApp: App {
         let token = KeychainHelper.readNotionToken()
         let serverCredentials = KeychainFinallyServerCredentialStore()
         let context = ModelContext(appContainer)
-        NotificationService.shared.rescheduleAllReminders(modelContext: context)
         let sessions = (try? context.fetch(FetchDescriptor<UserSession>())) ?? []
         let usableSessions = sessions.filter { session in
             switch session.providerIdentity {
@@ -150,6 +168,8 @@ struct FinallyApp: App {
 
         sessionRoute = .resolve(selectedWorkspace: selectedSession)
         isLoading = false
+        await taskProvider.submitWidgetCompletions(store: context)
+        NotificationService.shared.rescheduleAllReminders(modelContext: context)
 
         if sessionRoute == .tasks, let selectedSession {
             try? await taskProvider.synchronize(.launch, workspace: selectedSession, store: context)
@@ -184,6 +204,7 @@ struct FinallyApp: App {
 
     private func runIncrementalSyncIfPossible() async {
         let context = ModelContext(appContainer)
+        await taskProvider.submitWidgetCompletions(store: context)
         NotificationService.shared.rescheduleAllReminders(modelContext: context)
         guard sessionRoute == .tasks else { return }
         guard let session = try? context.selectedProviderWorkspace() else { return }
@@ -224,9 +245,26 @@ private struct DeadlineDemoView: View {
 }
 
 /// The Today tab over an in-memory store seeded with a Daily Focus that mixes providers and
-/// carries one pick whose task is gone.
+/// carries one pick whose task is gone. The widgets draw the same store, and completions made
+/// from them apply when the app comes to the foreground.
 private struct DailyFocusDemoView: View {
     @State private var container = DailyFocusDemoFixture.makeContainer()
+    @Environment(\.scenePhase) private var scenePhase
+
+    var body: some View {
+        ContentView()
+            .modelContainer(container)
+            .onChange(of: scenePhase, initial: true) { _, phase in
+                guard phase == .active else { return }
+                try? WidgetPublisher.applyPendingCompletions(store: container.mainContext)
+                try? WidgetPublisher.publish(store: container.mainContext)
+            }
+    }
+}
+
+/// The app over an in-memory store seeded with Inbox tasks and projects of different sizes.
+private struct TasksDemoView: View {
+    @State private var container = TasksDemoFixture.makeContainer()
 
     var body: some View {
         ContentView()
