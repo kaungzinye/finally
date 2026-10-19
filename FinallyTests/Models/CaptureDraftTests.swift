@@ -54,6 +54,7 @@ final class CaptureDraftTests: XCTestCase {
 
     func testNamedProjectTakesTheTaskOutOfTheInbox() throws {
         let taxes = ProjectItem(externalProjectID: "p-taxes", title: "Taxes")
+        taxes.providerWorkspaceId = "ws"
 
         let task = try XCTUnwrap(capture("Tax return due mon @Taxes", projects: [taxes]))
 
@@ -93,6 +94,7 @@ final class CaptureDraftTests: XCTestCase {
 
     func testPickingASuggestedProjectKeepsItOnceTheQueryLeavesTheText() {
         let taxes = ProjectItem(externalProjectID: "p-taxes", title: "Taxes")
+        taxes.providerWorkspaceId = "ws"
         var draft = CaptureDraft()
 
         type("Tax return @Tax", into: &draft, projects: [taxes])
@@ -147,6 +149,41 @@ final class CaptureDraftTests: XCTestCase {
 
         XCTAssertEqual(task.title, "Pay rent")
         XCTAssertEqual(task.deadline, day(2026, 11, 1))
+    }
+
+    func testATaskCreatedInAnotherWorkspaceDropsTheDraftsProjectAndParent() throws {
+        let errands = ProjectItem(externalProjectID: "p-errands", title: "Errands")
+        errands.providerWorkspaceId = "notion"
+        let move = TaskItem(externalTaskID: "t-move", title: "Move flat")
+        move.providerWorkspaceId = "notion"
+        var draft = CaptureDraft()
+        draft.pick(project: errands)
+        draft.parentTask = move
+        type("Book the van", into: &draft)
+
+        let task = try XCTUnwrap(draft.makeTask(workspaceId: "server", defaults: .standard))
+
+        XCTAssertEqual(task.providerWorkspaceId, "server")
+        XCTAssertNil(task.project)
+        XCTAssertNil(task.parentId)
+        XCTAssertNil(task.parent)
+    }
+
+    func testATaskCreatedInItsDraftsWorkspaceKeepsTheProjectAndParent() throws {
+        let errands = ProjectItem(externalProjectID: "p-errands", title: "Errands")
+        errands.providerWorkspaceId = "notion"
+        let move = TaskItem(externalTaskID: "t-move", title: "Move flat")
+        move.providerWorkspaceId = "notion"
+        var draft = CaptureDraft()
+        draft.pick(project: errands)
+        draft.parentTask = move
+        type("Book the van", into: &draft)
+
+        let task = try XCTUnwrap(draft.makeTask(workspaceId: "notion", defaults: .standard))
+
+        XCTAssertTrue(task.project === errands)
+        XCTAssertEqual(task.parentId, "t-move")
+        XCTAssertTrue(task.parent === move)
     }
 
     func testBlankTextMakesNoTask() {
