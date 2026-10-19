@@ -12,7 +12,7 @@ struct DayEntry: TimelineEntry {
     }
 }
 
-/// Reads the snapshot the app writes. The timeline adds an entry after each timed deadline left
+/// Reads the snapshot the app writes, with the widget completions the app has yet to apply. The timeline adds an entry after each timed deadline left
 /// today and at the next midnight, so deadlines turn overdue and Today rolls over without the app.
 struct DayProvider: TimelineProvider {
     func placeholder(in context: Context) -> DayEntry {
@@ -33,7 +33,7 @@ struct DayProvider: TimelineProvider {
     }
 
     private var storedSnapshot: WidgetSnapshot {
-        WidgetStorage.appGroup?.snapshot ?? .empty
+        WidgetStorage.appGroup?.displayedSnapshot ?? .empty
     }
 }
 

@@ -22,6 +22,24 @@ final class WidgetCompletionTests: XCTestCase {
         XCTAssertEqual(day.ringSections.filter(\.isDone).count, 1)
     }
 
+    func testTheWidgetShowsEveryPendingCompletionWhenASnapshotWriteIsLost() {
+        let storage = makeStorage()
+        let today = Calendar.current.startOfDay(for: Date())
+        let published = WidgetSnapshot(workspaceID: "notion-workspace", focusDay: today, focusLimit: 3, focusPickCount: 2, isFocusConfirmed: true, focusPlaces: [place(1, "brief"), place(2, "release")], tasks: [
+            widgetTask("brief", "Draft the brief"),
+            widgetTask("release", "Ship the release"),
+        ])
+        storage.snapshot = published
+
+        storage.complete(WidgetCompletion(providerWorkspaceID: "notion-workspace", externalTaskID: "brief"))
+        storage.complete(WidgetCompletion(providerWorkspaceID: "notion-workspace", externalTaskID: "release"))
+        storage.snapshot = published
+
+        let day = WidgetDay(snapshot: storage.displayedSnapshot!, at: Date())
+        XCTAssertEqual(day.openPicks.map(\.title), [])
+        XCTAssertEqual(day.ringSections.map(\.isDone), [true, true])
+    }
+
     func testTheAppAppliesWidgetCompletionsAsDirtyEditsAndClearsThem() throws {
         let storage = makeStorage()
         let context = try makeContext()

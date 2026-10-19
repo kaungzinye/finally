@@ -79,6 +79,13 @@ extension WidgetSnapshot {
         return [now] + Set(deadlines).sorted() + [midnight]
     }
 
+    /// Shows every pending widget completion, each finished at its first tap, in tap order.
+    mutating func complete(_ pending: [PendingWidgetCompletion]) {
+        pending.map(\.completion)
+            .sorted { $0.completedAt < $1.completedAt }
+            .forEach { complete($0) }
+    }
+
     /// Shows a widget completion at its tap time, as `TaskItem.complete` does: the task and its open
     /// steps turn done, a parent whose last open step finished returns to Today, and each Daily
     /// Focus place hands over to the next open task in its pick. A recurring parent shows done with
@@ -175,6 +182,14 @@ struct WidgetStorage {
         nonmutating set {
             defaults.set(newValue.flatMap { try? JSONEncoder().encode($0) }, forKey: Self.snapshotKey)
         }
+    }
+
+    /// What the widgets draw: the stored snapshot with every pending completion shown on top, so
+    /// a completion stays done even when a racing tap overwrote the snapshot it wrote.
+    var displayedSnapshot: WidgetSnapshot? {
+        guard var snapshot else { return nil }
+        snapshot.complete(pendingCompletions)
+        return snapshot
     }
 
     var pendingCompletions: [PendingWidgetCompletion] {

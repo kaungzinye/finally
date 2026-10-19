@@ -81,9 +81,7 @@ enum WidgetPublisher {
         let tasks = try store.fetch(FetchDescriptor<TaskItem>())
         var snapshot = WidgetSnapshot(tasks: tasks, focus: focus, workspace: workspace, at: referenceDate)
         // Completions the app has yet to apply stay done on the widget, finished at their first tap.
-        storage.pendingCompletions.map(\.completion)
-            .sorted { $0.completedAt < $1.completedAt }
-            .forEach { snapshot.complete($0) }
+        snapshot.complete(storage.pendingCompletions)
         storage.snapshot = snapshot
 #if canImport(WidgetKit)
         WidgetCenter.shared.reloadAllTimelines()
