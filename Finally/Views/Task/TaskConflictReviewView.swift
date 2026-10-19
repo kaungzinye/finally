@@ -64,9 +64,9 @@ struct TaskConflictReviewView: View {
     }
 
     private func recoverMissing(saveAsNew: Bool) {
-        if saveAsNew { task.saveMissingServerTaskAsDraft() }
-        else { modelContext.delete(task) }
         do {
+            if saveAsNew { try task.saveMissingServerTaskAsDraft(in: modelContext) }
+            else { modelContext.delete(task) }
             try modelContext.save()
             provider.clearError()
             dismiss()

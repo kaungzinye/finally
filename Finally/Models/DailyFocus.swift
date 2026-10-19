@@ -224,3 +224,21 @@ extension TaskItem {
         DailyFocusPick(providerWorkspaceID: providerWorkspaceId ?? "", externalTaskID: externalTaskID)
     }
 }
+
+extension TaskItem {
+    /// Gives the task a new provider identity and repoints every Daily Focus pick at it. A Daily
+    /// Focus stored on Finally Server is marked for its next write.
+    func replaceExternalTaskID(with newID: String, in store: ModelContext) throws {
+        let previous = dailyFocusPick
+        externalTaskID = newID
+        let replacement = dailyFocusPick
+        guard previous != replacement else { return }
+        let serverWorkspaceIDs = Set(try store.fetch(FetchDescriptor<UserSession>())
+            .filter { $0.providerIdentity == .finallyServer }
+            .map(\.workspaceId))
+        for focus in try store.fetch(FetchDescriptor<DailyFocus>()) where focus.picks.contains(previous) {
+            focus.picks = focus.picks.map { $0 == previous ? replacement : $0 }
+            if serverWorkspaceIDs.contains(focus.storageWorkspaceID) { focus.isDirty = true }
+        }
+    }
+}

@@ -21,6 +21,6 @@ Every widget reads the same Today definition as the Today tab. See `docs/model/T
 ## Data Source
 
 - **Shared container**: App Group `group.com.kaungzinye.finally`
-- **Storage**: a JSON presentation snapshot in app-group `UserDefaults`, written by the app after every local change and sync. It carries each open dated task's title, priority, status, scheduled day, deadline, and Daily Focus position for the selected workspace. It also carries every Daily Focus pick, whatever its provider, and each task finished on its scheduled or deadline day, so the lock screen ring can fill their sections.
+- **Storage**: a JSON presentation snapshot in app-group `UserDefaults`, written by the app after every local change and sync. It carries each open dated task's title, priority, status, scheduled day, and deadline for the selected workspace. It also carries every Daily Focus pick, whatever its provider, as its own place holding the picked task and its open steps in order, and each task finished on its scheduled or deadline day, so the lock screen ring can fill their sections.
 - **Shared code**: the widget compiles `Finally/Shared`, which holds the Today query, the row date rule, the snapshot, and the widget selection. The widget and the Today tab read the same code.
 - **Refresh**: the app calls `WidgetCenter.shared.reloadAllTimelines()` after writing the snapshot. The timeline adds an entry at the next midnight so Today rolls over.

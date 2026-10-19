@@ -92,7 +92,8 @@ enum TaskReminder: Codable, Equatable, Identifiable, Sendable {
         return "task-reminder-\(workspace.count):\(workspace)\(taskID.count):\(taskID):\(id.uuidString)"
     }
 
-    /// The instant this reminder fires, or nil while it is inert.
+    /// The instant this reminder fires, or nil while it is inert. A deadline reminder is inert
+    /// when it would fire after a timed deadline.
     /// Day-level offsets resolve on `calendar`'s days at `reminderMinutes` past midnight.
     func fireDate(deadline: Date?, deadlineHasTime: Bool, reminderMinutes: Int, calendar: Calendar = .current) -> Date? {
         switch self {
@@ -100,16 +101,20 @@ enum TaskReminder: Codable, Equatable, Identifiable, Sendable {
             return reminder.at
         case .deadline(let reminder):
             guard let deadline else { return nil }
+            let fire: Date?
             switch reminder.offset {
             case .hourBefore:
-                return deadlineHasTime ? deadline.addingTimeInterval(-3600) : nil
+                fire = deadlineHasTime ? deadline.addingTimeInterval(-3600) : nil
             case .morningOf:
-                return Self.reminderTime(daysBefore: 0, deadline: deadline, minutes: reminderMinutes, calendar: calendar)
+                fire = Self.reminderTime(daysBefore: 0, deadline: deadline, minutes: reminderMinutes, calendar: calendar)
             case .daysBefore(let days):
-                return Self.reminderTime(daysBefore: days, deadline: deadline, minutes: reminderMinutes, calendar: calendar)
+                fire = Self.reminderTime(daysBefore: days, deadline: deadline, minutes: reminderMinutes, calendar: calendar)
             case .weeksBefore(let weeks):
-                return Self.reminderTime(daysBefore: 7 * weeks, deadline: deadline, minutes: reminderMinutes, calendar: calendar)
+                fire = Self.reminderTime(daysBefore: 7 * weeks, deadline: deadline, minutes: reminderMinutes, calendar: calendar)
             }
+            // A deadline reminder that would fire after a timed deadline stays inert.
+            guard let fire, !deadlineHasTime || fire <= deadline else { return nil }
+            return fire
         }
     }
 

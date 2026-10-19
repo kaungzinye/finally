@@ -56,13 +56,12 @@ final class WidgetSnapshotTests: XCTestCase {
             tasks: [brief, launch, slides, release, rent], focus: focus, workspace: notion, at: now, calendar: calendar
         )
 
-        let positions = Dictionary(uniqueKeysWithValues: snapshot.tasks.map { ($0.title, $0.focusPosition) })
-        XCTAssertEqual(positions, [
-            "Draft the brief": 1,
-            "Draft the slides": 2,
-            "Prepare the launch": nil,
-            "Ship the release": 3,
-            "Pay the rent": 4,
+        let titles = Dictionary(uniqueKeysWithValues: snapshot.tasks.map { ($0.id, $0.title) })
+        XCTAssertEqual(snapshot.focusPlaces.map { place in [String(place.position)] + place.taskIDs.map { titles[$0] ?? $0 } }, [
+            ["1", "Draft the brief"],
+            ["2", "Draft the slides", "Prepare the launch"],
+            ["3", "Ship the release"],
+            ["4", "Pay the rent"],
         ])
         XCTAssertEqual(snapshot.focusDay, at(day: 16))
         XCTAssertEqual(snapshot.focusLimit, 5)
@@ -102,11 +101,12 @@ final class WidgetSnapshotTests: XCTestCase {
             focusDay: at(day: 16),
             focusLimit: 3,
             focusPickCount: 2,
+            focusPlaces: [WidgetFocusPlace(position: 1, taskIDs: ["notion-workspace:brief"])],
             tasks: [
                 WidgetTask(
                     providerWorkspaceID: "notion-workspace", externalTaskID: "brief", title: "Draft the brief",
                     priority: .urgent, status: .notStarted, scheduledDay: at(day: 16), deadline: at(day: 17, hour: 9),
-                    deadlineHasTime: true, focusPosition: 1
+                    deadlineHasTime: true
                 ),
                 WidgetTask(
                     providerWorkspaceID: "notion-workspace", externalTaskID: "slides", title: "Draft the slides",

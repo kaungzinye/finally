@@ -10,12 +10,6 @@ struct WidgetTask: Codable, Equatable, Identifiable {
     let scheduledDay: Date?
     let deadline: Date?
     var deadlineHasTime = false
-    /// The task's place in today's Daily Focus, starting at 1. A step standing in for a picked
-    /// parent takes the parent's place.
-    var focusPosition: Int?
-    /// The `id` of the task that takes this one's Daily Focus place once it is done: the picked
-    /// parent's next open step, then the parent itself.
-    var nextFocusTaskID: String?
     var isSubtask = false
     var suggestedDate: Date?
     var hasOpenSubtasks = false
@@ -41,6 +35,15 @@ extension WidgetTask: TodayTask {
     var effectiveSuggestedDate: Date? { suggestedDate }
 }
 
+/// One Daily Focus pick as the widgets track it.
+struct WidgetFocusPlace: Codable, Equatable {
+    /// The pick's place in today's Daily Focus, starting at 1.
+    let position: Int
+    /// The `id`s of the tasks that hold this place in turn: an open picked parent's open steps in
+    /// order, then the parent. The first one is shown.
+    var taskIDs: [String]
+}
+
 /// The presentation snapshot of the selected provider workspace. The app writes it to app-group
 /// storage after every local change and sync, and every widget draws from it.
 struct WidgetSnapshot: Codable, Equatable {
@@ -51,6 +54,8 @@ struct WidgetSnapshot: Codable, Equatable {
     var focusLimit: Int
     /// Every pick, a deleted one included, so the picks count like the Today tab.
     var focusPickCount: Int
+    /// The picks the widgets show, one per resolved pick, in pick order.
+    var focusPlaces: [WidgetFocusPlace] = []
     var tasks: [WidgetTask]
 }
 
@@ -67,18 +72,14 @@ extension WidgetSnapshot {
         return [now] + Set(deadlines).sorted() + [midnight]
     }
 
-    /// Moves a finished task's Daily Focus place to the first open task along its successors.
-    /// The place stays put when no open successor remains.
-    mutating func passFocusPlace(from index: Int) {
-        guard let position = tasks[index].focusPosition else { return }
-        var nextID = tasks[index].nextFocusTaskID
-        while let id = nextID, let next = tasks.firstIndex(where: { $0.id == id }) {
-            if tasks[next].isOpen {
-                tasks[index].focusPosition = nil
-                tasks[next].focusPosition = position
-                return
+    /// Moves each Daily Focus place the finished task held to the first open task after it in
+    /// that place. A place stays put when no open task remains in it.
+    mutating func passFocusPlaces(from taskID: String) {
+        let openIDs = Set(tasks.filter(\.isOpen).map(\.id))
+        for index in focusPlaces.indices where focusPlaces[index].taskIDs.first == taskID {
+            if let next = focusPlaces[index].taskIDs.dropFirst().firstIndex(where: openIDs.contains) {
+                focusPlaces[index].taskIDs.removeFirst(next)
             }
-            nextID = tasks[next].nextFocusTaskID
         }
     }
 }
@@ -145,7 +146,7 @@ struct WidgetStorage {
         for index in snapshot.tasks.indices where snapshot.tasks[index].providerWorkspaceID == completion.providerWorkspaceID
             && snapshot.tasks[index].externalTaskID == completion.externalTaskID {
             snapshot.tasks[index].status = .done
-            snapshot.passFocusPlace(from: index)
+            snapshot.passFocusPlaces(from: snapshot.tasks[index].id)
         }
         self.snapshot = snapshot
     }

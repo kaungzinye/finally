@@ -14,22 +14,17 @@ extension WidgetSnapshot {
         at referenceDate: Date = Date(),
         calendar: Calendar = .current
     ) {
-        var positions: [ObjectIdentifier: Int] = [:]
-        // Each open pick's open steps in order, then the pick, so a widget completion can hand
-        // the pick's place to the next one.
-        var nextInFocus: [ObjectIdentifier: TaskItem] = [:]
+        // Each open pick holds its open steps in order, then itself, so a widget completion can
+        // hand the pick's place to the next one.
+        var places: [WidgetFocusPlace] = []
         var inFocus: Set<ObjectIdentifier> = []
         for (index, item) in (focus?.resolvedPicks(among: tasks) ?? []).enumerated() {
             guard let task = item.task else { continue }
             let chain = task.isOpen
                 ? task.activeSubtasks.filter(\.isOpen).sorted { $0.sortIndex < $1.sortIndex } + [task]
                 : [task]
-            guard positions[ObjectIdentifier(chain[0])] == nil else { continue }
-            positions[ObjectIdentifier(chain[0])] = index + 1
+            places.append(WidgetFocusPlace(position: index + 1, taskIDs: chain.map(\.widgetTaskID)))
             inFocus.formUnion(chain.map(ObjectIdentifier.init))
-            for (current, next) in zip(chain, chain.dropFirst()) {
-                nextInFocus[ObjectIdentifier(current)] = next
-            }
         }
         let today = calendar.startOfDay(for: referenceDate)
         func isOn(_ date: Date?) -> Bool { date.map { calendar.startOfDay(for: $0) == today } ?? false }
@@ -44,15 +39,19 @@ extension WidgetSnapshot {
             focusDay: focus?.day,
             focusLimit: focus?.focusLimit ?? DailyFocus.defaultFocusLimit,
             focusPickCount: focus?.picks.count ?? 0,
-            tasks: shown.map {
-                WidgetTask($0, focusPosition: positions[ObjectIdentifier($0)], nextInFocus: nextInFocus[ObjectIdentifier($0)])
-            }
+            focusPlaces: places,
+            tasks: shown.map(WidgetTask.init)
         )
     }
 }
 
+private extension TaskItem {
+    /// The `id` this task's `WidgetTask` carries.
+    var widgetTaskID: String { "\(providerWorkspaceId ?? ""):\(externalTaskID)" }
+}
+
 private extension WidgetTask {
-    init(_ task: TaskItem, focusPosition: Int?, nextInFocus: TaskItem?) {
+    init(_ task: TaskItem) {
         self.init(
             providerWorkspaceID: task.providerWorkspaceId ?? "",
             externalTaskID: task.externalTaskID,
@@ -62,8 +61,6 @@ private extension WidgetTask {
             scheduledDay: task.scheduledDay,
             deadline: task.deadline,
             deadlineHasTime: task.deadlineHasTime,
-            focusPosition: focusPosition,
-            nextFocusTaskID: nextInFocus.map { "\($0.providerWorkspaceId ?? ""):\($0.externalTaskID)" },
             isSubtask: task.isSubtask,
             suggestedDate: task.isSubtask ? task.effectiveSuggestedDate : nil,
             hasOpenSubtasks: task.hasOpenSubtasks

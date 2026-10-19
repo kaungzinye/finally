@@ -35,6 +35,7 @@ The phone stores synchronized rules in SwiftData and resolves them locally again
 - `daysBefore` fires `value` calendar days before the deadline's day, at the default reminder time.
 - `weeksBefore` fires `7 × value` calendar days before the deadline's day, at the default reminder time.
 - `hourBefore` fires one hour before a timed deadline. It stays inert while the deadline has no time.
+- A deadline rule whose fire time falls after a timed deadline stays inert, so `morningOf` never fires for an 08:00 deadline with a 09:00 default reminder time.
 - `exact` fires at `at` whatever happens to the task's dates.
 
 A deadline at 17:00 on Friday with a 09:00 default reminder time gets `morningOf` at 09:00 Friday, `daysBefore 1` at 09:00 Thursday, and `hourBefore` at 16:00 Friday. Deadline reminders without a deadline stay inert. Fire times in the past are skipped. Day-level resolution uses the local calendar, and the phone schedules resolved instants with explicit UTC components, so a timezone change keeps exact instants and recalculates day-level ones.

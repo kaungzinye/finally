@@ -85,18 +85,20 @@ extension WidgetSnapshot {
             _ title: String,
             priority: TaskPriority? = nil,
             deadline: Date? = nil,
-            status: TaskStatus = .notStarted,
-            focusPosition: Int? = nil
+            status: TaskStatus = .notStarted
         ) -> WidgetTask {
             WidgetTask(
                 providerWorkspaceID: "sample", externalTaskID: title, title: title, priority: priority,
-                status: status, scheduledDay: today, deadline: deadline, focusPosition: focusPosition
+                status: status, scheduledDay: today, deadline: deadline
             )
         }
-        return WidgetSnapshot(workspaceID: "sample", focusDay: today, focusLimit: 3, focusPickCount: 3, tasks: [
-            task("Draft the brief", priority: .high, deadline: today, status: .done, focusPosition: 1),
-            task("Call the bank", priority: .medium, focusPosition: 2),
-            task("Review the contract", focusPosition: 3),
+        let picks = ["Draft the brief", "Call the bank", "Review the contract"].enumerated().map {
+            WidgetFocusPlace(position: $0.offset + 1, taskIDs: ["sample:\($0.element)"])
+        }
+        return WidgetSnapshot(workspaceID: "sample", focusDay: today, focusLimit: 3, focusPickCount: 3, focusPlaces: picks, tasks: [
+            task("Draft the brief", priority: .high, deadline: today, status: .done),
+            task("Call the bank", priority: .medium),
+            task("Review the contract"),
             task("Send the invoice", priority: .medium, deadline: today),
             task("Water the plants"),
         ])

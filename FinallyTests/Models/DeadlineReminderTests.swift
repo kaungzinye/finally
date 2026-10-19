@@ -44,6 +44,22 @@ final class DeadlineReminderTests: XCTestCase {
         XCTAssertNil(fire(.hourBefore, deadline: date(2026, 10, 23), hasTime: false))
     }
 
+    func testDeadlineReminderAfterATimedDeadlineStaysInert() {
+        // An 08:00 deadline comes before the 09:00 default reminder time on its own day.
+        let early = date(2026, 10, 23, 8)
+
+        XCTAssertNil(fire(.morningOf, deadline: early, hasTime: true))
+        XCTAssertEqual(fire(.daysBefore(1), deadline: early, hasTime: true), date(2026, 10, 22, 9))
+        XCTAssertEqual(fire(.morningOf, deadline: date(2026, 10, 23), hasTime: false), date(2026, 10, 23, 9))
+    }
+
+    func testExactReminderAfterATimedDeadlineStillFires() {
+        let instant = date(2026, 10, 23, 10)
+        let reminder = TaskReminder.exact(ExactReminder(at: instant))
+
+        XCTAssertEqual(reminder.fireDate(deadline: date(2026, 10, 23, 8), deadlineHasTime: true, reminderMinutes: nineAM, calendar: calendar), instant)
+    }
+
     func testDeadlineRemindersStayInertWithoutADeadline() {
         XCTAssertNil(fire(.morningOf, deadline: nil, hasTime: false))
         XCTAssertNil(fire(.weeksBefore(1), deadline: nil, hasTime: false))
