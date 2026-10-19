@@ -49,7 +49,11 @@ struct TodayView: View {
                         focus: dailyFocus,
                         onChange: { save(dailyFocus) },
                         onSelectTask: { selectedTask = $0 },
-                        onAddPick: { showPicker = true },
+                        onAddPick: {
+                            // A new day reloads Today, and the user picks into the new day's focus.
+                            guard !moveToCurrentDay() else { return }
+                            showPicker = true
+                        },
                         onEditPicks: { showEditor = true },
                         onReviewDay: { replanningFocus = dailyFocus }
                     )
@@ -93,18 +97,20 @@ struct TodayView: View {
             .task(id: loadID) { await load() }
             .onChange(of: scenePhase) { _, phase in
                 if phase == .active && isIdle {
-                    day = Calendar.current.startOfDay(for: Date())
+                    moveToCurrentDay()
                     Task { await load() }
                 }
             }
-            // Midnight passing while the app stays open moves Today to the new day.
+            // Midnight passing while the app stays open moves Today to the new day. A sheet or
+            // save open across midnight defers the move until it finishes.
             .onReceive(NotificationCenter.default.publisher(for: UIApplication.significantTimeChangeNotification)) { _ in
-                if isIdle {
-                    day = Calendar.current.startOfDay(for: Date())
-                }
+                if isIdle { moveToCurrentDay() }
+            }
+            .onChange(of: isIdle) { _, idle in
+                if idle { moveToCurrentDay() }
             }
             .refreshable {
-                day = Calendar.current.startOfDay(for: Date())
+                moveToCurrentDay()
                 try? await taskProvider.synchronize(.launch, store: modelContext)
                 await load()
             }
@@ -126,6 +132,14 @@ struct TodayView: View {
         .sheet(item: $replanningFocus) { focus in
             DailyFocusReplanningView(focus: focus)
         }
+    }
+
+    /// Moves Today to the current calendar day. Returns whether the day changed.
+    @discardableResult
+    private func moveToCurrentDay() -> Bool {
+        guard let current = Today.dayChange(from: day, at: Date()) else { return false }
+        day = current
+        return true
     }
 
     private func load() async {

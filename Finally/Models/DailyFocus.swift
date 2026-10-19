@@ -15,6 +15,7 @@ enum DailyFocusError: LocalizedError, Equatable {
     case taskUnavailable
     case needsSteps
     case needsNextDay
+    case dayEnded
 
     var errorDescription: String? {
         switch self {
@@ -24,6 +25,7 @@ enum DailyFocusError: LocalizedError, Equatable {
         case .taskUnavailable: "This task is unavailable. You can drop it from Daily Focus."
         case .needsSteps: "Add an unfinished step to this task, then finish breaking it down."
         case .needsNextDay: "Choose Daily Focus for a later day."
+        case .dayEnded: "A new day started. Pick again for today."
         }
     }
 }
@@ -222,6 +224,20 @@ extension TaskItem {
     /// The reference a Daily Focus keeps for this task.
     var dailyFocusPick: DailyFocusPick {
         DailyFocusPick(providerWorkspaceID: providerWorkspaceId ?? "", externalTaskID: externalTaskID)
+    }
+}
+
+extension TaskItem {
+    /// The user deletes the task. The task stays marked for its provider to retire, and every
+    /// Daily Focus that picked it lets the pick go. Returns the Daily Focus records that changed,
+    /// for the caller to save.
+    func delete(in store: ModelContext) throws -> [DailyFocus] {
+        isDeleted = true
+        isDirty = true
+        let pick = dailyFocusPick
+        let changed = try store.fetch(FetchDescriptor<DailyFocus>()).filter { $0.picks.contains(pick) }
+        changed.forEach { $0.remove(pick) }
+        return changed
     }
 }
 
