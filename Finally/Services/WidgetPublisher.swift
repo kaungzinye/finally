@@ -80,8 +80,10 @@ enum WidgetPublisher {
         )).first
         let tasks = try store.fetch(FetchDescriptor<TaskItem>())
         var snapshot = WidgetSnapshot(tasks: tasks, focus: focus, workspace: workspace, at: referenceDate)
-        // Completions the app has yet to apply stay done on the widget.
-        storage.pendingCompletions.forEach { snapshot.complete($0.completion) }
+        // Completions the app has yet to apply stay done on the widget, finished at their first tap.
+        storage.pendingCompletions.map(\.completion)
+            .sorted { $0.completedAt < $1.completedAt }
+            .forEach { snapshot.complete($0) }
         storage.snapshot = snapshot
 #if canImport(WidgetKit)
         WidgetCenter.shared.reloadAllTimelines()
@@ -97,17 +99,21 @@ enum WidgetPublisher {
         let pending = storage.pendingCompletions
         guard !pending.isEmpty else { return [] }
         let tasks = try store.fetch(FetchDescriptor<TaskItem>())
-        // Repeated taps on one task complete it once, so a recurring obligation advances one cycle.
-        var seen: Set<WidgetCompletion> = []
-        let completions = pending.map(\.completion).filter { seen.insert($0).inserted }
-        let completed = completions.compactMap { completion in
-            tasks.first {
+        // Repeated taps on one task complete it once, at the first tap, so a recurring obligation
+        // advances one cycle.
+        let completions = Dictionary(grouping: pending.map(\.completion), by: \.taskID)
+            .values.compactMap { $0.min { $0.completedAt < $1.completedAt } }
+            .sorted { $0.completedAt < $1.completedAt }
+        var completed: [TaskItem] = []
+        for completion in completions {
+            guard let task = tasks.first(where: {
                 $0.providerWorkspaceId == completion.providerWorkspaceID
                     && $0.externalTaskID == completion.externalTaskID
                     && $0.isOpen
-            }
+            }) else { continue }
+            task.complete(at: completion.completedAt)
+            completed.append(task)
         }
-        completed.forEach { $0.complete() }
         try store.save()
         storage.removePendingCompletions(pending)
         try publish(store: store, storage: storage)
