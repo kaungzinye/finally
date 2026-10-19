@@ -68,6 +68,19 @@ final class WidgetSnapshotTests: XCTestCase {
         XCTAssertEqual(snapshot.focusPickCount, 5)
     }
 
+    func testTheSnapshotCarriesWhetherTheUserConfirmedTheDailyFocus() {
+        let brief = task("Draft the brief", deadline: at(day: 16))
+        let focus = DailyFocus(day: at(day: 16), storageWorkspaceID: "notion-workspace")
+        focus.picks = [brief.dailyFocusPick]
+
+        let proposed = WidgetSnapshot(tasks: [brief], focus: focus, workspace: notion, at: now, calendar: calendar)
+        focus.confirm()
+        let confirmed = WidgetSnapshot(tasks: [brief], focus: focus, workspace: notion, at: now, calendar: calendar)
+
+        XCTAssertFalse(proposed.isFocusConfirmed)
+        XCTAssertTrue(confirmed.isFocusConfirmed)
+    }
+
     func testTheSnapshotKeepsTasksFinishedOnTheirDay() {
         let rent = task("Pay the rent", scheduled: at(day: 16))
         rent.status = .done
@@ -101,6 +114,7 @@ final class WidgetSnapshotTests: XCTestCase {
             focusDay: at(day: 16),
             focusLimit: 3,
             focusPickCount: 2,
+            isFocusConfirmed: true,
             focusPlaces: [WidgetFocusPlace(position: 1, taskIDs: ["notion-workspace:brief"])],
             tasks: [
                 WidgetTask(
