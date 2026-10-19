@@ -93,7 +93,8 @@ struct CaptureDraft {
     }
 
     /// The task this draft captures, or nil when it has no title. A new deadline takes the
-    /// default deadline reminders. A task with no project lands in the Inbox.
+    /// default deadline reminders. A task with no project lands in the Inbox. A project or parent
+    /// from another workspace stays behind, so the task holds only its own provider's IDs.
     func makeTask(workspaceId: String?, defaults: DefaultDeadlineReminders) -> TaskItem? {
         let title = titleWithoutShortcuts ?? text.trimmingCharacters(in: .whitespaces)
         guard !title.isEmpty else { return nil }
@@ -105,12 +106,12 @@ struct CaptureDraft {
         task.validateScheduledDay()
         task.priority = priority
         task.tags = tags
-        task.project = project
+        task.project = project.flatMap { $0.providerWorkspaceId == workspaceId ? $0 : nil }
         task.recurrence = recurrence
         task.customRecurrenceRule = customRecurrenceRule
         task.isDirty = true
 
-        if let parentTask {
+        if let parentTask, parentTask.providerWorkspaceId == workspaceId {
             task.parentId = parentTask.externalTaskID
             task.parent = parentTask
             task.sortIndex = parentTask.subtasks.count

@@ -45,6 +45,27 @@ final class WidgetCompletionTests: XCTestCase {
         XCTAssertEqual(day.openPicks.map(\.title), ["Ship the release"])
     }
 
+    func testPublishingBeforeTheAppAppliesAWidgetCompletionKeepsTheTaskDone() throws {
+        let storage = makeStorage()
+        let context = try makeContext()
+        let brief = insertTask("brief", "Draft the brief", into: context)
+        let release = insertTask("release", "Ship the release", into: context)
+        let focus = DailyFocus(day: Calendar.current.startOfDay(for: Date()), storageWorkspaceID: "notion-workspace")
+        focus.picks = [brief.dailyFocusPick, release.dailyFocusPick]
+        context.insert(focus)
+        try context.save()
+        try WidgetPublisher.publish(store: context, storage: storage)
+
+        storage.complete(WidgetCompletion(providerWorkspaceID: "notion-workspace", externalTaskID: "brief"))
+        try WidgetPublisher.publish(store: context, storage: storage)
+
+        XCTAssertEqual(brief.status, .notStarted)
+        XCTAssertEqual(storage.pendingCompletions.count, 1)
+        let day = WidgetDay(snapshot: storage.snapshot!, at: Date())
+        XCTAssertEqual(day.openPicks.map(\.title), ["Ship the release"])
+        XCTAssertEqual(day.ringSections.filter(\.isDone).count, 1)
+    }
+
     func testACompletionForAFinishedOrMissingTaskChangesNothing() throws {
         let storage = makeStorage()
         let context = try makeContext()
