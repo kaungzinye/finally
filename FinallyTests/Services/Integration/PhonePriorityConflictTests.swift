@@ -222,11 +222,33 @@ final class PhonePriorityConflictTests: XCTestCase {
         XCTAssertTrue(task.serverTaskMissing)
         XCTAssertEqual(task.title, "Phone recovery")
         api.nextTaskID = 2
-        task.saveMissingServerTaskAsDraft()
+        try task.saveMissingServerTaskAsDraft(in: context)
         try await FinallyServerTaskProviderAdapter(api: api).synchronize(.push, workspace: workspace, store: context)
         XCTAssertEqual(task.externalTaskID, "2")
         XCTAssertEqual(api.tasks["2"]?.title, "Phone recovery")
         XCTAssertFalse(task.isDirty)
+    }
+
+    func testSavingMissingTaskAsNewKeepsItsDailyFocusPick() async throws {
+        let (_, context, workspace, api, task) = try fixture()
+        let focus = DailyFocus(day: Calendar.current.startOfDay(for: Date()), storageWorkspaceID: workspace.workspaceId)
+        try focus.add(task.dailyFocusPick)
+        context.insert(focus)
+        try context.save()
+        api.tasks.removeAll()
+        task.title = "Phone recovery"
+        task.isDirty = true
+        do { try await FinallyServerTaskProviderAdapter(api: api).synchronize(.push, workspace: workspace, store: context); XCTFail("Expected missing task") }
+        catch FinallyServerClientError.notFound { }
+        api.nextTaskID = 2
+        try task.saveMissingServerTaskAsDraft(in: context)
+        XCTAssertEqual(focus.picks, [task.dailyFocusPick])
+        XCTAssertTrue(focus.isDirty)
+        focus.isDirty = false
+        try await FinallyServerTaskProviderAdapter(api: api).synchronize(.push, workspace: workspace, store: context)
+        XCTAssertEqual(focus.picks, [DailyFocusPick(providerWorkspaceID: workspace.workspaceId, externalTaskID: "2")])
+        XCTAssertTrue(focus.resolvedPicks(among: [task]).allSatisfy(\.isAvailable))
+        XCTAssertTrue(focus.isDirty)
     }
 
     func testTimedRemoteScheduledDayProducesTitleOnlyPatch() async throws {

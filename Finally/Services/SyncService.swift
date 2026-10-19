@@ -235,7 +235,7 @@ final class SyncService {
         let properties = buildNotionProperties(for: task, mappings: mappings)
         if task.lastSyncedAt == nil, !session.tasksDatabaseId.isEmpty {
             let created = try await api.createPage(databaseId: session.tasksDatabaseId, properties: properties)
-            task.externalTaskID = created.id
+            try task.replaceExternalTaskID(with: created.id, in: modelContext)
         } else if task.lastSyncedAt == nil {
             return
         } else {

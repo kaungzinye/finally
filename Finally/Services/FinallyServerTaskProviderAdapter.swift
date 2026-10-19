@@ -142,7 +142,7 @@ final class FinallyServerTaskProviderAdapter: TaskProviderAdapter {
             let remote: FinallyServerTask
             if task.lastSyncedAt == nil {
                 remote = try await api.createTask(projectID: projectID, mutation: mutation)
-                task.externalTaskID = remote.id
+                try task.replaceExternalTaskID(with: remote.id, in: store)
             } else {
                 remote = try await api.updateTask(id: task.externalTaskID, mutation: mutation)
             }

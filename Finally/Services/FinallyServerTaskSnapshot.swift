@@ -1,4 +1,5 @@
 import Foundation
+import SwiftData
 
 extension FinallyServerTask {
     var mutation: FinallyServerTaskMutation {
@@ -57,8 +58,8 @@ extension TaskItem {
         if fields.contains("priority") { priority = mutation.priority }
     }
 
-    func saveMissingServerTaskAsDraft() {
-        externalTaskID = UUID().uuidString
+    func saveMissingServerTaskAsDraft(in store: ModelContext) throws {
+        try replaceExternalTaskID(with: UUID().uuidString, in: store)
         lastSyncedAt = nil
         serverRevision = 0
         serverSnapshotJSON = nil
