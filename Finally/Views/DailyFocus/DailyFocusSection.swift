@@ -86,7 +86,7 @@ struct DailyFocusSection: View {
     private var emptyHint: some View {
         Text("Pick a few tasks from Today.")
             .foregroundStyle(Palette.muted)
-            .cardRow()
+            .roundedCardRow()
     }
 
     @ViewBuilder
@@ -95,17 +95,17 @@ struct DailyFocusSection: View {
             Label(focus.isFull ? "Add an urgent task" : "Pick a task", systemImage: "plus.circle")
         }
         .accessibilityIdentifier("daily-focus-add-pick")
-        .cardRow()
+        .roundedCardRow()
         if !focus.picks.isEmpty {
             Button("Edit", action: onEditPicks)
                 .accessibilityIdentifier("daily-focus-edit-picks")
-                .cardRow()
+                .roundedCardRow()
             if let onReviewDay {
                 Button(action: onReviewDay) {
                     Label("Review the day", systemImage: "arrow.triangle.branch")
                 }
                 .accessibilityIdentifier("daily-focus-review-day")
-                .cardRow()
+                .roundedCardRow()
             }
         }
     }
@@ -127,7 +127,7 @@ struct DailyFocusSection: View {
             }
             .buttonStyle(.borderless)
         }
-        .cardRow()
+        .roundedCardRow()
         .accessibilityIdentifier("daily-focus-deleted-pick")
     }
 }

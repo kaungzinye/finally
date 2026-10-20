@@ -20,7 +20,6 @@ struct TasksView: View {
     @State private var unscheduledOnly = false
     @State private var path: [ProjectItem] = []
     @State private var selectedTask: TaskItem?
-    @State private var showSettings = false
     @State private var showSearch = false
     @State private var showSortConfig = false
 
@@ -45,13 +44,8 @@ struct TasksView: View {
             .navigationDestination(for: ProjectItem.self) { project in
                 ProjectTasksView(project: project, unscheduledOnly: $unscheduledOnly)
             }
+            .settingsButton()
             .toolbar {
-                ToolbarItem(placement: .topBarLeading) {
-                    Button { showSettings = true } label: {
-                        Image(systemName: "gearshape")
-                    }
-                    .accessibilityLabel("Settings")
-                }
                 ToolbarItemGroup(placement: .topBarTrailing) {
                     if layout == .list {
                         Button { showSortConfig = true } label: {
@@ -67,9 +61,6 @@ struct TasksView: View {
             }
         }
         .onChange(of: sessions.selectedProviderWorkspace?.workspaceId) { _, _ in path = [] }
-        .sheet(isPresented: $showSettings) {
-            SettingsView()
-        }
         .sheet(isPresented: $showSearch) {
             SearchFilterView()
         }
@@ -140,7 +131,7 @@ struct TasksView: View {
                             .contentShape(Rectangle())
                         }
                         .buttonStyle(.plain)
-                        .cardRow()
+                        .roundedCardRow()
                         .accessibilityIdentifier("tasks-more-\(group.id)")
                     }
                     if group.tasks.isEmpty {
@@ -174,7 +165,7 @@ struct TasksView: View {
         Text(message)
             .font(.meta)
             .foregroundStyle(Palette.muted)
-            .cardRow()
+            .roundedCardRow()
     }
 
     private func projectTitle(_ project: ProjectItem) -> String {

@@ -18,6 +18,20 @@ extension View {
         listRowBackground(Palette.card)
     }
 
+    /// A row drawn as its own rounded card, 44 points tall with a 4-point gap to the next, so it
+    /// keeps its corners while it slides under a swipe. Rows that share a section with task rows
+    /// use it too, so the section reads as one stack of cards.
+    func roundedCardRow(fill: Color = Palette.card) -> some View {
+        let shape = RoundedRectangle(cornerRadius: 14, style: .continuous)
+        return padding(.horizontal, 20)
+            .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+            .background(fill, in: shape)
+            .contentShape(shape)
+            .listRowBackground(Color.clear)
+            .listRowInsets(EdgeInsets(top: 2, leading: 0, bottom: 2, trailing: 0))
+            .listRowSeparator(.hidden)
+    }
+
     /// Insets that hold a 44-point row to the shared 48-point height.
     func compactRowInsets() -> some View {
         listRowInsets(EdgeInsets(top: 2, leading: 20, bottom: 2, trailing: 20))
