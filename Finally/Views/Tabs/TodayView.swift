@@ -92,8 +92,8 @@ struct TodayView: View {
                 }
             }
             .paperList()
-            .navigationBarTitleDisplayMode(.inline)
-            .settingsButton()
+            .contentMargins(.top, 4, for: .scrollContent)
+            .toolbar(.hidden, for: .navigationBar)
             .disabled(isSaving)
             .task(id: loadID) { await load() }
             .onChange(of: scenePhase) { _, phase in
@@ -184,21 +184,24 @@ struct TodayView: View {
     }
 }
 
-/// The page heading: the weekday and the date.
+/// The page heading: the weekday and the date, with the Settings gear level with the weekday.
 private struct TodayHeader: View {
     let day: Date
 
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
-            Text("Today · \(day.formatted(.dateTime.weekday(.wide)))".uppercased())
-                .font(.eyebrow)
-                .tracking(0.5)
-                .foregroundStyle(Palette.muted)
+            HStack {
+                Text("Today · \(day.formatted(.dateTime.weekday(.wide)))".uppercased())
+                    .font(.eyebrow)
+                    .tracking(0.5)
+                    .foregroundStyle(Palette.muted)
+                Spacer(minLength: 12)
+                SettingsGear()
+            }
             Text(day.formatted(.dateTime.day().month(.wide)))
                 .font(.pageTitle)
                 .foregroundStyle(Palette.ink)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.top, 8)
     }
 }

@@ -222,6 +222,28 @@ private struct SettingsButton: ViewModifier {
     }
 }
 
+/// The Settings gear drawn in a tab's own header row, on the same glass circle as a toolbar
+/// button. Today uses it where its heading replaces the navigation bar.
+struct SettingsGear: View {
+    @State private var showSettings = false
+
+    var body: some View {
+        Button { showSettings = true } label: {
+            Image(systemName: "gearshape")
+                .font(.system(size: 19, weight: .medium))
+                .foregroundStyle(Palette.ink)
+                .frame(width: 44, height: 44)
+                .contentShape(Circle())
+        }
+        .buttonStyle(.plain)
+        .glassSurface(in: Circle())
+        .accessibilityLabel("Settings")
+        .sheet(isPresented: $showSettings) {
+            SettingsView()
+        }
+    }
+}
+
 extension View {
     /// Adds the Settings gear to the toolbar's leading edge. A tab hides it while its own
     /// leading control, such as Cancel, takes the spot.
