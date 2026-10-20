@@ -403,9 +403,13 @@ final class TaskProviderContractTests: XCTestCase {
         return workspace
     }
 
-    func testUnsupportedPopulatedFieldsProduceAProviderNotice() async throws {
+    func testUnsupportedPopulatedFieldsProduceAProviderNoticeOncePerWorkspaceAndField() async throws {
+        let suiteName = "TaskProviderContractTests-\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
+        defer { defaults.removePersistentDomain(forName: suiteName) }
         let coordinator = TaskProviderCoordinator(
-            adapter: FinallyServerTaskProviderAdapter(api: MockFinallyServerAPIClient())
+            adapter: FinallyServerTaskProviderAdapter(api: MockFinallyServerAPIClient()),
+            fieldNotices: FieldNoticeLedger(defaults: defaults)
         )
         let context = try makeInMemoryContext()
         let workspace = UserSession(
@@ -427,6 +431,13 @@ final class TaskProviderContractTests: XCTestCase {
             coordinator.lastWarning,
             "These fields stay on this iPhone only: labels."
         )
+
+        coordinator.clearWarning()
+        task.title = "Plan the launch"
+        task.isDirty = true
+        try await coordinator.submitPendingChanges(for: [task], store: context)
+
+        XCTAssertNil(coordinator.lastWarning)
     }
 
     func testCanonicalPlanningFieldsPersistIndependently() throws {
