@@ -40,7 +40,9 @@ struct UpcomingView: View {
         let date = day.formatted(.dateTime.weekday(.abbreviated).day())
         if calendar.isDateInToday(day) { return "Today · \(date)" }
         if calendar.isDateInTomorrow(day) { return "Tomorrow · \(date)" }
-        return day.formatted(.dateTime.weekday(.abbreviated).day().month(.abbreviated))
+        let style = Date.FormatStyle.dateTime.weekday(.abbreviated).day().month(.abbreviated)
+        let isAnotherYear = calendar.component(.year, from: day) != calendar.component(.year, from: Date())
+        return day.formatted(isAnotherYear ? style.year() : style)
     }
 
     var body: some View {

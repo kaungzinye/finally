@@ -56,7 +56,9 @@ struct ExactReminder: Codable, Equatable, Identifiable, Sendable {
     }
 
     var label: String {
-        at.formatted(.dateTime.month(.abbreviated).day().hour().minute())
+        let style = Date.FormatStyle.dateTime.month(.abbreviated).day().hour().minute()
+        let isAnotherYear = Calendar.current.component(.year, from: at) != Calendar.current.component(.year, from: Date())
+        return at.formatted(isAnotherYear ? style.year() : style)
     }
 }
 

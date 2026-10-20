@@ -92,7 +92,7 @@ struct TaskDetailView: View {
                                         .strikethrough(subtask.status == .done, color: Palette.hairline)
                                         .foregroundStyle(subtask.status == .done ? Palette.muted : Palette.ink)
                                     if let suggested = subtask.effectiveSuggestedDate {
-                                        Text(suggested.formatted(date: .abbreviated, time: .omitted))
+                                        Text(DayMonth.text(for: suggested, at: Date()))
                                             .font(.meta)
                                             .foregroundStyle(suggested < Calendar.current.startOfDay(for: Date()) && subtask.status != .done ? Palette.urgent : Palette.muted)
                                     }

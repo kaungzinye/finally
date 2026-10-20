@@ -155,6 +155,14 @@ final class TodayTests: XCTestCase {
         XCTAssertNil(rowDate(undated))
     }
 
+    func testARowAddsTheYearToADateInAnotherYear() {
+        let nextYear = task("Renew the lease", deadline: calendar.date(from: DateComponents(year: 2027, month: 10, day: 20))!)
+        let lastYear = task("Fix the bike", scheduled: calendar.date(from: DateComponents(year: 2025, month: 12, day: 30))!)
+
+        XCTAssertEqual(rowDate(nextYear), TaskRowDate(kind: .deadline, text: "Oct 20, 2027"))
+        XCTAssertEqual(rowDate(lastYear), TaskRowDate(kind: .scheduledDay, text: "from Dec 30, 2025"))
+    }
+
     // MARK: - Helpers
 
     private func rowDate(_ task: TaskItem) -> TaskRowDate? {

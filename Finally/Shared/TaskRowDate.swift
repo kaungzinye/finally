@@ -1,7 +1,7 @@
 import Foundation
 
 /// The one date a task row shows: the deadline when the task has one, otherwise its scheduled day.
-/// A scheduled day that has passed reads "from Sat".
+/// A scheduled day that has passed reads "from Sat". A date in another year carries its year.
 struct TaskRowDate: Equatable {
     enum Kind: Equatable {
         case deadline
@@ -25,7 +25,7 @@ extension TaskRowDate {
             case 1: "Tomorrow"
             case -1: "Yesterday"
             case 2...6: date.formatted(style.weekday(.abbreviated))
-            default: date.formatted(style.month(.abbreviated).day())
+            default: DayMonth.text(for: date, at: referenceDate, calendar: calendar, locale: locale)
             }
         }
 
@@ -35,12 +35,22 @@ extension TaskRowDate {
         } else if let scheduledDay = task.scheduledDay {
             let offset = days(to: scheduledDay)
             switch offset {
-            case ..<(-6): self.init(kind: .scheduledDay, text: "from " + scheduledDay.formatted(style.month(.abbreviated).day()))
+            case ..<(-6): self.init(kind: .scheduledDay, text: "from " + DayMonth.text(for: scheduledDay, at: referenceDate, calendar: calendar, locale: locale))
             case ..<0: self.init(kind: .scheduledDay, text: "from " + scheduledDay.formatted(style.weekday(.abbreviated)))
             default: self.init(kind: .scheduledDay, text: day(scheduledDay))
             }
         } else {
             return nil
         }
+    }
+}
+
+/// A date as its day and month, such as "20 Oct", with the year added when it differs from the
+/// reference date's year, such as "20 Oct 2027".
+enum DayMonth {
+    static func text(for date: Date, at referenceDate: Date, calendar: Calendar = .current, locale: Locale = .current) -> String {
+        let style = Date.FormatStyle(locale: locale, calendar: calendar, timeZone: calendar.timeZone).month(.abbreviated).day()
+        let isAnotherYear = calendar.component(.year, from: date) != calendar.component(.year, from: referenceDate)
+        return date.formatted(isAnotherYear ? style.year() : style)
     }
 }
