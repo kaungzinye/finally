@@ -44,12 +44,9 @@ struct TaskDetailView: View {
                         .padding(.top, 4)
                         .accessibilityIdentifier("task-detail-title")
 
-                    FlowLayout(spacing: 8) {
-                        StatusChip(task: task)
-                        fieldChips
-                    }
-                    .padding(.top, 8)
-                    .padding(.bottom, 8)
+                    header
+                        .padding(.top, 10)
+                        .padding(.bottom, 12)
                 }
                 .paperRow()
                 .listRowSeparator(.hidden)
@@ -188,48 +185,93 @@ struct TaskDetailView: View {
         }
     }
 
-    @ViewBuilder
-    private var fieldChips: some View {
-        ChipView(
-            label: task.scheduledDay.map { "Scheduled \(formattedPlanningDate($0, hasTime: false))" } ?? "Scheduled",
-            icon: "scope",
-            isPlaceholder: task.scheduledDay == nil
-        ) { showScheduledDayPicker = true }
-        .accessibilityIdentifier("task-detail-scheduled")
+    /// Status, then When, Details and Repeat, each under its own eyebrow and set apart by space.
+    private var header: some View {
+        VStack(alignment: .leading, spacing: 22) {
+            Picker("Status", selection: statusBinding) {
+                ForEach(TaskStatus.allCases, id: \.self) { status in
+                    Text(status.rawValue).tag(status)
+                }
+            }
+            .pickerStyle(.segmented)
+            .accessibilityIdentifier("task-detail-status")
 
-        ChipView(
-            label: task.deadline.map { "Deadline \(formattedPlanningDate($0, hasTime: task.deadlineHasTime))" } ?? "Deadline",
-            icon: "calendar",
-            color: task.isOverdue ? Palette.urgent : Palette.ink,
-            isPlaceholder: task.deadline == nil
-        ) {
-            deadlinePickerHasTime = task.deadlineHasTime
-            showDatePicker = true
+            VStack(alignment: .leading, spacing: 8) {
+                SectionLabel("When")
+                HStack(spacing: 10) {
+                    PlanningDateCard(
+                        caption: "Scheduled",
+                        noun: "scheduled day",
+                        label: task.scheduledDay.map { PlanningDateLabel(date: $0, hasTime: false, at: Date()) }
+                    ) { showScheduledDayPicker = true }
+                    .accessibilityIdentifier("task-detail-scheduled")
+
+                    PlanningDateCard(
+                        caption: "Deadline",
+                        noun: "deadline",
+                        label: task.deadline.map { PlanningDateLabel(date: $0, hasTime: task.deadlineHasTime, at: Date()) },
+                        isOverdue: task.isOverdue
+                    ) {
+                        deadlinePickerHasTime = task.deadlineHasTime
+                        showDatePicker = true
+                    }
+                    .accessibilityIdentifier("task-detail-deadline")
+                }
+                .fixedSize(horizontal: false, vertical: true)
+            }
+
+            VStack(alignment: .leading, spacing: 8) {
+                SectionLabel("Details")
+                FlowLayout(spacing: 8) {
+                    ChipView(
+                        label: task.priority?.rawValue ?? "Priority",
+                        icon: "flag",
+                        color: task.priority?.color ?? Palette.ink,
+                        isPlaceholder: task.priority == nil
+                    ) { showPriorityPicker = true }
+
+                    ChipView(label: task.project?.title ?? "Inbox", icon: "folder") { showProjectPicker = true }
+
+                    ChipView(
+                        label: task.tags.isEmpty ? "Tags" : task.tags.joined(separator: ", "),
+                        icon: "tag",
+                        isPlaceholder: task.tags.isEmpty
+                    ) { showTagPicker = true }
+                }
+            }
+
+            VStack(alignment: .leading, spacing: 8) {
+                SectionLabel("Repeat")
+                ChipView(
+                    label: task.recurrence == .custom
+                        ? (task.customRecurrenceRule?.summary ?? "Custom")
+                        : (task.recurrence == .none ? "Doesn't repeat" : task.recurrence.rawValue),
+                    icon: "repeat",
+                    isPlaceholder: task.recurrence == .none
+                ) { showRecurrencePicker = true }
+                .accessibilityIdentifier("task-detail-repeat")
+            }
         }
-        .accessibilityIdentifier("task-detail-deadline")
+    }
 
-        ChipView(
-            label: task.priority?.rawValue ?? "Priority",
-            icon: "flag",
-            color: task.priority?.color ?? Palette.ink,
-            isPlaceholder: task.priority == nil
-        ) { showPriorityPicker = true }
-
-        ChipView(label: task.project?.title ?? "Inbox", icon: "folder") { showProjectPicker = true }
-
-        ChipView(
-            label: task.tags.isEmpty ? "Tags" : task.tags.joined(separator: ", "),
-            icon: "tag",
-            isPlaceholder: task.tags.isEmpty
-        ) { showTagPicker = true }
-
-        ChipView(
-            label: task.recurrence == .custom
-                ? (task.customRecurrenceRule?.summary ?? "Custom")
-                : (task.recurrence == .none ? "Repeat" : task.recurrence.rawValue),
-            icon: "repeat",
-            isPlaceholder: task.recurrence == .none
-        ) { showRecurrencePicker = true }
+    /// The status control takes the same path as a Board drop: Complete finishes the task, or
+    /// starts a recurring obligation's next cycle and lands back on Not started.
+    private var statusBinding: Binding<TaskStatus> {
+        Binding(
+            get: { task.status },
+            set: { status in
+                guard status != task.status else { return }
+                UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                withAnimation(.snappy) {
+                    let recycled = task.move(to: status)
+                    if task.status == .done, !recycled {
+                        NotificationService.shared.cancelRemindersForTask(task, modelContext: modelContext)
+                    } else {
+                        NotificationService.shared.rescheduleAllReminders(modelContext: modelContext)
+                    }
+                }
+            }
+        )
     }
 
     private var sortedActiveSubtasks: [TaskItem] {
@@ -346,11 +388,49 @@ struct TaskDetailView: View {
         let provider = taskProvider
         Task { await provider.submitPendingChangesReportingFailure(for: edits, store: store) }
     }
+}
 
-    private func formattedPlanningDate(_ date: Date, hasTime: Bool) -> String {
-        date.formatted(
-            date: .abbreviated,
-            time: hasTime ? .shortened : .omitted
-        )
+/// One of the two When cards: a small caption, the day in large rounded type, and the full date
+/// below it. An overdue deadline draws in red, and an empty card offers "Add".
+private struct PlanningDateCard: View {
+    let caption: String
+    /// What the card holds, for VoiceOver's hint, such as "scheduled day".
+    let noun: String
+    let label: PlanningDateLabel?
+    var isOverdue = false
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(caption)
+                    .font(.system(.caption2, design: .rounded, weight: .semibold))
+                    .textCase(.uppercase)
+                    .tracking(0.5)
+                    .foregroundStyle(Palette.muted)
+                    .padding(.bottom, 2)
+                Text(label?.day ?? "Add")
+                    .font(.system(.title2, design: .rounded, weight: .semibold))
+                    .foregroundStyle(label == nil ? Palette.muted : (isOverdue ? Palette.urgent : Palette.ink))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
+                Text(label?.detail ?? " ")
+                    .font(.meta)
+                    .foregroundStyle(isOverdue ? Palette.urgent : Palette.muted)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+            .padding(.horizontal, 14)
+            .padding(.vertical, 12)
+            .background(Palette.card, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+            .contentShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+        }
+        .buttonStyle(.plain)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("\(caption), \(label?.spoken ?? "none")")
+        .accessibilityValue(isOverdue ? "Overdue" : "")
+        .accessibilityHint(label == nil ? "Adds a \(noun)" : "Changes the \(noun)")
+        .accessibilityAddTraits(.isButton)
     }
 }
