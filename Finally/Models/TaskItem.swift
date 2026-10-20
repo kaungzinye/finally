@@ -209,11 +209,31 @@ final class TaskItem {
 
     // MARK: - Actions
 
+    /// Whether a scheduled day fits before the deadline. A day after the deadline's day needs the
+    /// deadline moved to that day, at the deadline's own time of day when it has one.
+    enum ScheduledDayFit: Equatable {
+        case fits
+        case needsDeadlineMoved(to: Date)
+    }
+
+    func scheduledDayFit(for day: Date?, calendar: Calendar = .current) -> ScheduledDayFit {
+        guard let day, let deadline else { return .fits }
+        let newDay = calendar.startOfDay(for: day)
+        let deadlineDay = calendar.startOfDay(for: deadline)
+        guard newDay > deadlineDay else { return .fits }
+        guard deadlineHasTime else { return .needsDeadlineMoved(to: newDay) }
+        let timeOfDay = calendar.dateComponents([.hour, .minute, .second], from: deadlineDay, to: deadline)
+        return .needsDeadlineMoved(to: calendar.date(byAdding: timeOfDay, to: newDay) ?? newDay)
+    }
+
     /// Moves the scheduled day as a dirty edit and spreads the steps' suggested dates again.
-    /// A day after the deadline stops on the deadline's day, and nil clears the scheduled day.
+    /// A day after the deadline's day moves the deadline to that day too, keeping its time of day
+    /// and the task's own reminders. Nil clears the scheduled day.
     func reschedule(to day: Date?, calendar: Calendar = .current) {
+        if case .needsDeadlineMoved(let deadline) = scheduledDayFit(for: day, calendar: calendar) {
+            setDeadline(deadline, hasTime: deadlineHasTime, defaults: .current())
+        }
         scheduledDay = day.map { calendar.startOfDay(for: $0) }
-        validateScheduledDay(calendar: calendar)
         isDirty = true
         SubtaskScheduler.distributeSubtaskDates(parent: self)
     }

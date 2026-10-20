@@ -159,7 +159,7 @@ struct TaskDetailView: View {
             DatePickerSheet(deadline: deadlineBinding, hasTime: $deadlinePickerHasTime)
         }
         .sheet(isPresented: $showScheduledDayPicker) {
-            DatePickerSheet(scheduledDay: scheduledDayBinding, latest: task.deadline)
+            DatePickerSheet(scheduledDay: scheduledDayBinding, task: task)
         }
         .sheet(isPresented: $showPriorityPicker) {
             PriorityPicker(selection: edit(\.priority))
@@ -356,7 +356,7 @@ struct TaskDetailView: View {
         Binding(
             get: { task.scheduledDay },
             set: { day in
-                task.edit { $0.scheduledDay = day }
+                task.reschedule(to: day)
                 planningDatesChanged()
             }
         )

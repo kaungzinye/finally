@@ -61,7 +61,7 @@ struct TaskRowView: View {
             .tint(Palette.highFill)
         }
         .sheet(isPresented: $showDatePicker) {
-            DatePickerSheet(scheduledDay: scheduledDayBinding, latest: task.deadline)
+            DatePickerSheet(scheduledDay: scheduledDayBinding, task: task)
         }
     }
 
@@ -104,7 +104,7 @@ struct TaskRowView: View {
 
     // MARK: - Reschedule
 
-    /// Reschedule moves the scheduled day and never the deadline.
+    /// Reschedule moves the scheduled day, and the deadline too when the user confirms a day after it.
     private var scheduledDayBinding: Binding<Date?> {
         Binding(
             get: { task.scheduledDay },

@@ -226,25 +226,24 @@ final class DailyFocusTests: XCTestCase {
         XCTAssertFalse(task.isDirty)
     }
 
-    func testScheduleAndDeferEditOnlyTheScheduledDay() throws {
+    func testSchedulePastTheDeadlineMovesBothAndDeferEditsOnlyTheScheduledDay() throws {
         let task = TaskItem(externalTaskID: "unfinished", title: "Draft the brief")
         task.providerWorkspaceId = "notion-workspace"
-        let deadline = day.addingTimeInterval(86_400 * 2)
-        task.deadline = deadline
+        task.deadline = day.addingTimeInterval(86_400 * 2)
         let focus = DailyFocus(day: day)
         try focus.add(task.dailyFocusPick)
-        let scheduled = day.addingTimeInterval(86_400 * 5)
+        let scheduled = Calendar.current.startOfDay(for: day.addingTimeInterval(86_400 * 5))
 
         try focus.replan(task.dailyFocusPick, decision: .schedule(scheduled), task: task)
-        XCTAssertEqual(task.scheduledDay, Calendar.current.startOfDay(for: deadline))
-        XCTAssertEqual(task.deadline, deadline)
+        XCTAssertEqual(task.scheduledDay, scheduled)
+        XCTAssertEqual(task.deadline, scheduled)
         XCTAssertTrue(task.isDirty)
         XCTAssertTrue(focus.picks.isEmpty)
 
         try focus.add(task.dailyFocusPick)
         try focus.replan(task.dailyFocusPick, decision: .deferTask, task: task)
         XCTAssertNil(task.scheduledDay)
-        XCTAssertEqual(task.deadline, deadline)
+        XCTAssertEqual(task.deadline, scheduled)
         XCTAssertFalse(task.isDeleted)
         XCTAssertTrue(focus.picks.isEmpty)
     }
