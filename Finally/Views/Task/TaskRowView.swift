@@ -52,7 +52,7 @@ struct TaskRowView: View {
             Button(action: complete) {
                 Label("Complete", systemImage: "checkmark")
             }
-            .tint(Palette.ink)
+            .tint(Palette.done)
         }
         .swipeActions(edge: .trailing) {
             Button {
@@ -60,7 +60,7 @@ struct TaskRowView: View {
             } label: {
                 Label("Reschedule", systemImage: "calendar")
             }
-            .tint(Palette.high)
+            .tint(Palette.highFill)
         }
         .sheet(isPresented: $showDatePicker) {
             DatePickerSheet(scheduledDay: scheduledDayBinding, latest: task.deadline)

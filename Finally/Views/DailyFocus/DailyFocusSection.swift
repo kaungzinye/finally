@@ -229,9 +229,7 @@ struct DailyFocusEditorView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) { EditButton() }
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Done") { dismiss() }
-                }
+                ConfirmToolbarButton("Done") { dismiss() }
             }
         }
         .paperSheet()

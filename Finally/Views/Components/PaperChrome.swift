@@ -104,6 +104,28 @@ extension ButtonStyle where Self == InkButtonStyle {
     static var ink: InkButtonStyle { InkButtonStyle() }
 }
 
+/// A sheet's confirming toolbar button, such as Done or Save. The system fills it with the tint
+/// and draws its label white, so it tints with `Palette.inkControl` to stay legible in dark mode.
+struct ConfirmToolbarButton: ToolbarContent {
+    let title: String
+    var isDisabled = false
+    let action: () -> Void
+
+    init(_ title: String, isDisabled: Bool = false, action: @escaping () -> Void) {
+        self.title = title
+        self.isDisabled = isDisabled
+        self.action = action
+    }
+
+    var body: some ToolbarContent {
+        ToolbarItem(placement: .confirmationAction) {
+            Button(title, action: action)
+                .disabled(isDisabled)
+                .tint(Palette.inkControl)
+        }
+    }
+}
+
 // MARK: - Sheets
 
 extension View {

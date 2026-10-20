@@ -140,9 +140,7 @@ struct SettingsView: View {
             .paperList()
             .navigationTitle("Settings")
             .toolbar {
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Done") { dismiss() }
-                }
+                ConfirmToolbarButton("Done") { dismiss() }
             }
         }
     }

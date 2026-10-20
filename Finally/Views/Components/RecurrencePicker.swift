@@ -54,9 +54,7 @@ struct RecurrencePicker: View {
             .navigationTitle("Repeat")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Done") { dismiss() }
-                }
+                ConfirmToolbarButton("Done") { dismiss() }
             }
         }
         .presentationDetents([.medium, .large])
@@ -171,11 +169,9 @@ struct CustomRecurrenceEditor: View {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel") { dismiss() }
                 }
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Save") {
-                        onSave(rule)
-                        dismiss()
-                    }
+                ConfirmToolbarButton("Save") {
+                    onSave(rule)
+                    dismiss()
                 }
             }
         }
