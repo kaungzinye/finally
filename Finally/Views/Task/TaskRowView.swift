@@ -45,7 +45,7 @@ struct TaskRowView: View {
 
             trailing
         }
-        .roundedCardRow(fill: isSelected ? Palette.selection : Palette.card)
+        .swipeableCardRow(fill: isSelected ? Palette.selection : Palette.card)
         .swipeActions(edge: .leading) {
             Button(action: complete) {
                 Label("Complete", systemImage: "checkmark")

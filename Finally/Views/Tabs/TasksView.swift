@@ -131,7 +131,7 @@ struct TasksView: View {
                             .contentShape(Rectangle())
                         }
                         .buttonStyle(.plain)
-                        .roundedCardRow()
+                        .cardRow()
                         .accessibilityIdentifier("tasks-more-\(group.id)")
                     }
                     if group.tasks.isEmpty {
@@ -165,7 +165,7 @@ struct TasksView: View {
         Text(message)
             .font(.meta)
             .foregroundStyle(Palette.muted)
-            .roundedCardRow()
+            .cardRow()
     }
 
     private func projectTitle(_ project: ProjectItem) -> String {

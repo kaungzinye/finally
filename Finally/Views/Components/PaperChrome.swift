@@ -2,6 +2,12 @@ import SwiftUI
 
 // MARK: - Lists on paper
 
+/// The inset card group a list section draws on paper.
+enum PaperGroup {
+    /// The system's corner radius for an inset grouped section, which a swiped row takes too.
+    static let cornerRadius: CGFloat = 26
+}
+
 extension View {
     /// Cards on paper: inset groups over the paper background, with every row at least 48 points.
     /// The bottom margin lets the last row scroll clear of the floating add button.
@@ -18,23 +24,11 @@ extension View {
         listRowBackground(Palette.card)
     }
 
-    /// A row drawn as its own rounded card, 44 points tall with a 4-point gap to the next, so it
-    /// keeps its corners while it slides under a swipe. Rows that share a section with task rows
-    /// use it too, so the section reads as one stack of cards.
-    func roundedCardRow(fill: Color = Palette.card) -> some View {
-        let shape = RoundedRectangle(cornerRadius: 14, style: .continuous)
-        return padding(.horizontal, 20)
-            .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
-            .background(fill, in: shape)
-            .contentShape(shape)
-            .listRowBackground(Color.clear)
-            .listRowInsets(EdgeInsets(top: 2, leading: 0, bottom: 2, trailing: 0))
-            .listRowSeparator(.hidden)
-    }
-
-    /// Insets that hold a 44-point row to the shared 48-point height.
-    func compactRowInsets() -> some View {
-        listRowInsets(EdgeInsets(top: 2, leading: 20, bottom: 2, trailing: 20))
+    /// A task row in its section's joined card group. At rest the row draws on the group's
+    /// background. While a swipe slides it aside, the row draws as its own card with the group's
+    /// corner radius, so its corners show against the revealed action.
+    func swipeableCardRow(fill: Color = Palette.card) -> some View {
+        modifier(SwipeableCardRow(fill: fill))
     }
 
     /// A list row that sits directly on paper, outside any card.
@@ -53,6 +47,35 @@ extension View {
                 .overlay(shape.stroke(Palette.hairline, lineWidth: 0.5))
                 .shadow(color: .black.opacity(0.12), radius: 18, y: 8)
         }
+    }
+}
+
+/// A swipe slides the whole list cell, its row background included. While the row sits away
+/// from its resting place, the row background clears and the content draws its own card.
+private struct SwipeableCardRow: ViewModifier {
+    let fill: Color
+    /// Where the row rests, learned from its first frame at each width. A swipe moves the row
+    /// without changing its width, and a new width, such as after rotation, means a new rest.
+    @State private var rest: CGRect?
+    @State private var isSliding = false
+
+    func body(content: Content) -> some View {
+        let shape = RoundedRectangle(cornerRadius: PaperGroup.cornerRadius, style: .continuous)
+        content
+            .padding(.horizontal, 20)
+            .frame(maxWidth: .infinity, minHeight: 48, alignment: .leading)
+            .background(isSliding ? fill : Color.clear, in: shape)
+            .contentShape(shape)
+            .onGeometryChange(for: CGRect.self) { $0.frame(in: .scrollView) } action: { frame in
+                guard let rest, abs(rest.width - frame.width) < 0.5 else {
+                    rest = frame
+                    isSliding = false
+                    return
+                }
+                isSliding = abs(frame.minX - rest.minX) > 0.5
+            }
+            .listRowBackground(isSliding ? Color.clear : fill)
+            .listRowInsets(EdgeInsets())
     }
 }
 
