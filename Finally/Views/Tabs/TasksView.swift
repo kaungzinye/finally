@@ -3,6 +3,7 @@ import SwiftUI
 
 /// The Tasks tab: every open task in the workspace, as a list or as the Board.
 /// The list opens with the Inbox, then each project with its nearest tasks.
+/// Both layouts stay mounted under fixed controls, so switching crossfades without rebuilding either.
 struct TasksView: View {
     enum Layout: String {
         case list, board
@@ -27,18 +28,17 @@ struct TasksView: View {
 
     var body: some View {
         NavigationStack(path: $path) {
-            Group {
-                switch layout {
-                case .list:
+            VStack(spacing: 0) {
+                controls
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 8)
+                ZStack {
                     taskList
-                case .board:
-                    VStack(spacing: 0) {
-                        controls
-                            .padding(.horizontal, 16)
-                            .padding(.vertical, 8)
-                        BoardView()
-                    }
+                        .shown(layout == .list)
+                    BoardView(isActive: layout == .board)
+                        .shown(layout == .board)
                 }
+                .animation(.smooth(duration: 0.2), value: layout)
             }
             .background(Palette.paper)
             .navigationTitle("Tasks")
@@ -88,13 +88,19 @@ struct TasksView: View {
 
     private var controls: some View {
         HStack(spacing: 8) {
-            LayoutSwitch(layout: $layout)
-            if layout == .list {
-                FilterChip(title: "Unscheduled", isOn: $unscheduledOnly)
-                    .accessibilityIdentifier("tasks-filter-unscheduled")
+            Picker("Layout", selection: $layout) {
+                Text("List").tag(Layout.list)
+                Text("Board").tag(Layout.board)
             }
+            .pickerStyle(.segmented)
+            .fixedSize()
+            .accessibilityIdentifier("tasks-layout")
+            FilterChip(title: "Unscheduled", isOn: $unscheduledOnly)
+                .accessibilityIdentifier("tasks-filter-unscheduled")
+                .shown(layout == .list)
             Spacer(minLength: 0)
         }
+        .animation(.smooth(duration: 0.2), value: layout)
     }
 
     private var taskList: some View {
@@ -103,9 +109,6 @@ struct TasksView: View {
             workspace: sessions.selectedProviderWorkspace, unscheduledOnly: unscheduledOnly
         )
         return List {
-            controls
-                .controlsRow()
-
             Section {
                 if list.inbox.isEmpty {
                     emptyRow(unscheduledOnly ? "No unscheduled tasks" : "Nothing in Inbox")
@@ -252,37 +255,11 @@ private extension View {
     }
 }
 
-/// Switches Tasks between the list and the Board.
-private struct LayoutSwitch: View {
-    @Binding var layout: TasksView.Layout
-
-    var body: some View {
-        HStack(spacing: 2) {
-            option(.list, title: "List", icon: "list.bullet")
-            option(.board, title: "Board", icon: "rectangle.split.3x1")
-        }
-        .padding(3)
-        .background(Palette.wash, in: Capsule())
-    }
-
-    private func option(_ value: TasksView.Layout, title: String, icon: String) -> some View {
-        let isSelected = layout == value
-        return Button {
-            withAnimation(.snappy) { layout = value }
-        } label: {
-            Label(title, systemImage: icon)
-                .labelStyle(.titleAndIcon)
-                .font(.chip)
-                .lineLimit(1)
-                .fixedSize()
-                .foregroundStyle(isSelected ? Palette.onInk : Palette.ink)
-                .padding(.horizontal, 12)
-                .frame(minHeight: 32)
-                .background(isSelected ? Palette.ink : .clear, in: Capsule())
-                .contentShape(Capsule())
-        }
-        .buttonStyle(.plain)
-        .accessibilityIdentifier("tasks-layout-\(value.rawValue)")
-        .accessibilityAddTraits(isSelected ? .isSelected : [])
+private extension View {
+    /// Shows or hides a view that stays mounted, so it keeps its state and skips a rebuild.
+    func shown(_ isShown: Bool) -> some View {
+        opacity(isShown ? 1 : 0)
+            .allowsHitTesting(isShown)
+            .accessibilityHidden(!isShown)
     }
 }
