@@ -18,7 +18,7 @@ final class PlanningDateLabelTests: XCTestCase {
         let label = PlanningDateLabel(date: at(day: 20), hasTime: false, at: now, calendar: calendar, locale: britain)
 
         XCTAssertEqual(label.day, "Today")
-        XCTAssertEqual(label.detail, "Tue 20 Oct")
+        XCTAssertEqual(label.detail, "20 Oct")
         XCTAssertEqual(label.spoken, "Today")
     }
 
@@ -26,7 +26,7 @@ final class PlanningDateLabelTests: XCTestCase {
         let label = PlanningDateLabel(date: at(day: 23), hasTime: false, at: now, calendar: calendar, locale: britain)
 
         XCTAssertEqual(label.day, "Fri")
-        XCTAssertEqual(label.detail, "Fri 23 Oct")
+        XCTAssertEqual(label.detail, "23 Oct")
         XCTAssertEqual(label.spoken, "Friday 23 October")
     }
 
@@ -35,7 +35,7 @@ final class PlanningDateLabelTests: XCTestCase {
         let yesterday = PlanningDateLabel(date: at(day: 19), hasTime: false, at: now, calendar: calendar, locale: britain)
 
         XCTAssertEqual(tomorrow.day, "Tomorrow")
-        XCTAssertEqual(tomorrow.detail, "Wed 21 Oct")
+        XCTAssertEqual(tomorrow.detail, "21 Oct")
         XCTAssertEqual(yesterday.day, "Yesterday")
         XCTAssertEqual(yesterday.spoken, "Yesterday")
     }
@@ -52,13 +52,36 @@ final class PlanningDateLabelTests: XCTestCase {
         XCTAssertEqual(today.spoken, "Today at 5\u{202F}pm")
     }
 
-    func testADayMoreThanAWeekAwayReadsItsDayAndMonth() {
+    func testADayMoreThanAWeekAwayReadsItsDateOverItsWeekday() {
         let later = PlanningDateLabel(date: at(day: 29), hasTime: false, at: now, calendar: calendar, locale: britain)
         let earlier = PlanningDateLabel(date: at(day: 12), hasTime: false, at: now, calendar: calendar, locale: britain)
 
         XCTAssertEqual(later.day, "29 Oct")
-        XCTAssertEqual(later.detail, "Thu 29 Oct")
+        XCTAssertEqual(later.detail, "Thursday")
+        XCTAssertEqual(later.spoken, "Thursday 29 October")
         XCTAssertEqual(earlier.day, "12 Oct")
+        XCTAssertEqual(earlier.detail, "Monday")
+    }
+
+    func testATimedDeadlineMoreThanAWeekAwayShowsItsWeekdayAndTime() {
+        let label = PlanningDateLabel(date: at(day: 29, hour: 17), hasTime: true, at: now, calendar: calendar, locale: australia)
+
+        XCTAssertEqual(label.day, "29 Oct")
+        XCTAssertEqual(label.detail, "Thursday · 5\u{202F}pm")
+        XCTAssertEqual(label.spoken, "Thursday 29 October at 5\u{202F}pm")
+    }
+
+    func testADayInAnotherYearAddsTheYearToItsDetailAndSpokenDate() {
+        let nextYear = PlanningDateLabel(date: at(day: 29, year: 2027), hasTime: false, at: now, calendar: calendar, locale: britain)
+        let newYearsDay = at(day: 30, month: 12, hour: 9)
+        let acrossTheYear = PlanningDateLabel(date: at(day: 2, month: 1, year: 2027), hasTime: false, at: newYearsDay, calendar: calendar, locale: britain)
+
+        XCTAssertEqual(nextYear.day, "29 Oct")
+        XCTAssertEqual(nextYear.detail, "Friday · 2027")
+        XCTAssertEqual(nextYear.spoken, "Friday, 29 October 2027")
+        XCTAssertEqual(acrossTheYear.day, "Sat")
+        XCTAssertEqual(acrossTheYear.detail, "2 Jan 2027")
+        XCTAssertEqual(acrossTheYear.spoken, "Saturday, 2 January 2027")
     }
 
     func testATimedDeadlineInATwentyFourHourLocaleKeepsItsMinutes() {

@@ -390,8 +390,8 @@ struct TaskDetailView: View {
     }
 }
 
-/// One of the two When cards: a small caption, the day in large rounded type, and the full date
-/// below it. An overdue deadline draws in red, and an empty card offers "Add".
+/// One of the two When cards: a small caption, the day in large rounded type, and what the day
+/// leaves out below it. An overdue deadline draws in red, and an empty card offers "Add".
 private struct PlanningDateCard: View {
     let caption: String
     /// What the card holds, for VoiceOver's hint, such as "scheduled day".
