@@ -6,6 +6,16 @@ import SwiftUI
 enum PaperGroup {
     /// The system's corner radius for an inset grouped section, which a swiped row takes too.
     static let cornerRadius: CGFloat = 26
+
+    /// How far a swipe slides a row before its corners reach the group's radius.
+    static let swipeRoundingDistance: CGFloat = 60
+
+    /// The corner radius of a row slid `offset` points from rest, in either direction. A row at
+    /// rest has square corners and joins its group, and the corners round in step with the
+    /// swipe until they reach the group's radius.
+    static func swipeCornerRadius(forOffset offset: CGFloat) -> CGFloat {
+        min(abs(offset) / swipeRoundingDistance, 1) * cornerRadius
+    }
 }
 
 extension View {
@@ -25,8 +35,8 @@ extension View {
     }
 
     /// A task row in its section's joined card group. At rest the row draws on the group's
-    /// background. While a swipe slides it aside, the row draws as its own card with the group's
-    /// corner radius, so its corners show against the revealed action.
+    /// background. As a swipe slides it aside, its corners round toward the group's radius, so
+    /// they show against the revealed action.
     func swipeableCardRow(fill: Color = Palette.card) -> some View {
         modifier(SwipeableCardRow(fill: fill))
     }
@@ -50,31 +60,32 @@ extension View {
     }
 }
 
-/// A swipe slides the whole list cell, its row background included. While the row sits away
-/// from its resting place, the row background clears and the content draws its own card.
+/// A swipe slides the whole list cell, its row background included. The row background rounds
+/// its corners with the row's distance from rest, so a row at rest joins its group and a swiped
+/// row shows its corners against the revealed action. The system's own group corners still
+/// round a section's first and last rows.
 private struct SwipeableCardRow: ViewModifier {
     let fill: Color
     /// Where the row rests, learned from its first frame at each width. A swipe moves the row
     /// without changing its width, and a new width, such as after rotation, means a new rest.
     @State private var rest: CGRect?
-    @State private var isSliding = false
+    @State private var offset: CGFloat = 0
 
     func body(content: Content) -> some View {
-        let shape = RoundedRectangle(cornerRadius: PaperGroup.cornerRadius, style: .continuous)
+        let shape = RoundedRectangle(cornerRadius: PaperGroup.swipeCornerRadius(forOffset: offset), style: .continuous)
         content
             .padding(.horizontal, 20)
             .frame(maxWidth: .infinity, minHeight: 48, alignment: .leading)
-            .background(isSliding ? fill : Color.clear, in: shape)
             .contentShape(shape)
             .onGeometryChange(for: CGRect.self) { $0.frame(in: .scrollView) } action: { frame in
                 guard let rest, abs(rest.width - frame.width) < 0.5 else {
                     rest = frame
-                    isSliding = false
+                    offset = 0
                     return
                 }
-                isSliding = abs(frame.minX - rest.minX) > 0.5
+                offset = frame.minX - rest.minX
             }
-            .listRowBackground(isSliding ? Color.clear : fill)
+            .listRowBackground(shape.fill(fill))
             .listRowInsets(EdgeInsets())
     }
 }

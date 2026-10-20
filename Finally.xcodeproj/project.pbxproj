@@ -145,6 +145,7 @@
 		EEB9D6E96677AD8EAB1DC409 /* Enums.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5DF9E28C5C320BE1EE73448A /* Enums.swift */; };
 		F3ACAD85A390E0059627C8CB /* PhonePriorityConflictTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 32E0D92C672C8159DFD1EBEE /* PhonePriorityConflictTests.swift */; };
 		F6B3FF871A5A1CF311AE3AB5 /* FinallyServerAccountService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F9EF412B0991CDB2D31BB700 /* FinallyServerAccountService.swift */; };
+		F7D34B0E582FEC502DA1C73C /* PaperGroupTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 07CF2A9704AEFAE231500DD7 /* PaperGroupTests.swift */; };
 		F7E273C1E9278F742980DFFE /* DatabasePickerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0B13C11F80B93B61065C6CAD /* DatabasePickerView.swift */; };
 		F8EDCF27645FBB12C8BB16A5 /* CaptureDraftTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4D0FC86B67D088170EF867CC /* CaptureDraftTests.swift */; };
 		F95D4E81DBCE8109F5CB43CC /* DailyFocusSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB3FBFAEF9F852010C48CD27 /* DailyFocusSection.swift */; };
@@ -189,6 +190,7 @@
 		0519FAB27D1D99141C414FB8 /* FinallyWidgetViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FinallyWidgetViews.swift; sourceTree = "<group>"; };
 		0587AFE7BA6C571E38D93D08 /* PaperChrome.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PaperChrome.swift; sourceTree = "<group>"; };
 		076DC8A4A8CF43403DD2050E /* RecurrencePicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecurrencePicker.swift; sourceTree = "<group>"; };
+		07CF2A9704AEFAE231500DD7 /* PaperGroupTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PaperGroupTests.swift; sourceTree = "<group>"; };
 		0825EA06C67979383841F604 /* TaskDeleteTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskDeleteTests.swift; sourceTree = "<group>"; };
 		08A9E12B9A89E0FDD5D30146 /* ChipView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChipView.swift; sourceTree = "<group>"; };
 		0B13C11F80B93B61065C6CAD /* DatabasePickerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DatabasePickerView.swift; sourceTree = "<group>"; };
@@ -596,6 +598,7 @@
 				E6B474345709AE791A120D5E /* DailyFocusTests.swift */,
 				103C5ECE4EE59941E719538D /* DeadlineReminderTests.swift */,
 				F5885ED3AF7DB43EB8B6F093 /* DefaultDeadlineRemindersTests.swift */,
+				07CF2A9704AEFAE231500DD7 /* PaperGroupTests.swift */,
 				3AF8954557BC6A8854C1F5D7 /* Phase6BTaskItemTests.swift */,
 				35FC044E313696DD223BA41B /* PlanningDateLabelTests.swift */,
 				BDF3A5C0B718FB3F9D18C039 /* RecurrenceTests.swift */,
@@ -766,6 +769,7 @@
 				1A1EF31471916736EF4376BA /* NotionCRUDE2ETests.swift in Sources */,
 				4D86D0AA132A80D5C3114505 /* NotionDataShapeUnitTests.swift in Sources */,
 				A8B9D08ACCC5488F01A66707 /* NotionOnboardingIntegrationTests.swift in Sources */,
+				F7D34B0E582FEC502DA1C73C /* PaperGroupTests.swift in Sources */,
 				B82E053654B7E4DE04A680E3 /* Phase6BNotificationServiceTests.swift in Sources */,
 				5E0CDA7D321610870C57B80D /* Phase6BSubtaskSchedulerTests.swift in Sources */,
 				ADEA4999510EE5FB567BDFEE /* Phase6BTaskItemTests.swift in Sources */,
