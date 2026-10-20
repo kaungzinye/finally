@@ -2,6 +2,17 @@
 
 Every widget reads the same Today definition as the Today tab. See `docs/model/Today.md`.
 
+## Widgets
+
+Each widget is its own kind with its own gallery name, so the gallery lists four widgets. They share one timeline provider.
+
+| Gallery name | Kind | Families |
+|--------------|------|----------|
+| 3 things to do | `FinallyFocusWidget` | `.systemMedium` |
+| Next up | `FinallyNowWidget` | `.systemSmall` |
+| Today | `FinallyTodayWidget` | `.systemLarge` |
+| Today ring | `FinallyTodayRingWidget` | `.accessoryCircular`, `.accessoryRectangular` |
+
 ## Widget Families
 
 | Family | Name | Content |
@@ -23,4 +34,4 @@ Every widget reads the same Today definition as the Today tab. See `docs/model/T
 - **Shared container**: App Group `group.com.kaungzinye.finally`
 - **Storage**: a JSON presentation snapshot in app-group `UserDefaults`, written by the app after every local change and sync. It carries each open dated task's title, priority, status, scheduled day, and deadline for the selected workspace. It also carries every Daily Focus pick, whatever its provider, as its own place holding the picked task and its open steps in order, and each task finished today that was in Today when it finished, with its completion time, so the lock screen ring can fill their sections. A step carries its parent's ID, so finishing a parent's last open step from a widget returns the parent to Today. It records whether the user confirmed the Daily Focus. The widgets draw the snapshot with every pending completion shown on top, so a completion stays done when a racing tap overwrites the snapshot.
 - **Shared code**: the widget compiles `Finally/Shared`, which holds the Today query, the row date rule, the snapshot, and the widget selection. The widget and the Today tab read the same code.
-- **Refresh**: the app calls `WidgetCenter.shared.reloadAllTimelines()` after writing the snapshot. The timeline adds an entry at the next midnight so Today rolls over.
+- **Refresh**: the app calls `WidgetCenter.shared.reloadAllTimelines()` after writing the snapshot, which reloads every kind. The timeline adds an entry at the next midnight so Today rolls over.

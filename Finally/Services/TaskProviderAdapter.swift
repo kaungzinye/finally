@@ -180,14 +180,16 @@ final class TaskProviderCoordinator {
     private let synchronizeProvider: ((TaskProviderSyncIntent, UserSession?, ModelContext) async throws -> Void)?
     private let notionAdapter: SyncService
     private let credentials: FinallyServerCredentialStore
+    @ObservationIgnored private let fieldNotices: FieldNoticeLedger
     @ObservationIgnored private var activeSynchronizations: [SynchronizationKey: ActiveSynchronization] = [:]
 
     var isSyncing = false
     var lastError: String?
     var lastWarning: String?
 
-    init<Adapter: TaskProviderAdapter>(adapter: Adapter)
+    init<Adapter: TaskProviderAdapter>(adapter: Adapter, fieldNotices: FieldNoticeLedger = FieldNoticeLedger())
     where Adapter.WorkspaceState == UserSession, Adapter.LocalStore == ModelContext {
+        self.fieldNotices = fieldNotices
         providerIdentity = adapter.providerIdentity
         capabilities = adapter.capabilities
         notionAdapter = SyncService()
@@ -199,8 +201,10 @@ final class TaskProviderCoordinator {
 
     init(
         notionAdapter: SyncService = SyncService(),
-        credentials: FinallyServerCredentialStore = KeychainFinallyServerCredentialStore()
+        credentials: FinallyServerCredentialStore = KeychainFinallyServerCredentialStore(),
+        fieldNotices: FieldNoticeLedger = FieldNoticeLedger()
     ) {
+        self.fieldNotices = fieldNotices
         providerIdentity = .notion
         capabilities = notionAdapter.capabilities
         self.notionAdapter = notionAdapter
@@ -323,7 +327,9 @@ final class TaskProviderCoordinator {
             for workspace in workspaces {
                 try await synchronize(.push, workspace: workspace, store: store)
             }
-            lastWarning = unsupportedFieldWarning(for: tasks, workspaces: workspaces)
+            if let warning = unsupportedFieldWarning(for: tasks, workspaces: workspaces) {
+                lastWarning = warning
+            }
         } catch {
             lastError = error.localizedDescription
             throw error
@@ -420,12 +426,14 @@ final class TaskProviderCoordinator {
         lastWarning = nil
     }
 
+    /// Names the populated fields a workspace's provider cannot store. Each workspace hears
+    /// about each field once.
     private func unsupportedFieldWarning(
         for tasks: [TaskItem],
         workspaces: [UserSession]
     ) -> String? {
         let workspaceByID = Dictionary(uniqueKeysWithValues: workspaces.map { ($0.workspaceId, $0) })
-        var unsupportedFields: Set<CanonicalTaskField> = []
+        var fieldsByWorkspace: [String: Set<CanonicalTaskField>] = [:]
         for task in tasks {
             guard let workspaceID = task.providerWorkspaceId,
                   let workspace = workspaceByID[workspaceID] else { continue }
@@ -440,9 +448,12 @@ final class TaskProviderCoordinator {
             }
             for field in populatedFields(in: task) {
                 if case .unsupported = support[field] {
-                    unsupportedFields.insert(field)
+                    fieldsByWorkspace[workspaceID, default: []].insert(field)
                 }
             }
+        }
+        let unsupportedFields = fieldsByWorkspace.reduce(into: Set<CanonicalTaskField>()) { unshown, entry in
+            unshown.formUnion(fieldNotices.takeUnshown(entry.value, in: entry.key))
         }
         guard !unsupportedFields.isEmpty else { return nil }
         let names = unsupportedFields

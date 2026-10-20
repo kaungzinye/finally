@@ -69,9 +69,7 @@ struct DailyFocusReplanningView: View {
             .navigationBarTitleDisplayMode(.inline)
             .disabled(isSaving)
             .toolbar {
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Done") { dismiss() }.disabled(isSaving)
-                }
+                ConfirmToolbarButton("Done", isDisabled: isSaving) { dismiss() }
             }
             .sheet(isPresented: Binding(get: { keepPick != nil }, set: { if !$0 { keepPick = nil } })) {
                 if let nextFocus, let keepPick {
@@ -108,7 +106,7 @@ struct DailyFocusReplanningView: View {
                     VStack(alignment: .leading, spacing: 12) {
                         DatePicker("Scheduled", selection: $scheduleDay, in: Calendar.current.startOfDay(for: Date())..., displayedComponents: .date)
                             .datePickerStyle(.graphical)
-                            .tint(Palette.ink)
+                            .tint(Palette.inkControl)
                         SectionNote("The deadline stays where it is.")
                         Spacer(minLength: 0)
                     }
@@ -120,11 +118,9 @@ struct DailyFocusReplanningView: View {
                         ToolbarItem(placement: .cancellationAction) {
                             Button("Cancel") { scheduleTask = nil }
                         }
-                        ToolbarItem(placement: .confirmationAction) {
-                            Button("Schedule") {
-                                decide(ResolvedDailyFocusPick(pick: task.dailyFocusPick, task: task), .schedule(scheduleDay))
-                                scheduleTask = nil
-                            }
+                        ConfirmToolbarButton("Schedule") {
+                            decide(ResolvedDailyFocusPick(pick: task.dailyFocusPick, task: task), .schedule(scheduleDay))
+                            scheduleTask = nil
                         }
                     }
                 }
