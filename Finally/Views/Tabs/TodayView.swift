@@ -18,7 +18,8 @@ struct TodayView: View {
     @State private var replanningFocus: DailyFocus?
     @State private var isSaving = false
     @State private var showPicker = false
-    @State private var showEditor = false
+    /// A task picked from Other tasks while Daily Focus is full, waiting for the pick it swaps with.
+    @State private var swapCandidate: TaskItem?
 
     private var workspace: UserSession? { sessions.selectedProviderWorkspace }
     private var loadID: String { "\(workspace?.workspaceId ?? "")/\(DailyFocus.dayKey(for: day))" }
@@ -31,7 +32,7 @@ struct TodayView: View {
     }
 
     /// No save or sheet is in flight, so Today can move to another day.
-    private var isIdle: Bool { !isSaving && replanningFocus == nil && !showPicker && !showEditor }
+    private var isIdle: Bool { !isSaving && replanningFocus == nil && !showPicker && swapCandidate == nil }
 
     private var otherTasks: [Today.Member<TaskItem>] {
         let scoped = tasks.scoped(to: workspace)
@@ -54,8 +55,9 @@ struct TodayView: View {
                             guard !moveToCurrentDay() else { return }
                             showPicker = true
                         },
-                        onEditPicks: { showEditor = true },
-                        onReviewDay: { replanningFocus = dailyFocus }
+                        onReviewDay: DailyFocus.showsReviewTheDay(
+                            for: dailyFocus, hasUnfinishedEarlierDay: !unfinishedDays.isEmpty, at: Date()
+                        ) ? { replanningFocus = dailyFocus } : nil
                     )
                     .disabled(isSaving)
                 } else {
@@ -80,7 +82,7 @@ struct TodayView: View {
                 if !otherTasks.isEmpty {
                     Section {
                         ForEach(otherTasks, id: \.task.persistentModelID) { member in
-                            TaskRowView(task: member.task)
+                            TaskRowView(task: member.task, focusAction: .pick { pickFromOtherTasks(member.task) })
                                 .contentShape(Rectangle())
                                 .onTapGesture { selectedTask = member.task }
                         }
@@ -121,11 +123,22 @@ struct TodayView: View {
                 DailyFocusPickerView(focus: dailyFocus, onPick: { picked($0, into: dailyFocus) })
             }
         }
-        .sheet(isPresented: $showEditor) {
+        .confirmationDialog(
+            "Swap with which?",
+            isPresented: Binding(get: { swapCandidate != nil }, set: { if !$0 { swapCandidate = nil } }),
+            titleVisibility: .visible,
+            presenting: swapCandidate
+        ) { task in
             if let dailyFocus {
-                DailyFocusEditorView(focus: dailyFocus, onChange: { save(dailyFocus) })
-                    .disabled(isSaving)
+                ForEach(dailyFocus.resolvedPicks(among: tasks)) { item in
+                    Button(item.task?.title ?? "Deleted") {
+                        pick(task, into: dailyFocus, replacing: item.pick)
+                    }
+                }
             }
+            Button("Cancel", role: .cancel) {}
+        } message: { task in
+            Text("All \(dailyFocus?.focusLimit ?? focusLimit) picks are taken. \(task.title) takes the place of the one you choose, which keeps its dates.")
         }
         .sheet(item: $selectedTask) { task in
             TaskDetailView(task: task)
@@ -170,6 +183,27 @@ struct TodayView: View {
             } catch {
                 dailyFocusService.lastError = error.localizedDescription
             }
+        }
+    }
+
+    /// Focus on a task in Other tasks picks it for the day. A full Daily Focus first asks which
+    /// pick it swaps with.
+    private func pickFromOtherTasks(_ task: TaskItem) {
+        guard let dailyFocus, !moveToCurrentDay() else { return }
+        if dailyFocus.isFull {
+            swapCandidate = task
+        } else {
+            pick(task, into: dailyFocus, replacing: nil)
+        }
+    }
+
+    private func pick(_ task: TaskItem, into focus: DailyFocus, replacing displaced: DailyFocusPick?) {
+        swapCandidate = nil
+        do {
+            try focus.pick(task, replacing: displaced)
+            picked(task, into: focus)
+        } catch {
+            dailyFocusService.lastError = error.localizedDescription
         }
     }
 

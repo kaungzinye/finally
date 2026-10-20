@@ -166,14 +166,30 @@ final class DailyFocus {
         remove(pick)
     }
 
-    func remove(atOffsets offsets: IndexSet) {
-        picks = picks.enumerated().filter { !offsets.contains($0.offset) }.map(\.element)
+    /// Drags a pick among the picks a list shows. Picks the list leaves out, such as finished
+    /// ones, keep their places.
+    func move(_ shown: [DailyFocusPick], fromOffsets source: IndexSet, toOffset destination: Int) {
+        var reordered = shown
+        reordered.move(fromOffsets: source, toOffset: destination)
+        let shownSet = Set(shown)
+        var next = reordered.makeIterator()
+        picks = picks.map { shownSet.contains($0) ? next.next() ?? $0 : $0 }
     }
 
     func move(fromOffsets source: IndexSet, toOffset destination: Int) {
-        var current = picks
-        current.move(fromOffsets: source, toOffset: destination)
-        picks = current
+        move(picks, fromOffsets: source, toOffset: destination)
+    }
+
+    /// Review the day shows for a day with picks from 17:00, and all day while an earlier day's
+    /// Daily Focus still holds unfinished picks waiting for replanning.
+    static func showsReviewTheDay(
+        for focus: DailyFocus,
+        hasUnfinishedEarlierDay: Bool,
+        at now: Date,
+        calendar: Calendar = .current
+    ) -> Bool {
+        guard !focus.picks.isEmpty else { return false }
+        return hasUnfinishedEarlierDay || calendar.component(.hour, from: now) >= 17
     }
 
     func confirm() {

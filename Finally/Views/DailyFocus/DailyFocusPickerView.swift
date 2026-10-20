@@ -1,8 +1,7 @@
 import SwiftData
 import SwiftUI
 
-/// Picks a task for the day, listing Today's tasks first. A full day takes a pick only by
-/// replacing the one the user chooses.
+/// Picks a task into an open slot of the day, listing Today's tasks first.
 struct DailyFocusPickerView: View {
     let focus: DailyFocus
     let onPick: (TaskItem) -> Void
@@ -19,7 +18,6 @@ struct DailyFocusPickerView: View {
     @Query private var sessions: [UserSession]
     @State private var searchText = ""
     @State private var sourceWorkspaceID: String?
-    @State private var replacementTask: TaskItem?
     @State private var errorMessage: String?
     @Query private var allTasks: [TaskItem]
 
@@ -101,43 +99,6 @@ struct DailyFocusPickerView: View {
             }
             .navigationTitle("Pick a task")
             .navigationBarTitleDisplayMode(.inline)
-            .sheet(item: $replacementTask) { task in
-                NavigationStack {
-                    List {
-                        Section {
-                            ForEach(focus.resolvedPicks(among: allTasks)) { item in
-                                Button {
-                                    guard focusIsCurrent() else { return }
-                                    do {
-                                        try focus.pick(task, replacing: item.pick)
-                                        onPick(task)
-                                        replacementTask = nil
-                                        dismiss()
-                                    } catch {
-                                        errorMessage = error.localizedDescription
-                                        replacementTask = nil
-                                    }
-                                } label: {
-                                    Label(item.task?.title ?? "Deleted", systemImage: "arrow.left.arrow.right")
-                                        .foregroundStyle(Palette.ink)
-                                }
-                                .cardRow()
-                            }
-                        } header: {
-                            SectionNote("Make room for \(task.title). The task you replace keeps its dates.")
-                        }
-                    }
-                    .paperList(background: Palette.sheet)
-                    .navigationTitle("Choose a task to replace")
-                    .navigationBarTitleDisplayMode(.inline)
-                    .toolbar {
-                        ToolbarItem(placement: .cancellationAction) {
-                            Button("Cancel") { replacementTask = nil }
-                        }
-                    }
-                }
-                .paperSheet()
-            }
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     Button("Cancel") { dismiss() }
@@ -152,17 +113,12 @@ struct DailyFocusPickerView: View {
     private func focusIsCurrent() -> Bool {
         guard Today.dayChange(from: focus.day, at: Date()) != nil else { return true }
         dailyFocusService.lastError = DailyFocusError.dayEnded.errorDescription
-        replacementTask = nil
         dismiss()
         return false
     }
 
     private func pick(_ task: TaskItem) {
         guard focusIsCurrent() else { return }
-        if focus.isFull {
-            replacementTask = task
-            return
-        }
         do {
             try focus.pick(task)
             onPick(task)

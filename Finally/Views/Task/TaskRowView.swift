@@ -4,8 +4,16 @@ import SwiftData
 /// One task on one line: the priority ring, the title, and a short trailing slot.
 /// Every row has the same height whether or not the task carries a deadline or subtasks.
 struct TaskRowView: View {
+    /// A trailing swipe that changes the task's place in Daily Focus: Remove on a pick, Focus on
+    /// a task in Other tasks.
+    enum FocusAction {
+        case remove(() -> Void)
+        case pick(() -> Void)
+    }
+
     @Bindable var task: TaskItem
     var isSelected = false
+    var focusAction: FocusAction?
     @Environment(\.modelContext) private var modelContext
     @Environment(TaskProviderCoordinator.self) private var taskProvider
 
@@ -59,6 +67,19 @@ struct TaskRowView: View {
                 Label("Reschedule", systemImage: "calendar")
             }
             .tint(Palette.highFill)
+            switch focusAction {
+            case .remove(let remove):
+                Button(role: .destructive, action: remove) {
+                    Label("Remove", systemImage: "minus.circle")
+                }
+            case .pick(let pick):
+                Button(action: pick) {
+                    Label("Focus", systemImage: "scope")
+                }
+                .tint(Palette.inkControl)
+            case nil:
+                EmptyView()
+            }
         }
         .sheet(isPresented: $showDatePicker) {
             DatePickerSheet(scheduledDay: scheduledDayBinding, task: task)

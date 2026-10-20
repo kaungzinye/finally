@@ -20,3 +20,4 @@ Daily Focus never grows past its [[Focus limit]].
 - Once confirmed, the first unfinished pick shows as a larger card at the top, with no label.
 - A pick whose task was deleted shows as "Deleted" in muted text.
 - One counter only: "1 of 3 done".
+- Remove takes a pick out of the day and leaves the task open with its dates. Picking into a full day swaps out the pick the user chooses.

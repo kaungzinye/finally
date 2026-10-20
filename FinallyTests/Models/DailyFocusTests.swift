@@ -33,6 +33,37 @@ final class DailyFocusTests: XCTestCase {
         XCTAssertEqual(focus.picks.map(\.externalTaskID), ["d", "a", "c"])
     }
 
+    func testDraggingAShownPickReordersOnlyTheShownPicks() throws {
+        let focus = DailyFocus(day: day, focusLimit: 5)
+        focus.picks = [pick("done"), pick("b"), pick("c"), pick("d")]
+
+        focus.move([pick("b"), pick("c"), pick("d")], fromOffsets: IndexSet(integer: 2), toOffset: 0)
+
+        XCTAssertEqual(focus.picks.map(\.externalTaskID), ["done", "d", "b", "c"])
+    }
+
+    func testReviewTheDayShowsFromFiveInTheEvening() {
+        let focus = DailyFocus(day: day)
+        focus.picks = [pick("a")]
+
+        XCTAssertFalse(DailyFocus.showsReviewTheDay(for: focus, hasUnfinishedEarlierDay: false, at: at(hour: 16, minute: 59)))
+        XCTAssertTrue(DailyFocus.showsReviewTheDay(for: focus, hasUnfinishedEarlierDay: false, at: at(hour: 17)))
+        XCTAssertTrue(DailyFocus.showsReviewTheDay(for: focus, hasUnfinishedEarlierDay: false, at: at(hour: 23, minute: 30)))
+    }
+
+    func testReviewTheDayShowsAllDayWhileAnEarlierDayAwaitsReplanning() {
+        let focus = DailyFocus(day: day)
+        focus.picks = [pick("a")]
+
+        XCTAssertTrue(DailyFocus.showsReviewTheDay(for: focus, hasUnfinishedEarlierDay: true, at: at(hour: 9)))
+    }
+
+    func testReviewTheDayStaysHiddenWithNothingPicked() {
+        let focus = DailyFocus(day: day)
+
+        XCTAssertFalse(DailyFocus.showsReviewTheDay(for: focus, hasUnfinishedEarlierDay: true, at: at(hour: 20)))
+    }
+
     func testDailyFocusIgnoresAPickItAlreadyHolds() throws {
         let focus = DailyFocus(day: day)
         try focus.add(pick("a"))
@@ -298,6 +329,10 @@ final class DailyFocusTests: XCTestCase {
         let configuration = ModelConfiguration(isStoredInMemoryOnly: true)
         let container = try ModelContainer(for: schema, configurations: [configuration])
         return ModelContext(container)
+    }
+
+    private func at(hour: Int, minute: Int = 0) -> Date {
+        Calendar.current.date(bySettingHour: hour, minute: minute, second: 0, of: day)!
     }
 
     private func pick(_ taskID: String, workspace: String = "notion-workspace") -> DailyFocusPick {
