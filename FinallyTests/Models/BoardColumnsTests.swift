@@ -14,6 +14,22 @@ final class BoardColumnsTests: XCTestCase {
         context.insert(workspace)
     }
 
+    func testADropOnTheStatusBarLandsOnTheSegmentUnderIt() {
+        XCTAssertEqual(BoardColumns.status(atX: 10, inWidth: 300), .notStarted)
+        XCTAssertEqual(BoardColumns.status(atX: 150, inWidth: 300), .inProgress)
+        XCTAssertEqual(BoardColumns.status(atX: 290, inWidth: 300), .done)
+    }
+
+    func testADropPastEitherEndOfTheStatusBarLandsOnTheEndSegment() {
+        XCTAssertEqual(BoardColumns.status(atX: -4, inWidth: 300), .notStarted)
+        XCTAssertEqual(BoardColumns.status(atX: 300, inWidth: 300), .done)
+        XCTAssertEqual(BoardColumns.status(atX: 340, inWidth: 300), .done)
+    }
+
+    func testAStatusBarWithNoWidthNamesNoSegment() {
+        XCTAssertNil(BoardColumns.status(atX: 10, inWidth: 0))
+    }
+
     func testColumnsGroupTopLevelTasksOfTheWorkspaceByStatus() {
         makeTask("idle", "Buy stamps")
         makeTask("active", "Paint the fence").status = .inProgress
