@@ -118,8 +118,9 @@ extension ButtonStyle where Self == InkButtonStyle {
     static var ink: InkButtonStyle { InkButtonStyle() }
 }
 
-/// A sheet's confirming toolbar button, such as Done or Save. The system fills it with the tint
-/// and draws its label white, so it tints with `Palette.inkControl` to stay legible in dark mode.
+/// A sheet's confirming toolbar button, such as Done or Save. On iOS 26 it is prominent glass
+/// filled with ink, its label drawn in `onInk`, so it reads in both modes whatever label color
+/// the system would pick. Earlier systems draw it as bold ink text.
 struct ConfirmToolbarButton: ToolbarContent {
     let title: String
     var isDisabled = false
@@ -133,9 +134,20 @@ struct ConfirmToolbarButton: ToolbarContent {
 
     var body: some ToolbarContent {
         ToolbarItem(placement: .confirmationAction) {
-            Button(title, action: action)
+            if #available(iOS 26, *) {
+                Button(action: action) {
+                    Text(title)
+                        .fontWeight(.semibold)
+                        .foregroundStyle(Palette.onInk)
+                }
+                .buttonStyle(.glassProminent)
+                .tint(Palette.ink)
                 .disabled(isDisabled)
-                .tint(Palette.inkControl)
+            } else {
+                Button(title, action: action)
+                    .fontWeight(.semibold)
+                    .disabled(isDisabled)
+            }
         }
     }
 }

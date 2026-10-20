@@ -24,9 +24,9 @@ enum Palette {
     static let done = Color(light: 0x3B7347, dark: 0x47805A)
     /// The High orange deep enough to carry the system's white label in both modes.
     static let highFill = Color(light: 0xA4561F, dark: 0xA4561F)
-    /// Ink for system controls that draw white over their tint, such as the prominent toolbar
-    /// button and the selected day in a date picker. Dark mode uses a warm tan that holds white
-    /// text and still reads on dark paper.
+    /// Ink for system controls that draw white over their tint, such as today's date selected in
+    /// a graphical date picker. Dark mode uses a warm tan that holds white text and still reads
+    /// on dark paper.
     static let inkControl = Color(light: 0x27221F, dark: 0x8C7A63)
 
     /// The priority color for a stored priority name. A task without a priority draws in `low`.
