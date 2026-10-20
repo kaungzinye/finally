@@ -131,6 +131,7 @@ struct TaskDetailView: View {
                 }
             }
             .paperList(background: Palette.sheet)
+            .contentMargins(.top, 0, for: .scrollContent)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
