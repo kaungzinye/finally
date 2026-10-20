@@ -5,7 +5,8 @@ import SwiftData
 /// Seeds an in-memory store for the `-tasks-demo` launch argument: one Notion workspace with
 /// Inbox tasks, a project holding more than three open tasks, a project with one undated open task
 /// and one complete task, and an empty project. Three Home tasks carry priorities, one is in progress,
-/// and the boiler sits in the window between its scheduled day and its deadline.
+/// and the boiler sits in the window between its scheduled day and its deadline. The Inbox also
+/// holds a timed deadline tomorrow and a deadline a year out.
 enum TasksDemoFixture {
     static let workspaceID = "demo-tasks-workspace"
 
@@ -36,6 +37,10 @@ enum TasksDemoFixture {
 
         makeTask("demo-receipts", "Sort the receipts", in: context)
         makeTask("demo-dentist", "Book the dentist", in: context).scheduledDay = day(2)
+        let water = makeTask("demo-water", "Pay the water bill", in: context)
+        water.deadline = calendar.date(byAdding: DateComponents(hour: 17, minute: 30), to: day(1))
+        water.deadlineHasTime = true
+        makeTask("demo-lease", "Renew the lease", in: context).deadline = day(365)
 
         let boiler = makeTask("demo-boiler", "Service the boiler", project: home, in: context)
         boiler.scheduledDay = day(0)

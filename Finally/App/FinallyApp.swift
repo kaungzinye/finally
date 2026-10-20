@@ -254,6 +254,7 @@ private struct DailyFocusDemoView: View {
     var body: some View {
         ContentView()
             .modelContainer(container)
+            .demoTab()
             .onChange(of: scenePhase, initial: true) { _, phase in
                 guard phase == .active else { return }
                 try? WidgetPublisher.applyPendingCompletions(store: container.mainContext)
@@ -269,7 +270,29 @@ private struct TasksDemoView: View {
     var body: some View {
         ContentView()
             .modelContainer(container)
+            .demoTab()
     }
+}
+
+/// A demo opens on the tab its `-demo-tab today|upcoming|tasks` launch argument names.
+private struct DemoTab: ViewModifier {
+    @Environment(NavigationRouter.self) private var router
+
+    func body(content: Content) -> some View {
+        content.onAppear {
+            let arguments = ProcessInfo.processInfo.arguments
+            guard let index = arguments.firstIndex(of: "-demo-tab"), arguments.indices.contains(index + 1) else { return }
+            switch arguments[index + 1] {
+            case "upcoming": router.selectedTab = .upcoming
+            case "tasks": router.selectedTab = .tasks
+            default: router.selectedTab = .today
+            }
+        }
+    }
+}
+
+private extension View {
+    func demoTab() -> some View { modifier(DemoTab()) }
 }
 #endif
 

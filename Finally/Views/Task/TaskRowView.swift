@@ -1,8 +1,9 @@
 import SwiftUI
 import SwiftData
 
-/// One task on one line: the priority ring, the title, and a short trailing slot.
-/// Every row has the same height whether or not the task carries a deadline or subtasks.
+/// One task on one line: the date in a fixed leading column, the title, a short trailing slot,
+/// and the priority ring on the right. Every row has the same 48-point height, and a row with no
+/// date keeps the empty column so titles line up.
 struct TaskRowView: View {
     /// A trailing swipe that changes the task's place in Daily Focus: Remove on a pick, Focus on
     /// a task in Other tasks.
@@ -18,6 +19,8 @@ struct TaskRowView: View {
     @Environment(TaskProviderCoordinator.self) private var taskProvider
 
     @State private var showDatePicker = false
+    /// Wide enough for "Yesterday" or "from Dec 30". A year or time sits on a second line.
+    @ScaledMetric(relativeTo: .footnote) private var dateColumnWidth: CGFloat = 76
 
     private var isDone: Bool { task.status == .done }
 
@@ -35,14 +38,7 @@ struct TaskRowView: View {
 
     var body: some View {
         HStack(spacing: 12) {
-            Button(action: complete) {
-                PriorityRing(color: task.priority?.color ?? Palette.low, isDone: isDone)
-                    .frame(width: 44, height: 44)
-                    .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-            .padding(.leading, -11)
-            .accessibilityLabel(isDone ? "Completed" : "Complete")
+            dateColumn
 
             Text(task.title)
                 .lineLimit(1)
@@ -52,6 +48,15 @@ struct TaskRowView: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
 
             trailing
+
+            Button(action: complete) {
+                PriorityRing(color: task.priority?.color ?? Palette.low, isDone: isDone)
+                    .frame(width: 44, height: 44)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .padding(.trailing, -11)
+            .accessibilityLabel(isDone ? "Completed" : "Complete")
         }
         .swipeableCardRow(fill: isSelected ? Palette.selection : Palette.card)
         .swipeActions(edge: .leading) {
@@ -86,6 +91,26 @@ struct TaskRowView: View {
         }
     }
 
+    private var dateColumn: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            if let rowDate {
+                Text(rowDate.columnDay)
+                    .font(.meta)
+                if let detail = rowDate.columnDetail {
+                    Text(detail)
+                        .font(.caption2.monospacedDigit())
+                }
+            }
+        }
+        .foregroundStyle(rowDate.map(color(for:)) ?? Palette.muted)
+        .lineLimit(1)
+        .minimumScaleFactor(0.8)
+        .frame(width: dateColumnWidth, alignment: .leading)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(rowDate?.text ?? "")
+        .accessibilityHidden(rowDate == nil)
+    }
+
     private var trailing: some View {
         HStack(spacing: 8) {
             if task.isSubtask, let parentTitle = task.parent?.title {
@@ -98,10 +123,6 @@ struct TaskRowView: View {
                 let progress = task.subtaskProgress
                 Label("\(progress.done)/\(progress.total)", systemImage: "checkmark")
                     .labelStyle(.titleAndIcon)
-            }
-            if let rowDate {
-                Text(rowDate.text)
-                    .foregroundStyle(color(for: rowDate))
             }
         }
         .font(.meta)

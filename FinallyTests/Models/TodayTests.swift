@@ -159,8 +159,20 @@ final class TodayTests: XCTestCase {
         let nextYear = task("Renew the lease", deadline: calendar.date(from: DateComponents(year: 2027, month: 10, day: 20))!)
         let lastYear = task("Fix the bike", scheduled: calendar.date(from: DateComponents(year: 2025, month: 12, day: 30))!)
 
-        XCTAssertEqual(rowDate(nextYear), TaskRowDate(kind: .deadline, text: "Oct 20, 2027"))
-        XCTAssertEqual(rowDate(lastYear), TaskRowDate(kind: .scheduledDay, text: "from Dec 30, 2025"))
+        XCTAssertEqual(rowDate(nextYear)?.text, "Oct 20, 2027")
+        XCTAssertEqual(rowDate(lastYear)?.text, "from Dec 30, 2025")
+    }
+
+    func testARowsDateColumnPutsTheYearOrTimeOnASecondLine() {
+        let nearby = task("Water the plants", scheduled: at(day: 17))
+        let nextYear = task("Renew the lease", deadline: calendar.date(from: DateComponents(year: 2027, month: 10, day: 20))!)
+        let lastYear = task("Fix the bike", scheduled: calendar.date(from: DateComponents(year: 2025, month: 12, day: 30))!)
+        let timed = task("Ship the draft", deadline: at(day: 17, hour: 17, minute: 30), deadlineHasTime: true)
+
+        XCTAssertEqual(rowDate(nearby).map { [$0.columnDay, $0.columnDetail] }, ["Tomorrow", nil])
+        XCTAssertEqual(rowDate(nextYear).map { [$0.columnDay, $0.columnDetail] }, ["Oct 20", "2027"])
+        XCTAssertEqual(rowDate(lastYear).map { [$0.columnDay, $0.columnDetail] }, ["from Dec 30", "2025"])
+        XCTAssertEqual(rowDate(timed).map { [$0.columnDay, $0.columnDetail] }, ["Tomorrow", "5:30\u{202F}PM"])
     }
 
     // MARK: - Helpers
