@@ -159,8 +159,8 @@ struct FilterChip: View {
             .foregroundStyle(isOn ? Palette.onInk : Palette.ink)
             .padding(.horizontal, 12)
             .frame(minHeight: 38)
-            .background(isOn ? Palette.ink : Palette.wash, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
-            .contentShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+            .background(isOn ? Palette.ink : Palette.wash, in: Capsule())
+            .contentShape(Capsule())
         }
         .buttonStyle(.plain)
         .accessibilityAddTraits(isOn ? .isSelected : [])
@@ -187,8 +187,8 @@ struct ChoiceChips<Value: Hashable>: View {
                         .foregroundStyle(isSelected ? Palette.onInk : Palette.ink)
                         .padding(.horizontal, 12)
                         .frame(minWidth: 38, minHeight: 34)
-                        .background(isSelected ? Palette.ink : Palette.wash, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
-                        .contentShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                        .background(isSelected ? Palette.ink : Palette.wash, in: Capsule())
+                        .contentShape(Capsule())
                 }
                 .buttonStyle(.plain)
                 .accessibilityAddTraits(isSelected ? .isSelected : [])
