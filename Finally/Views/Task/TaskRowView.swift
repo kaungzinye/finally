@@ -112,7 +112,7 @@ struct TaskRowView: View {
             }
         case .focus(let number, let isNext):
             // One view tree for open and done, so completing and reopening animate the same
-            // views: the number scales, the title restyles, and the meta line fades and slides.
+            // views. The title keeps its face, since a font change swaps text instead of easing.
             HStack(spacing: 14) {
                 Text("\(number)")
                     .font(.focusNumber)
@@ -124,23 +124,21 @@ struct TaskRowView: View {
 
                 VStack(alignment: .leading, spacing: 3) {
                     Text(task.title)
-                        .font(isDone ? .subheadline : .focusTitle)
+                        .font(.focusTitle)
                         .lineLimit(isDone ? 1 : 2)
                         .strikethrough(isDone, color: Palette.muted)
                         .foregroundStyle(isDone || isMissedScheduledDay ? Palette.muted : Palette.ink)
                     if !isDone {
                         focusMeta
-                            .transition(.opacity.combined(with: .offset(y: -6)))
+                            .transition(.opacity)
                     }
                 }
                 .padding(.vertical, isDone ? 0 : 10)
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .clipped()
 
                 ring(diameter: isDone ? 20 : 24, height: 40, doneFill: Palette.done, doneMark: .white)
             }
             .frame(maxWidth: .infinity, minHeight: isDone ? 40 : 64)
-            .easedRowHeight(Self.focusSpring)
         }
     }
 
@@ -233,19 +231,28 @@ struct TaskRowView: View {
         if case .focus = layout { .spring(Self.focusSpring) } else { .snappy }
     }
 
+    /// Completing or reopening animates the row first. The reminder and provider work waits
+    /// until the animation ends, since fetching every task mid-animation drops frames.
     private func toggleCompletion() {
         UIImpactFeedbackGenerator(style: .light).impactOccurred()
+        let wasDone = isDone
+        var completed = false
         withAnimation(completionAnimation) {
-            if isDone {
+            if wasDone {
                 task.move(to: .notStarted)
-                NotificationService.shared.rescheduleAllReminders(modelContext: modelContext)
-            } else if task.complete() {
+            } else {
+                completed = task.complete()
+            }
+        }
+        Task {
+            try? await Task.sleep(for: .milliseconds(400))
+            if wasDone || completed {
                 NotificationService.shared.rescheduleAllReminders(modelContext: modelContext)
             } else {
                 NotificationService.shared.cancelRemindersForTask(task, modelContext: modelContext)
             }
+            submitTaskMutation()
         }
-        submitTaskMutation()
     }
 
     // MARK: - Reschedule

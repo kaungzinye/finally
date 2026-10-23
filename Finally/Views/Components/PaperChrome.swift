@@ -61,63 +61,6 @@ extension View {
     }
 }
 
-extension View {
-    /// Eases a list row's height along `spring` whenever its content grows or shrinks. A list cell
-    /// takes a new height at once, even inside an animation, so the row steps its own height
-    /// frame by frame and the rows below follow it. The content clips to the stepping height.
-    func easedRowHeight(_ spring: Spring) -> some View {
-        modifier(EasedRowHeight(spring: spring))
-    }
-}
-
-private struct EasedRowHeight: ViewModifier {
-    let spring: Spring
-    /// The height the row shows. It holds the last height until the next change eases away
-    /// from it, so the cell never draws the content's new height before the easing starts.
-    @State private var shown: CGFloat?
-    @State private var target: CGFloat?
-    @State private var easing: Task<Void, Never>?
-
-    func body(content: Content) -> some View {
-        content
-            .fixedSize(horizontal: false, vertical: true)
-            .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { height in
-                if let shown, target != height {
-                    ease(from: shown, to: height)
-                } else if shown == nil {
-                    shown = height
-                }
-                target = height
-            }
-            .frame(height: shown)
-            .clipShape(VerticalClip())
-    }
-
-    private func ease(from start: CGFloat, to end: CGFloat) {
-        easing?.cancel()
-        easing = Task { @MainActor in
-            let clock = ContinuousClock()
-            let began = clock.now
-            while !Task.isCancelled {
-                let elapsed = began.duration(to: clock.now) / .seconds(1)
-                guard elapsed < spring.settlingDuration else {
-                    shown = end
-                    return
-                }
-                shown = start + (end - start) * spring.value(target: 1.0, time: elapsed)
-                try? await Task.sleep(for: .milliseconds(8))
-            }
-        }
-    }
-}
-
-/// Clips above and below a view and lets it draw past its sides, where a row's ring reaches.
-private struct VerticalClip: Shape {
-    func path(in rect: CGRect) -> Path {
-        Path(rect.insetBy(dx: -rect.width, dy: 0))
-    }
-}
-
 /// A swipe slides the whole list cell, its row background included. The row background rounds
 /// its corners with the row's distance from rest, so a row at rest joins its group and a swiped
 /// row shows its corners against the revealed action. The system's own group corners still
