@@ -22,6 +22,8 @@ enum Palette {
 
     /// A finished task: the Complete swipe action. Deep enough to carry the system's white label in both modes.
     static let done = Color(light: 0x3B7347, dark: 0x47805A)
+    /// The Urgent red deep enough to carry the system's white label in both modes.
+    static let urgentFill = Color(light: 0xB83A26, dark: 0xB3432E)
     /// The High orange deep enough to carry the system's white label in both modes.
     static let highFill = Color(light: 0xA4561F, dark: 0xA4561F)
     /// Ink for system controls that draw white over their tint, such as today's date selected in
