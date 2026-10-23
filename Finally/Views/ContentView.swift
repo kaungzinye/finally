@@ -43,6 +43,10 @@ struct ContentView: View {
                     .tabItem { Label("Tasks", systemImage: "checklist") }
                     .badge(inboxCount)
                     .tag(NavigationRouter.Tab.tasks)
+
+                SettingsView()
+                    .tabItem { Label("Settings", systemImage: "gearshape") }
+                    .tag(NavigationRouter.Tab.settings)
             }
             .background(Palette.paper.ignoresSafeArea())
 

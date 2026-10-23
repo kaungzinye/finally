@@ -219,20 +219,16 @@ struct TodayView: View {
     }
 }
 
-/// The page heading: the weekday and the date, with the Settings gear level with the weekday.
+/// The page heading: the weekday over the date.
 private struct TodayHeader: View {
     let day: Date
 
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
-            HStack {
-                Text("Today · \(day.formatted(.dateTime.weekday(.wide)))".uppercased())
-                    .font(.eyebrow)
-                    .tracking(0.5)
-                    .foregroundStyle(Palette.muted)
-                Spacer(minLength: 12)
-                SettingsGear()
-            }
+            Text("Today · \(day.formatted(.dateTime.weekday(.wide)))".uppercased())
+                .font(.eyebrow)
+                .tracking(0.5)
+                .foregroundStyle(Palette.muted)
             Text(day.formatted(.dateTime.day().month(.wide)))
                 .font(.pageTitle)
                 .foregroundStyle(Palette.ink)

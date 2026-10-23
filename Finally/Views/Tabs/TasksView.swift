@@ -52,7 +52,6 @@ struct TasksView: View {
             .navigationDestination(for: ProjectItem.self) { project in
                 ProjectTasksView(project: project, tasks: tasks, unscheduledOnly: $unscheduledOnly)
             }
-            .settingsButton()
             .toolbar {
                 ToolbarItemGroup(placement: .topBarTrailing) {
                     if layout == .list {

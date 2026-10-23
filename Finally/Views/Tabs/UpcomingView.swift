@@ -58,7 +58,6 @@ struct UpcomingView: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .background(Palette.paper)
                 .navigationTitle("Upcoming")
-                .settingsButton()
             } else {
                 ScrollViewReader { proxy in
                     List {
@@ -101,7 +100,6 @@ struct UpcomingView: View {
                 .paperList()
                 }
                 .navigationTitle(isSelectionMode ? "\(selectedTasks.count) selected" : "Upcoming")
-                .settingsButton(isHidden: isSelectionMode)
                 .refreshable {
                     try? await taskProvider.synchronize(.launch, store: modelContext)
                 }

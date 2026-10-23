@@ -271,7 +271,7 @@ private struct TasksDemoView: View {
     }
 }
 
-/// A demo opens on the tab its `-demo-tab today|upcoming|tasks` launch argument names.
+/// A demo opens on the tab its `-demo-tab today|upcoming|tasks|settings` launch argument names.
 private struct DemoTab: ViewModifier {
     @Environment(NavigationRouter.self) private var router
 
@@ -282,6 +282,7 @@ private struct DemoTab: ViewModifier {
             switch arguments[index + 1] {
             case "upcoming": router.selectedTab = .upcoming
             case "tasks": router.selectedTab = .tasks
+            case "settings": router.selectedTab = .settings
             default: router.selectedTab = .today
             }
         }

@@ -6,6 +6,7 @@ final class NavigationRouter {
         case today = 0
         case upcoming
         case tasks
+        case settings
     }
 
     var selectedTab: Tab = .today
