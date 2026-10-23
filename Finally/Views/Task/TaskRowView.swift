@@ -3,8 +3,19 @@ import SwiftData
 
 /// One task on one line: the date in a fixed leading column, the title, a short trailing slot,
 /// and the priority ring on the right. Every row has the same 48-point height, and a row with no
-/// date keeps the empty column so titles line up.
+/// date keeps the empty column so titles line up. Today's Other tasks draw the same row at 40
+/// points, and a Daily Focus pick draws as a numbered slot.
 struct TaskRowView: View {
+    enum Layout {
+        case standard
+        /// The same one line at 40 points.
+        case compact
+        /// A numbered Daily Focus slot: the number, the title over its date and project, and the
+        /// ring. `isNext` colors the number of the pick to start with. A finished pick collapses
+        /// to one short struck-through line.
+        case focus(number: Int, isNext: Bool)
+    }
+
     /// A trailing swipe that changes the task's place in Daily Focus: Remove on a pick, Focus on
     /// a task in Other tasks.
     enum FocusAction {
@@ -15,6 +26,7 @@ struct TaskRowView: View {
     @Bindable var task: TaskItem
     var isSelected = false
     var focusAction: FocusAction?
+    var layout: Layout = .standard
     @Environment(\.modelContext) private var modelContext
     @Environment(TaskProviderCoordinator.self) private var taskProvider
 
@@ -37,32 +49,20 @@ struct TaskRowView: View {
         return Palette.muted
     }
 
-    var body: some View {
-        HStack(spacing: 8) {
-            dateColumn
-
-            Text(task.title)
-                .lineLimit(1)
-                .truncationMode(.tail)
-                .strikethrough(isDone, color: Palette.hairline)
-                .foregroundStyle(isDone || isMissedScheduledDay ? Palette.muted : Palette.ink)
-                .frame(maxWidth: .infinity, alignment: .leading)
-
-            trailing
-
-            Button(action: complete) {
-                PriorityRing(color: task.priority?.color ?? Palette.low, isDone: isDone)
-                    .frame(width: 44, height: 44)
-                    .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-            .padding(.trailing, -11)
-            .accessibilityLabel(isDone ? "Completed" : "Complete")
+    private var minHeight: CGFloat {
+        switch layout {
+        case .standard: 48
+        case .compact: 40
+        case .focus: isDone ? 40 : 64
         }
-        .swipeableCardRow(fill: isSelected ? Palette.selection : Palette.card)
+    }
+
+    var body: some View {
+        content
+        .swipeableCardRow(fill: isSelected ? Palette.selection : Palette.card, minHeight: minHeight)
         .swipeActions(edge: .leading) {
-            Button(action: complete) {
-                Label("Complete", systemImage: "checkmark")
+            Button(action: toggleCompletion) {
+                Label(isDone ? "Reopen" : "Complete", systemImage: isDone ? "arrow.uturn.backward" : "checkmark")
             }
             .tint(Palette.done)
         }
@@ -90,6 +90,87 @@ struct TaskRowView: View {
         .sheet(isPresented: $showDatePicker) {
             DatePickerSheet(scheduledDay: scheduledDayBinding, task: task)
         }
+    }
+
+    @ViewBuilder
+    private var content: some View {
+        switch layout {
+        case .standard, .compact:
+            HStack(spacing: 8) {
+                dateColumn
+
+                Text(task.title)
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+                    .strikethrough(isDone, color: Palette.hairline)
+                    .foregroundStyle(isDone || isMissedScheduledDay ? Palette.muted : Palette.ink)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+
+                trailing
+
+                ring(diameter: 22, height: minHeight)
+            }
+        case .focus(let number, let isNext):
+            HStack(spacing: 14) {
+                Text("\(number)")
+                    .font(isDone ? .focusNumberDone : .focusNumber)
+                    .monospacedDigit()
+                    .foregroundStyle(isNext ? Palette.high : Palette.muted.opacity(isDone ? 0.5 : 0.8))
+                    .frame(width: 26)
+                    .accessibilityLabel("Pick \(number)")
+
+                if isDone {
+                    Text(task.title)
+                        .font(.subheadline)
+                        .lineLimit(1)
+                        .strikethrough(true, color: Palette.muted)
+                        .foregroundStyle(Palette.muted)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    ring(diameter: 20, height: minHeight, doneFill: Palette.done, doneMark: .white)
+                } else {
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text(task.title)
+                            .font(.focusTitle)
+                            .foregroundStyle(isMissedScheduledDay ? Palette.muted : Palette.ink)
+                            .lineLimit(2)
+                        focusMeta
+                    }
+                    .padding(.vertical, 10)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    ring(diameter: 24, height: 44)
+                }
+            }
+        }
+    }
+
+    /// The row date in words and the project, under a focus pick's title.
+    @ViewBuilder
+    private var focusMeta: some View {
+        let rowDate = rowDate
+        let project = task.project?.title
+        if rowDate != nil || project != nil {
+            let date = rowDate.map { Text($0.sentence).foregroundStyle(color(for: $0)) } ?? Text("")
+            let separator = rowDate != nil && project != nil ? Text(" · ") : Text("")
+            (date + separator + Text(project ?? "").foregroundStyle(Palette.muted))
+                .font(.meta)
+                .foregroundStyle(Palette.muted)
+                .lineLimit(1)
+        }
+    }
+
+    /// The priority ring. Tapping it completes an open task and reopens a finished one.
+    private func ring(diameter: CGFloat, height: CGFloat, doneFill: Color = Palette.ink, doneMark: Color = Palette.onInk) -> some View {
+        Button(action: toggleCompletion) {
+            PriorityRing(
+                color: task.priority?.color ?? Palette.low, isDone: isDone, diameter: diameter,
+                doneFill: doneFill, doneMark: doneMark
+            )
+            .frame(width: 44, height: height)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .padding(.trailing, -11)
+        .accessibilityLabel(isDone ? "Reopen" : "Complete")
     }
 
     private var dateColumn: some View {
@@ -133,11 +214,13 @@ struct TaskRowView: View {
         .fixedSize(horizontal: true, vertical: false)
     }
 
-    private func complete() {
+    private func toggleCompletion() {
         UIImpactFeedbackGenerator(style: .light).impactOccurred()
         withAnimation(.snappy) {
-            let recycled = task.complete()
-            if recycled {
+            if isDone {
+                task.move(to: .notStarted)
+                NotificationService.shared.rescheduleAllReminders(modelContext: modelContext)
+            } else if task.complete() {
                 NotificationService.shared.rescheduleAllReminders(modelContext: modelContext)
             } else {
                 NotificationService.shared.cancelRemindersForTask(task, modelContext: modelContext)

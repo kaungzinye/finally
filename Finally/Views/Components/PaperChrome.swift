@@ -19,13 +19,14 @@ enum PaperGroup {
 }
 
 extension View {
-    /// Cards on paper: inset groups over the paper background, with every row at least 48 points.
-    /// The bottom margin lets the last row scroll clear of the floating add button.
-    func paperList(background: Color = Palette.paper) -> some View {
+    /// Cards on paper: inset groups over the paper background, with every row at least
+    /// `minRowHeight` points. The bottom margin lets the last row scroll clear of the floating
+    /// add button.
+    func paperList(background: Color = Palette.paper, minRowHeight: CGFloat = 48) -> some View {
         listStyle(.insetGrouped)
             .scrollContentBackground(.hidden)
             .background(background)
-            .environment(\.defaultMinListRowHeight, 48)
+            .environment(\.defaultMinListRowHeight, minRowHeight)
             .contentMargins(.bottom, 96, for: .scrollContent)
     }
 
@@ -37,8 +38,8 @@ extension View {
     /// A task row in its section's joined card group. At rest the row draws on the group's
     /// background. As a swipe slides it aside, its corners round toward the group's radius, so
     /// they show against the revealed action.
-    func swipeableCardRow(fill: Color = Palette.card) -> some View {
-        modifier(SwipeableCardRow(fill: fill))
+    func swipeableCardRow(fill: Color = Palette.card, minHeight: CGFloat = 48) -> some View {
+        modifier(SwipeableCardRow(fill: fill, minHeight: minHeight))
     }
 
     /// A list row that sits directly on paper, outside any card.
@@ -66,6 +67,7 @@ extension View {
 /// round a section's first and last rows.
 private struct SwipeableCardRow: ViewModifier {
     let fill: Color
+    let minHeight: CGFloat
     /// Where the row rests, learned from its first frame at each width. A swipe moves the row
     /// without changing its width, and a new width, such as after rotation, means a new rest.
     @State private var rest: CGRect?
@@ -75,7 +77,7 @@ private struct SwipeableCardRow: ViewModifier {
         let shape = RoundedRectangle(cornerRadius: PaperGroup.swipeCornerRadius(forOffset: offset), style: .continuous)
         content
             .padding(.horizontal, 20)
-            .frame(maxWidth: .infinity, minHeight: 48, alignment: .leading)
+            .frame(maxWidth: .infinity, minHeight: minHeight, alignment: .leading)
             .contentShape(shape)
             .onGeometryChange(for: CGRect.self) { $0.frame(in: .scrollView) } action: { frame in
                 guard let rest, abs(rest.width - frame.width) < 0.5 else {

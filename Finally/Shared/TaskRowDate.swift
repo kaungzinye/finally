@@ -23,6 +23,14 @@ struct TaskRowDate: Equatable {
         self.columnDay = columnDay ?? text
         self.columnDetail = columnDetail
     }
+
+    /// The date in words under a Daily Focus pick's title, such as "Today", "from Wed", or
+    /// "Deadline Fri 5:00 PM".
+    var sentence: String {
+        guard kind == .deadline else { return text }
+        let relative = ["Today", "Tomorrow", "Yesterday"].first { text.hasPrefix($0) }
+        return "Deadline " + (relative.map { $0.lowercased() + text.dropFirst($0.count) } ?? text)
+    }
 }
 
 extension TaskRowDate {

@@ -48,21 +48,34 @@ extension Font {
     static let chip = Font.system(.subheadline, design: .rounded, weight: .medium)
     static let meta = Font.system(.footnote, design: .rounded)
     static let action = Font.system(.body, design: .rounded, weight: .semibold)
+
+    /// Today's date under its eyebrow.
+    static let todayTitle = Font.system(.largeTitle, design: .rounded, weight: .heavy)
+    /// The Daily Focus heading, "3 things to do".
+    static let focusHeading = Font.system(.headline, design: .rounded, weight: .bold)
+    /// A Daily Focus slot's number, and the smaller number of a finished pick.
+    static let focusNumber = Font.system(.title, design: .rounded, weight: .heavy)
+    static let focusNumberDone = Font.system(.title3, design: .rounded, weight: .heavy)
+    /// An open pick's title, the largest text on Today after the date.
+    static let focusTitle = Font.system(.title3, weight: .semibold)
 }
 
-/// The checkbox ring. Its stroke carries the task's priority, and a finished task fills with ink.
+/// The checkbox ring. Its stroke carries the task's priority, and a finished task fills with ink,
+/// or with `doneFill` where a finished task reads as a check.
 struct PriorityRing: View {
     let color: Color
     let isDone: Bool
     var diameter: CGFloat = 22
+    var doneFill: Color = Palette.ink
+    var doneMark: Color = Palette.onInk
 
     var body: some View {
         ZStack {
             if isDone {
-                Circle().fill(Palette.ink)
+                Circle().fill(doneFill)
                 Image(systemName: "checkmark")
                     .font(.system(size: diameter * 0.45, weight: .bold))
-                    .foregroundStyle(Palette.onInk)
+                    .foregroundStyle(doneMark)
             } else {
                 Circle().fill(color.opacity(0.1))
                 Circle().strokeBorder(color, lineWidth: 1.8)

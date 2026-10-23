@@ -204,6 +204,18 @@ final class TodayTests: XCTestCase {
         XCTAssertEqual(date?.columnDay, "23 Oct")
     }
 
+    func testAFocusPickReadsItsDateInWords() {
+        let scheduled = task("Water the plants", scheduled: at(day: 16))
+        let missed = task("Book the dentist", scheduled: at(day: 14))
+        let dueToday = task("Send the invoice", deadline: at(day: 16))
+        let timed = task("Ship the draft", deadline: at(day: 20, hour: 17), deadlineHasTime: true)
+
+        XCTAssertEqual(rowDate(scheduled)?.sentence, "Today")
+        XCTAssertEqual(rowDate(missed)?.sentence, "from Wed")
+        XCTAssertEqual(rowDate(dueToday)?.sentence, "Deadline today")
+        XCTAssertEqual(rowDate(timed)?.sentence, "Deadline Tue 5:00\u{202F}PM")
+    }
+
     // MARK: - Helpers
 
     private func rowDate(_ task: TaskItem) -> TaskRowDate? {
