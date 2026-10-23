@@ -44,8 +44,10 @@ struct TodayView: View {
         let otherTasks = otherTasks
         NavigationStack {
             List {
-                TodayHeader(day: day)
-                    .paperRow()
+                // A section header, unlike a row, draws outside its group's rounded clip, so
+                // the heading reaches the large-title inset.
+                Section {} header: { TodayHeader(day: day) }
+                    .listSectionSpacing(.compact)
                 if let dailyFocus {
                     DailyFocusSection(
                         focus: dailyFocus,
@@ -83,7 +85,7 @@ struct TodayView: View {
                 if !otherTasks.isEmpty {
                     Section {
                         ForEach(otherTasks, id: \.task.persistentModelID) { member in
-                            TaskRowView(task: member.task, focusAction: .pick { pickFromOtherTasks(member.task) })
+                            TaskRowView(task: member.task, focusAction: .pick { pickFromOtherTasks(member.task) }, layout: .compact)
                                 .contentShape(Rectangle())
                                 .onTapGesture { selectedTask = member.task }
                         }
@@ -94,7 +96,7 @@ struct TodayView: View {
                     }
                 }
             }
-            .paperList()
+            .paperList(minRowHeight: 40)
             .contentMargins(.top, 4, for: .scrollContent)
             .toolbar(.hidden, for: .navigationBar)
             .disabled(isSaving)
@@ -219,7 +221,8 @@ struct TodayView: View {
     }
 }
 
-/// The page heading: the weekday over the date.
+/// The page heading: the weekday over the date, at the leading inset of the large titles on
+/// Upcoming and Tasks.
 private struct TodayHeader: View {
     let day: Date
 
@@ -230,9 +233,11 @@ private struct TodayHeader: View {
                 .tracking(0.5)
                 .foregroundStyle(Palette.muted)
             Text(day.formatted(.dateTime.day().month(.wide)))
-                .font(.pageTitle)
+                .font(.todayTitle)
                 .foregroundStyle(Palette.ink)
         }
+        .textCase(nil)
         .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.leading, -16)
     }
 }

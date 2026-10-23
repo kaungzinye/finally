@@ -6,6 +6,9 @@ import SwiftData
 /// workspace, a Finally Server workspace, open tasks in both, and a full Daily Focus the personal
 /// agent proposed, whose picks span both providers and include one deleted task. Today also holds
 /// an overdue task, a task due today, a task scheduled today, and a missed scheduled day.
+///
+/// `-demo-focus-progress` seeds the day midway instead: confirmed, its first pick done, a second
+/// open pick, and one open slot.
 enum DailyFocusDemoFixture {
     static let notionWorkspaceID = "demo-notion-workspace"
     static let serverWorkspaceID = "demo-server-workspace"
@@ -21,6 +24,9 @@ enum DailyFocusDemoFixture {
         }
         let context = ModelContext(container)
         seed(into: context, referenceDate: referenceDate, calendar: calendar)
+        if ProcessInfo.processInfo.arguments.contains("-demo-focus-progress") {
+            seedProgress(into: context)
+        }
         try? context.save()
         return container
     }
@@ -64,6 +70,16 @@ enum DailyFocusDemoFixture {
             DailyFocusPick(providerWorkspaceID: notionWorkspaceID, externalTaskID: "demo-removed"),
         ]
         context.insert(focus)
+    }
+
+    /// Confirms the day, finishes its first pick, and frees the deleted pick's slot.
+    static func seedProgress(into context: ModelContext) {
+        guard let focus = try? context.fetch(FetchDescriptor<DailyFocus>()).first,
+              let tasks = try? context.fetch(FetchDescriptor<TaskItem>()) else { return }
+        let picks = focus.resolvedPicks(among: tasks)
+        picks.first?.task?.status = .done
+        picks.filter { $0.task == nil }.forEach { focus.remove($0.pick) }
+        focus.confirm()
     }
 
     private static func makeTask(_ id: String, _ title: String, workspace: String, priority: TaskPriority?) -> TaskItem {
