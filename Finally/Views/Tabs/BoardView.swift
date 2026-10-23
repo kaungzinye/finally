@@ -2,7 +2,7 @@ import SwiftUI
 import SwiftData
 
 /// The Board: the Tasks tab's columns of Not started, In progress, and Complete.
-/// The status bar is a segmented control naming every column with its count. Choosing a segment,
+/// The status bar is the status control, naming every column with its count. Choosing a segment,
 /// by tap or by dragging across, jumps to its column, and a card dropped on a segment moves there,
 /// so each column stays reachable without scrolling sideways.
 struct BoardView: View {
@@ -76,18 +76,17 @@ struct BoardView: View {
 
     // MARK: - Status bar
 
-    /// The native segmented control: on iOS 26 its glass thumb follows a finger dragged across
-    /// the segments, with selection haptics. A drop lands on the segment under the card.
+    /// The status control, each segment naming its column's count. A drop lands on the segment
+    /// under the card.
     private func statusBar(_ board: BoardColumns) -> some View {
-        Picker("Status", selection: Binding(
-            get: { visibleStatus ?? .notStarted },
-            set: { status in withAnimation(.snappy) { visibleStatus = status } }
-        )) {
-            ForEach(board.columns) { column in
-                Text("\(column.title) \(column.tasks.count)").tag(column.status)
-            }
-        }
-        .pickerStyle(.segmented)
+        let counts = Dictionary(uniqueKeysWithValues: board.columns.map { ($0.status, $0.tasks.count) })
+        return StatusControl(
+            selection: Binding(
+                get: { visibleStatus ?? .notStarted },
+                set: { status in withAnimation(.snappy) { visibleStatus = status } }
+            ),
+            label: { "\($0.rawValue) \(counts[$0] ?? 0)" }
+        )
         .accessibilityIdentifier("board-status")
         .onGeometryChange(for: Double.self) { $0.size.width } action: { statusBarWidth = $0 }
         .dropDestination(for: String.self) { ids, location in

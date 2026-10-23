@@ -189,13 +189,8 @@ struct TaskDetailView: View {
     /// Status, then When, Details and Repeat, each under its own eyebrow and set apart by space.
     private var header: some View {
         VStack(alignment: .leading, spacing: 22) {
-            Picker("Status", selection: statusBinding) {
-                ForEach(TaskStatus.allCases, id: \.self) { status in
-                    Text(status.rawValue).tag(status)
-                }
-            }
-            .pickerStyle(.segmented)
-            .accessibilityIdentifier("task-detail-status")
+            StatusControl(selection: statusBinding)
+                .accessibilityIdentifier("task-detail-status")
 
             VStack(alignment: .leading, spacing: 8) {
                 SectionLabel("When")
@@ -262,7 +257,6 @@ struct TaskDetailView: View {
             get: { task.status },
             set: { status in
                 guard status != task.status else { return }
-                UIImpactFeedbackGenerator(style: .light).impactOccurred()
                 withAnimation(.snappy) {
                     let recycled = task.move(to: status)
                     if task.status == .done, !recycled {
