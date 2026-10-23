@@ -40,31 +40,19 @@ struct FinallyApp: App {
     var body: some Scene {
         WindowGroup {
             Group {
+#if DEBUG
                 if isDeadlineDemoMode {
                     DeadlineDemoView()
                 } else if isDailyFocusDemoMode {
                     DailyFocusDemoView()
                 } else if isTasksDemoMode {
                     TasksDemoView()
-                } else if isLoading {
-                    ProgressView("Loading...")
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                        .background(Palette.paper.ignoresSafeArea())
                 } else {
-                    switch sessionRoute {
-                    case .connect:
-                        ProviderConnectView(onConnected: {
-                            Task { await checkSession() }
-                        })
-                    case .databaseSetup:
-                        DatabasePickerView(
-                            onComplete: { Task { await checkSession() } },
-                            onChooseProvider: { sessionRoute = .connect }
-                        )
-                    case .tasks:
-                        ContentView()
-                    }
+                    appContent
                 }
+#else
+                appContent
+#endif
             }
             .environment(router)
             .environment(taskProvider)
@@ -98,7 +86,9 @@ struct FinallyApp: App {
                 Task { await checkSession() }
             }
             .task {
+#if DEBUG
                 if isDeadlineDemoMode || isDailyFocusDemoMode || isTasksDemoMode { return }
+#endif
                 await checkSession()
                 await startForegroundSyncLoop()
             }
@@ -116,29 +106,36 @@ struct FinallyApp: App {
         }
     }
 
-    private var isDeadlineDemoMode: Bool {
-#if DEBUG
-        ProcessInfo.processInfo.arguments.contains("-deadline-demo")
-#else
-        false
-#endif
+    // MARK: - Content
+
+    @ViewBuilder
+    private var appContent: some View {
+        if isLoading {
+            ProgressView("Loading...")
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .background(Palette.paper.ignoresSafeArea())
+        } else {
+            switch sessionRoute {
+            case .connect:
+                ProviderConnectView(onConnected: {
+                    Task { await checkSession() }
+                })
+            case .databaseSetup:
+                DatabasePickerView(
+                    onComplete: { Task { await checkSession() } },
+                    onChooseProvider: { sessionRoute = .connect }
+                )
+            case .tasks:
+                ContentView()
+            }
+        }
     }
 
-    private var isDailyFocusDemoMode: Bool {
 #if DEBUG
-        ProcessInfo.processInfo.arguments.contains("-daily-focus-demo")
-#else
-        false
+    private var isDeadlineDemoMode: Bool { ProcessInfo.processInfo.arguments.contains("-deadline-demo") }
+    private var isDailyFocusDemoMode: Bool { ProcessInfo.processInfo.arguments.contains("-daily-focus-demo") }
+    private var isTasksDemoMode: Bool { ProcessInfo.processInfo.arguments.contains("-tasks-demo") }
 #endif
-    }
-
-    private var isTasksDemoMode: Bool {
-#if DEBUG
-        ProcessInfo.processInfo.arguments.contains("-tasks-demo")
-#else
-        false
-#endif
-    }
 
     // MARK: - Session Check
 
