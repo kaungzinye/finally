@@ -19,8 +19,9 @@ struct TaskRowView: View {
     @Environment(TaskProviderCoordinator.self) private var taskProvider
 
     @State private var showDatePicker = false
-    /// Wide enough for "Yesterday" or "from Dec 30". A year or time sits on a second line.
-    @ScaledMetric(relativeTo: .footnote) private var dateColumnWidth: CGFloat = 76
+    /// Wide enough for the widest compact label at the default text size: "May '28" measures 48
+    /// points in the footnote rounded face, and a time such as "12:00 AM" on the second line 50.
+    @ScaledMetric(relativeTo: .footnote) private var dateColumnWidth: CGFloat = 50
 
     private var isDone: Bool { task.status == .done }
 
@@ -37,7 +38,7 @@ struct TaskRowView: View {
     }
 
     var body: some View {
-        HStack(spacing: 12) {
+        HStack(spacing: 8) {
             dateColumn
 
             Text(task.title)

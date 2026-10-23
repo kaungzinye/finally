@@ -148,10 +148,12 @@ final class TodayTests: XCTestCase {
         let longMissed = task("Fix the bike", scheduled: at(day: 1))
         let undated = task("Read the novel")
 
-        XCTAssertEqual(rowDate(both), TaskRowDate(kind: .deadline, text: "Tue"))
-        XCTAssertEqual(rowDate(scheduled), TaskRowDate(kind: .scheduledDay, text: "Tomorrow"))
-        XCTAssertEqual(rowDate(missed), TaskRowDate(kind: .scheduledDay, text: "from Wed"))
-        XCTAssertEqual(rowDate(longMissed), TaskRowDate(kind: .scheduledDay, text: "from Oct 1"))
+        XCTAssertEqual(rowDate(both)?.kind, .deadline)
+        XCTAssertEqual(rowDate(both)?.text, "Tue")
+        XCTAssertEqual(rowDate(scheduled)?.kind, .scheduledDay)
+        XCTAssertEqual(rowDate(scheduled)?.text, "Tomorrow")
+        XCTAssertEqual(rowDate(missed)?.text, "from Wed")
+        XCTAssertEqual(rowDate(longMissed)?.text, "from Oct 1")
         XCTAssertNil(rowDate(undated))
     }
 
@@ -163,22 +165,53 @@ final class TodayTests: XCTestCase {
         XCTAssertEqual(rowDate(lastYear)?.text, "from Dec 30, 2025")
     }
 
-    func testARowsDateColumnPutsTheYearOrTimeOnASecondLine() {
-        let nearby = task("Water the plants", scheduled: at(day: 17))
+    func testARowsDateColumnUsesCompactLabels() {
+        let tomorrow = task("Water the plants", scheduled: at(day: 17))
+        let yesterday = task("Send the invoice", deadline: at(day: 15))
+        let weekday = task("Plan the trip", deadline: at(day: 20))
+        let later = task("Book the venue", deadline: at(day: 30))
         let nextYear = task("Renew the lease", deadline: calendar.date(from: DateComponents(year: 2027, month: 10, day: 20))!)
-        let lastYear = task("Fix the bike", scheduled: calendar.date(from: DateComponents(year: 2025, month: 12, day: 30))!)
-        let timed = task("Ship the draft", deadline: at(day: 17, hour: 17, minute: 30), deadlineHasTime: true)
 
-        XCTAssertEqual(rowDate(nearby).map { [$0.columnDay, $0.columnDetail] }, ["Tomorrow", nil])
-        XCTAssertEqual(rowDate(nextYear).map { [$0.columnDay, $0.columnDetail] }, ["Oct 20", "2027"])
-        XCTAssertEqual(rowDate(lastYear).map { [$0.columnDay, $0.columnDetail] }, ["from Dec 30", "2025"])
-        XCTAssertEqual(rowDate(timed).map { [$0.columnDay, $0.columnDetail] }, ["Tomorrow", "5:30\u{202F}PM"])
+        XCTAssertEqual(column(tomorrow), ["Tmr", nil])
+        XCTAssertEqual(column(yesterday), ["Yest", nil])
+        XCTAssertEqual(column(weekday), ["Tue", nil])
+        XCTAssertEqual(column(later), ["Oct 30", nil])
+        XCTAssertEqual(column(nextYear), ["Oct '27", nil])
+    }
+
+    func testARowsDateColumnPutsTheTimeOnASecondLine() {
+        let timed = task("Ship the draft", deadline: at(day: 17, hour: 17, minute: 30), deadlineHasTime: true)
+        let timedNextYear = task("Renew the lease", deadline: calendar.date(from: DateComponents(year: 2027, month: 10, day: 20, hour: 9))!, deadlineHasTime: true)
+
+        XCTAssertEqual(column(timed), ["Tmr", "5:30\u{202F}PM"])
+        XCTAssertEqual(column(timedNextYear), ["Oct '27", "9:00\u{202F}AM"])
+    }
+
+    func testARowsDateColumnPutsAMissedScheduledDayUnderFrom() {
+        let missed = task("Book the dentist", scheduled: at(day: 14))
+        let longMissed = task("Fix the bike", scheduled: at(day: 1))
+        let lastYear = task("Call the bank", scheduled: calendar.date(from: DateComponents(year: 2025, month: 12, day: 30))!)
+
+        XCTAssertEqual(column(missed), ["from", "Wed"])
+        XCTAssertEqual(column(longMissed), ["from", "Oct 1"])
+        XCTAssertEqual(column(lastYear), ["from", "Dec '25"])
+    }
+
+    func testARowsDateColumnFollowsTheLocalesDayMonthOrder() {
+        let later = task("Book the venue", deadline: at(day: 23))
+        let date = TaskRowDate(for: later, at: now, calendar: calendar, locale: Locale(identifier: "en_GB"))
+
+        XCTAssertEqual(date?.columnDay, "23 Oct")
     }
 
     // MARK: - Helpers
 
     private func rowDate(_ task: TaskItem) -> TaskRowDate? {
         TaskRowDate(for: task, at: now, calendar: calendar, locale: Locale(identifier: "en_US_POSIX"))
+    }
+
+    private func column(_ task: TaskItem) -> [String?]? {
+        rowDate(task).map { [$0.columnDay, $0.columnDetail] }
     }
 
     private func subtask(_ title: String, of parent: TaskItem, suggested: Date, index: Int) -> TaskItem {
