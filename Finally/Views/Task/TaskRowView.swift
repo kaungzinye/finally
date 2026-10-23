@@ -53,7 +53,7 @@ struct TaskRowView: View {
         switch layout {
         case .standard: 48
         case .compact: 40
-        case .focus: isDone ? 40 : 64
+        case .focus: 40
         }
     }
 
@@ -111,37 +111,44 @@ struct TaskRowView: View {
                 ring(diameter: 22, height: minHeight)
             }
         case .focus(let number, let isNext):
+            // One view tree for open and done, so completing and reopening animate the same
+            // views: the number scales, the title restyles, and the meta line fades and slides.
             HStack(spacing: 14) {
                 Text("\(number)")
-                    .font(isDone ? .focusNumberDone : .focusNumber)
+                    .font(.focusNumber)
                     .monospacedDigit()
+                    .scaleEffect(isDone ? Self.doneNumberScale : 1)
                     .foregroundStyle(isNext ? Palette.high : Palette.muted.opacity(isDone ? 0.5 : 0.8))
                     .frame(width: 26)
                     .accessibilityLabel("Pick \(number)")
 
-                if isDone {
+                VStack(alignment: .leading, spacing: 3) {
                     Text(task.title)
-                        .font(.subheadline)
-                        .lineLimit(1)
-                        .strikethrough(true, color: Palette.muted)
-                        .foregroundStyle(Palette.muted)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                    ring(diameter: 20, height: minHeight, doneFill: Palette.done, doneMark: .white)
-                } else {
-                    VStack(alignment: .leading, spacing: 3) {
-                        Text(task.title)
-                            .font(.focusTitle)
-                            .foregroundStyle(isMissedScheduledDay ? Palette.muted : Palette.ink)
-                            .lineLimit(2)
+                        .font(isDone ? .subheadline : .focusTitle)
+                        .lineLimit(isDone ? 1 : 2)
+                        .strikethrough(isDone, color: Palette.muted)
+                        .foregroundStyle(isDone || isMissedScheduledDay ? Palette.muted : Palette.ink)
+                    if !isDone {
                         focusMeta
+                            .transition(.opacity.combined(with: .offset(y: -6)))
                     }
-                    .padding(.vertical, 10)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    ring(diameter: 24, height: 44)
                 }
+                .padding(.vertical, isDone ? 0 : 10)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .clipped()
+
+                ring(diameter: isDone ? 20 : 24, height: 40, doneFill: Palette.done, doneMark: .white)
             }
+            .frame(maxWidth: .infinity, minHeight: isDone ? 40 : 64)
+            .easedRowHeight(Self.focusSpring)
         }
     }
+
+    /// A done pick's number shrinks from the title face to the title3 face.
+    private static let doneNumberScale: CGFloat = 0.72
+
+    /// One curve for a pick's collapse and reopen: its content and its row height.
+    private static let focusSpring = Spring(duration: 0.3, bounce: 0)
 
     /// The deadline and the project under an open pick's title. A pick with neither stays one line.
     @ViewBuilder
@@ -220,9 +227,15 @@ struct TaskRowView: View {
         .fixedSize(horizontal: true, vertical: false)
     }
 
+    /// A focus pick collapses and reopens in place, so its height, number, and meta line move
+    /// together. Other rows leave their section on the quicker snappy curve.
+    private var completionAnimation: Animation {
+        if case .focus = layout { .spring(Self.focusSpring) } else { .snappy }
+    }
+
     private func toggleCompletion() {
         UIImpactFeedbackGenerator(style: .light).impactOccurred()
-        withAnimation(.snappy) {
+        withAnimation(completionAnimation) {
             if isDone {
                 task.move(to: .notStarted)
                 NotificationService.shared.rescheduleAllReminders(modelContext: modelContext)

@@ -55,9 +55,8 @@ extension Font {
     static let todayTitle = Font.system(.largeTitle, design: .rounded, weight: .heavy)
     /// The Daily Focus heading, "3 things to do".
     static let focusHeading = Font.system(.headline, design: .rounded, weight: .bold)
-    /// A Daily Focus slot's number, and the smaller number of a finished pick.
+    /// A Daily Focus slot's number. A finished pick scales it down, so the change animates.
     static let focusNumber = Font.system(.title, design: .rounded, weight: .heavy)
-    static let focusNumberDone = Font.system(.title3, design: .rounded, weight: .heavy)
     /// An open pick's title, the largest text on Today after the date.
     static let focusTitle = Font.system(.title3, weight: .semibold)
 }
