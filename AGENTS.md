@@ -41,14 +41,7 @@ The project defines two schemes, `Finally` and `FinallyWidgetExtension`. `Finall
 
 For runtime verification, run the app on a booted simulator and inspect the launched UI and logs, then run the relevant tests on that simulator.
 
-Maestro drives UI flows on the booted simulator for behavioural verification. Flows live in `maestro/`. Build and install the app on the simulator first, then:
-
-```bash
-export JAVA_HOME=/opt/homebrew/opt/openjdk/libexec/openjdk.jdk/Contents/Home
-maestro test maestro/<flow>.yaml
-```
-
-The `-deadline-demo` launch argument (DEBUG builds) opens a populated task detail screen with no OAuth, giving flows deterministic UI. The `-daily-focus-demo` launch argument opens the app over an in-memory store seeded with a full Daily Focus that mixes providers and holds one unavailable pick.
+The `-deadline-demo` launch argument (DEBUG builds) opens a populated task detail screen with no OAuth. The `-daily-focus-demo` launch argument opens the app over an in-memory store seeded with a full Daily Focus that mixes providers and holds one unavailable pick.
 
 ## No compatibility burden
 

@@ -28,6 +28,6 @@ Replanning keeps each unfinished pick visible until the user decides. Keep place
 
 The phone saves all changed Daily Focus days together before attempting server writes. Failed writes leave dirty edits on the phone; the Daily Focus error banner retries all dirty days in the selected storage workspace. Picking, Schedule, and Defer also enter the task provider's dirty-edit pipeline and refresh local reminders.
 
-`DailyFocusTests` exercises picking, displacement, all replanning decisions, and date preservation. `DailyFocusServiceTests` exercises prompted writes through a mock API, confirmation on the same record, and offline recovery across both days. `maestro/daily-focus-demo.yaml` exercises the seeded phone flow.
+`DailyFocusTests` exercises picking, displacement, all replanning decisions, and date preservation. `DailyFocusServiceTests` exercises prompted writes through a mock API, confirmation on the same record, and offline recovery across both days.
 
 Finally Server's `main` branch implements the route in `pkg/routes/api/v2/finally_daily_focus.go`. Server PR #16 contains the endpoint and its tests. Deployment of that route, the personal agent account configuration, and the phone-priority concurrent edit contract in issue #15 are integration dependencies. The automated prompted-write test uses a mock API; a live conversation with the personal agent requires verification against the deployed server.
