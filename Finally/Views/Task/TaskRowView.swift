@@ -10,8 +10,8 @@ struct TaskRowView: View {
         case standard
         /// The same one line at 40 points.
         case compact
-        /// A numbered Daily Focus slot: the number, the title over its date and project, and the
-        /// ring. `isNext` colors the number of the pick to start with. A finished pick collapses
+        /// A numbered Daily Focus slot: the number, the title over its deadline and project, and
+        /// the ring. `isNext` colors the number of the pick to start with. A finished pick collapses
         /// to one short struck-through line.
         case focus(number: Int, isNext: Bool)
     }
@@ -143,18 +143,24 @@ struct TaskRowView: View {
         }
     }
 
-    /// The row date in words and the project, under a focus pick's title.
+    /// The deadline and the project under an open pick's title. A pick with neither stays one line.
     @ViewBuilder
     private var focusMeta: some View {
-        let rowDate = rowDate
-        let project = task.project?.title
-        if rowDate != nil || project != nil {
-            let date = rowDate.map { Text($0.sentence).foregroundStyle(color(for: $0)) } ?? Text("")
-            let separator = rowDate != nil && project != nil ? Text(" · ") : Text("")
-            (date + separator + Text(project ?? "").foregroundStyle(Palette.muted))
+        if let meta = TaskRowDate.FocusMeta(for: task, project: task.project?.title, at: Date()) {
+            let deadline = meta.deadline.map { Text($0).foregroundStyle(color(for: meta.tone)) } ?? Text("")
+            let separator = meta.deadline != nil && meta.project != nil ? Text(" · ") : Text("")
+            (deadline + separator + Text(meta.project ?? ""))
                 .font(.meta)
                 .foregroundStyle(Palette.muted)
                 .lineLimit(1)
+        }
+    }
+
+    private func color(for tone: TaskRowDate.FocusMeta.Tone) -> Color {
+        switch tone {
+        case .overdue: Palette.urgent
+        case .activeWindow: Palette.high
+        case .quiet: Palette.muted
         }
     }
 

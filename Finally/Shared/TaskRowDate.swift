@@ -24,13 +24,6 @@ struct TaskRowDate: Equatable {
         self.columnDetail = columnDetail
     }
 
-    /// The date in words under a Daily Focus pick's title, such as "Today", "from Wed", or
-    /// "Deadline Fri 5:00 PM".
-    var sentence: String {
-        guard kind == .deadline else { return text }
-        let relative = ["Today", "Tomorrow", "Yesterday"].first { text.hasPrefix($0) }
-        return "Deadline " + (relative.map { $0.lowercased() + text.dropFirst($0.count) } ?? text)
-    }
 }
 
 extension TaskRowDate {
@@ -75,6 +68,50 @@ extension TaskRowDate {
             }
         } else {
             return nil
+        }
+    }
+}
+
+extension TaskRowDate {
+    /// The line under an open Daily Focus pick's title: the deadline in words, such as "Deadline
+    /// today" or "Deadline Fri 5:00 PM", then the project, joined by " · ". Every pick sits on
+    /// today, so a scheduled day never shows. A pick with neither has no line.
+    struct FocusMeta: Equatable {
+        /// How loudly the deadline reads: red when overdue, orange in its active window.
+        enum Tone: Equatable {
+            case overdue
+            case activeWindow
+            case quiet
+        }
+
+        let deadline: String?
+        let tone: Tone
+        let project: String?
+
+        var text: String { [deadline, project].compactMap { $0 }.joined(separator: " · ") }
+
+        init?(for task: some TodayTask, project: String?, at referenceDate: Date, calendar: Calendar = .current, locale: Locale = .current) {
+            let project = project.flatMap { $0.isEmpty ? nil : $0 }
+            let date = TaskRowDate(for: task, at: referenceDate, calendar: calendar, locale: locale)
+            guard let date, date.kind == .deadline, let due = task.deadline else {
+                guard let project else { return nil }
+                self.deadline = nil
+                self.tone = .quiet
+                self.project = project
+                return
+            }
+            let relative = ["Today", "Tomorrow", "Yesterday"].first { date.text.hasPrefix($0) }
+            self.deadline = "Deadline " + (relative.map { $0.lowercased() + date.text.dropFirst($0.count) } ?? date.text)
+            self.project = project
+            let today = calendar.startOfDay(for: referenceDate)
+            if task.isOpen && Today.isOverdue(deadline: due, hasTime: task.deadlineHasTime, at: referenceDate, calendar: calendar) {
+                self.tone = .overdue
+            } else if task.isOpen, let scheduledDay = task.scheduledDay,
+                      calendar.startOfDay(for: scheduledDay) <= today, today <= calendar.startOfDay(for: due) {
+                self.tone = .activeWindow
+            } else {
+                self.tone = .quiet
+            }
         }
     }
 }

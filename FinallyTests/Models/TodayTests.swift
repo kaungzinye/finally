@@ -204,22 +204,56 @@ final class TodayTests: XCTestCase {
         XCTAssertEqual(date?.columnDay, "23 Oct")
     }
 
-    func testAFocusPickReadsItsDateInWords() {
+    func testAFocusPickShowsItsDeadlineInWords() {
+        let dueToday = task("Send the invoice", deadline: at(day: 16))
+        let dueTomorrow = task("Ship the release", deadline: at(day: 17))
+        let timed = task("Ship the draft", deadline: at(day: 20, hour: 17), deadlineHasTime: true)
+        let later = task("Plan the trip", deadline: at(day: 23))
+
+        XCTAssertEqual(focusMeta(dueToday)?.text, "Deadline today")
+        XCTAssertEqual(focusMeta(dueTomorrow)?.text, "Deadline tomorrow")
+        XCTAssertEqual(focusMeta(timed)?.text, "Deadline Tue 5:00\u{202F}PM")
+        XCTAssertEqual(focusMeta(later, locale: Locale(identifier: "en_GB"))?.text, "Deadline 23 Oct")
+    }
+
+    func testAFocusPickNeverShowsItsScheduledDay() {
         let scheduled = task("Water the plants", scheduled: at(day: 16))
         let missed = task("Book the dentist", scheduled: at(day: 14))
-        let dueToday = task("Send the invoice", deadline: at(day: 16))
-        let timed = task("Ship the draft", deadline: at(day: 20, hour: 17), deadlineHasTime: true)
 
-        XCTAssertEqual(rowDate(scheduled)?.sentence, "Today")
-        XCTAssertEqual(rowDate(missed)?.sentence, "from Wed")
-        XCTAssertEqual(rowDate(dueToday)?.sentence, "Deadline today")
-        XCTAssertEqual(rowDate(timed)?.sentence, "Deadline Tue 5:00\u{202F}PM")
+        XCTAssertNil(focusMeta(scheduled))
+        XCTAssertNil(focusMeta(missed))
+        XCTAssertEqual(focusMeta(scheduled, project: "Home")?.text, "Home")
+    }
+
+    func testAFocusPickJoinsItsDeadlineAndProject() {
+        let due = task("Ship the release", scheduled: at(day: 16), deadline: at(day: 17))
+
+        let meta = focusMeta(due, project: "Launch")
+
+        XCTAssertEqual(meta?.text, "Deadline tomorrow · Launch")
+        XCTAssertEqual(meta?.deadline, "Deadline tomorrow")
+        XCTAssertEqual(meta?.project, "Launch")
+    }
+
+    func testAFocusPickDeadlineCarriesItsUrgency() {
+        let overdue = task("Renew the passport", scheduled: at(day: 16), deadline: at(day: 15))
+        let active = task("Send the invoice", scheduled: at(day: 16), deadline: at(day: 18))
+        let ahead = task("Plan the trip", deadline: at(day: 20))
+
+        XCTAssertEqual(focusMeta(overdue)?.tone, .overdue)
+        XCTAssertEqual(focusMeta(active)?.tone, .activeWindow)
+        XCTAssertEqual(focusMeta(ahead)?.tone, .quiet)
+        XCTAssertEqual(focusMeta(task("Pack", scheduled: at(day: 16)), project: "Home")?.tone, .quiet)
     }
 
     // MARK: - Helpers
 
     private func rowDate(_ task: TaskItem) -> TaskRowDate? {
         TaskRowDate(for: task, at: now, calendar: calendar, locale: Locale(identifier: "en_US_POSIX"))
+    }
+
+    private func focusMeta(_ task: TaskItem, project: String? = nil, locale: Locale = Locale(identifier: "en_US_POSIX")) -> TaskRowDate.FocusMeta? {
+        TaskRowDate.FocusMeta(for: task, project: project, at: now, calendar: calendar, locale: locale)
     }
 
     private func column(_ task: TaskItem) -> [String?]? {
