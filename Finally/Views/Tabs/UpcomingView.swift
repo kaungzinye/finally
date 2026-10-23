@@ -131,18 +131,16 @@ struct UpcomingView: View {
                         }
                     }
                 } else {
-                    ToolbarItem(placement: .topBarTrailing) {
-                        HStack(spacing: 12) {
-                            Button { showSortConfig = true } label: {
-                                Image(systemName: "arrow.up.arrow.down")
-                            }
-                            .accessibilityLabel("Sort")
-
-                            Button { showSearch = true } label: {
-                                Image(systemName: "magnifyingglass")
-                            }
-                            .accessibilityLabel("Search")
+                    ToolbarItemGroup(placement: .topBarTrailing) {
+                        Button { showSortConfig = true } label: {
+                            Image(systemName: "arrow.up.arrow.down")
                         }
+                        .accessibilityLabel("Sort")
+
+                        Button { showSearch = true } label: {
+                            Image(systemName: "magnifyingglass")
+                        }
+                        .accessibilityLabel("Search")
                     }
                 }
             }
