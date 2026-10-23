@@ -41,6 +41,7 @@ struct TodayView: View {
     }
 
     var body: some View {
+        let otherTasks = otherTasks
         NavigationStack {
             List {
                 TodayHeader(day: day)

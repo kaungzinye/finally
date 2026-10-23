@@ -93,7 +93,8 @@ struct TaskRowView: View {
     }
 
     private var dateColumn: some View {
-        VStack(alignment: .leading, spacing: 0) {
+        let rowDate = rowDate
+        return VStack(alignment: .leading, spacing: 0) {
             if let rowDate {
                 Text(rowDate.columnDay)
                     .font(.meta)

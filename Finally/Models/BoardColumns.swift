@@ -22,8 +22,9 @@ struct BoardColumns {
                 && (projects.isEmpty || projects.contains($0.project?.externalProjectID ?? ""))
                 && (priorities.isEmpty || priorities.contains($0.priorityRaw ?? ""))
         }
+        let byStatus = Dictionary(grouping: board, by: \.status)
         columns = TaskStatus.allCases.map { status in
-            Column(status: status, tasks: board.filter { $0.status == status }.sorted(by: TasksList.isNearer))
+            Column(status: status, tasks: TasksList.nearestFirst(byStatus[status] ?? []))
         }
     }
 

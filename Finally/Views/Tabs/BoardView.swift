@@ -8,8 +8,8 @@ import SwiftData
 struct BoardView: View {
     /// The Board is the layout on screen. A hidden Board keeps its state and leaves the toolbar alone.
     var isActive = true
-
-    @Query(filter: #Predicate<TaskItem> { $0.isDeleted == false }) private var allTasks: [TaskItem]
+    /// The Tasks tab's tasks, from its one query.
+    let allTasks: [TaskItem]
     @Query private var sessions: [UserSession]
     @Environment(TaskProviderCoordinator.self) private var taskProvider
     @Environment(\.modelContext) private var modelContext
@@ -99,6 +99,7 @@ struct BoardView: View {
     // MARK: - Columns
 
     /// Portrait shows one column at a time with the next one peeking. Landscape fits all three.
+    /// Each column scrolls on its own and builds only the cards on screen.
     private func columns(_ board: BoardColumns, in size: CGSize) -> some View {
         let isLandscape = size.width > size.height
         let spacing: CGFloat = 12
@@ -106,31 +107,31 @@ struct BoardView: View {
             ? (size.width - 32 - spacing * 2) / 3
             : size.width - 32 - 40
 
-        return ScrollView(.vertical) {
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(alignment: .top, spacing: spacing) {
-                    ForEach(board.columns) { column in
+        return ScrollView(.horizontal, showsIndicators: false) {
+            HStack(alignment: .top, spacing: spacing) {
+                ForEach(board.columns) { column in
+                    ScrollView(.vertical) {
                         columnView(column)
-                            .frame(width: columnWidth)
-                            .id(column.status)
+                            .padding(.bottom, 72)
                     }
+                    .refreshable {
+                        try? await taskProvider.synchronize(.launch, store: modelContext)
+                    }
+                    .frame(width: columnWidth, height: size.height)
+                    .id(column.status)
                 }
-                .scrollTargetLayout()
-                .padding(.horizontal, 16)
             }
-            .scrollTargetBehavior(.viewAligned)
-            .scrollPosition(id: $visibleStatus, anchor: .leading)
-            .padding(.bottom, 72)
+            .scrollTargetLayout()
+            .padding(.horizontal, 16)
         }
-        .refreshable {
-            try? await taskProvider.synchronize(.launch, store: modelContext)
-        }
+        .scrollTargetBehavior(.viewAligned)
+        .scrollPosition(id: $visibleStatus, anchor: .leading)
     }
 
     /// A column grows only as tall as its cards.
     private func columnView(_ column: BoardColumns.Column) -> some View {
         let isTargeted = targetedStatus == column.status
-        return VStack(alignment: .leading, spacing: 8) {
+        return LazyVStack(alignment: .leading, spacing: 8) {
             SectionLabel(title: column.title) { Text("\(column.tasks.count)") }
                 .padding(.horizontal, 6)
                 .padding(.top, 4)
