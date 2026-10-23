@@ -234,7 +234,7 @@ final class FinallyServerConnectionIntegrationTests: XCTestCase {
         try await FinallyServerTaskProviderAdapter(api: api)
             .synchronize(.push, workspace: workspace, store: context)
 
-        XCTAssertEqual(api.taskOperations, ["update", "complete"])
+        XCTAssertEqual(api.taskOperations, ["read", "update", "complete"])
         XCTAssertEqual(api.tasks["1"]?.title, "Edited title")
         XCTAssertTrue(api.tasks["1"]?.isCompleted == true)
         XCTAssertEqual(task.title, "Edited title")
@@ -253,7 +253,7 @@ final class FinallyServerConnectionIntegrationTests: XCTestCase {
                 .synchronize(.push, workspace: workspace, store: context)
             XCTFail("Expected edit failure")
         } catch FinallyServerClientError.serverUnavailable {
-            XCTAssertEqual(api.taskOperations, ["update"])
+            XCTAssertEqual(api.taskOperations, ["read", "update"])
             XCTAssertEqual(task.title, "Edited title")
             XCTAssertEqual(task.status, .done)
             XCTAssertTrue(task.isDirty)
@@ -262,7 +262,7 @@ final class FinallyServerConnectionIntegrationTests: XCTestCase {
 
     func testDirtyCompletedTaskKeepsLocalStateWhenCompletionFails() async throws {
         let api = MockFinallyServerAPIClient()
-        api.tasks["1"] = FinallyServerTask(id: "1", projectID: 42, title: "Old title", isCompleted: false)
+        api.tasks["1"] = FinallyServerTask(id: "1", projectID: 42, title: "Old title", isCompleted: true)
         api.completeError = FinallyServerClientError.serverUnavailable
         let (context, workspace, task) = try makeDirtyCompletedTask()
 
@@ -271,9 +271,9 @@ final class FinallyServerConnectionIntegrationTests: XCTestCase {
                 .synchronize(.push, workspace: workspace, store: context)
             XCTFail("Expected completion failure")
         } catch FinallyServerClientError.serverUnavailable {
-            XCTAssertEqual(api.taskOperations, ["update", "complete"])
+            XCTAssertEqual(api.taskOperations, ["read", "update", "complete"])
             XCTAssertEqual(api.tasks["1"]?.title, "Edited title")
-            XCTAssertFalse(api.tasks["1"]?.isCompleted == true)
+            XCTAssertTrue(api.tasks["1"]?.isCompleted == true)
             XCTAssertEqual(task.title, "Edited title")
             XCTAssertEqual(task.status, .done)
             XCTAssertTrue(task.isDirty)

@@ -32,6 +32,7 @@ final class MockFinallyServerAPIClient: FinallyServerAPIClient {
     }
 
     func readTask(id: String) async throws -> FinallyServerTask {
+        taskOperations.append("read")
         if let error { throw error }
         guard let task = tasks[id] else { throw FinallyServerClientError.notFound }
         return task

@@ -3,6 +3,19 @@ import XCTest
 @testable import Finally
 
 final class TaskProviderContractTests: XCTestCase {
+    func testProviderCoordinatorPropagatesCancellation() async throws {
+        let coordinator = TaskProviderCoordinator(adapter: CancellingTaskProviderAdapter())
+        let context = try makeInMemoryContext()
+
+        do {
+            try await coordinator.synchronize(.push, store: context)
+            XCTFail("Expected cancellation")
+        } catch is CancellationError {
+            XCTAssertFalse(coordinator.isSyncing)
+            XCTAssertNil(coordinator.lastError)
+        }
+    }
+
     func testUnsyncedCreateIsDurableBeforeThrowingProviderPush() async throws {
         let (container, context) = try makeInMemoryStore()
         let adapter = AlwaysFailingTaskProviderAdapter()
@@ -290,6 +303,27 @@ final class TaskProviderContractTests: XCTestCase {
         let configuration = ModelConfiguration(isStoredInMemoryOnly: true)
         let container = try ModelContainer(for: schema, configurations: [configuration])
         return (container, ModelContext(container))
+    }
+}
+
+private final class CancellingTaskProviderAdapter: TaskProviderAdapter {
+    let providerIdentity = TaskProviderIdentity.finallyServer
+    let capabilities: Set<TaskProviderCapability> = []
+
+    func workspaceIdentity(for workspace: UserSession) -> ProviderWorkspaceIdentity {
+        ProviderWorkspaceIdentity(provider: providerIdentity, externalID: workspace.workspaceId)
+    }
+
+    func taskIdentity(for task: TaskItem, in workspace: ProviderWorkspaceIdentity) -> ProviderTaskIdentity {
+        ProviderTaskIdentity(workspace: workspace, externalID: task.externalTaskID)
+    }
+
+    func synchronize(
+        _ intent: TaskProviderSyncIntent,
+        workspace: UserSession?,
+        store: ModelContext
+    ) async throws {
+        throw CancellationError()
     }
 }
 
