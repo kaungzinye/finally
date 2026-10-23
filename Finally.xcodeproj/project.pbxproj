@@ -15,6 +15,7 @@
 		1462F1EB97E6FA5647BE0E69 /* TaskItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = E3DCE4B37409BDE28BFD5686 /* TaskItem.swift */; };
 		14783BBA2AA4669DF1A810EA /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9B179DAFF77F711BB646D68B /* ContentView.swift */; };
 		166653693A743A7B09D729AE /* DefaultDeadlineReminders.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6A16244EB7E87921909EB098 /* DefaultDeadlineReminders.swift */; };
+		17159BC766B1D6C68A487C2D /* DailyFocusList.swift in Sources */ = {isa = PBXBuildFile; fileRef = DCABA4D249E1C139623894D4 /* DailyFocusList.swift */; };
 		19D487F867C9063029029395 /* NetworkService.swift in Sources */ = {isa = PBXBuildFile; fileRef = C9438CA4430DF5A84E08C34F /* NetworkService.swift */; };
 		1A1EF31471916736EF4376BA /* NotionCRUDE2ETests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B810A6DFB04DE19772B99FA3 /* NotionCRUDE2ETests.swift */; };
 		1CA00DE5E134E2DE0D84883B /* ReminderSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = F983C2144C0E18B3B29542EA /* ReminderSection.swift */; };
@@ -79,6 +80,7 @@
 		7AEC7C1206DA184E34E48B01 /* WidgetSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = D43FA92B96F4243548E18E5D /* WidgetSnapshot.swift */; };
 		7B1928F312FA550AEB3106A6 /* PaperChrome.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0587AFE7BA6C571E38D93D08 /* PaperChrome.swift */; };
 		7D556389213DC7DD77A34755 /* StatusChip.swift in Sources */ = {isa = PBXBuildFile; fileRef = BE8DC7A906F6CB3095FE4AA0 /* StatusChip.swift */; };
+		85398EBC6C2006F18A65B6C5 /* DailyFocusListTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8532298A74EADB952DA3F03A /* DailyFocusListTests.swift */; };
 		876A2951259B59948D4E3EC8 /* FinallyWidgetExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 03F3B629AECA1694C5B528B5 /* FinallyWidgetExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		891FD9E83F18DB93CB8DE15F /* TaskStatusAndPriority.swift in Sources */ = {isa = PBXBuildFile; fileRef = E62DDF7C4EFECF21D544B032 /* TaskStatusAndPriority.swift */; };
 		896C39D850C092C323334951 /* WidgetPublisher.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3F2D02477CFFC7AB499C2C11 /* WidgetPublisher.swift */; };
@@ -260,6 +262,7 @@
 		832612E5901E80295CD69C97 /* ProjectPicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProjectPicker.swift; sourceTree = "<group>"; };
 		8379C4A99FB2D717844E53B8 /* TasksDemoFixture.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TasksDemoFixture.swift; sourceTree = "<group>"; };
 		837D45B286A6CB5EEF5A4D27 /* InlineTaskCreator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InlineTaskCreator.swift; sourceTree = "<group>"; };
+		8532298A74EADB952DA3F03A /* DailyFocusListTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DailyFocusListTests.swift; sourceTree = "<group>"; };
 		881BE845BBC337EEB8F00A12 /* Today.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Today.swift; sourceTree = "<group>"; };
 		886B142AE74239CB20B81B88 /* SubtaskScheduler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubtaskScheduler.swift; sourceTree = "<group>"; };
 		8875DF7703CDE08E6E96792D /* E2EConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = E2EConfig.swift; sourceTree = "<group>"; };
@@ -300,6 +303,7 @@
 		D43FA92B96F4243548E18E5D /* WidgetSnapshot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetSnapshot.swift; sourceTree = "<group>"; };
 		D6309FEABF2B53C34BE78097 /* FinallyServerTaskSnapshot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FinallyServerTaskSnapshot.swift; sourceTree = "<group>"; };
 		DA087D2A792A34E4E6B9FA66 /* DefaultDeadlineRemindersView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DefaultDeadlineRemindersView.swift; sourceTree = "<group>"; };
+		DCABA4D249E1C139623894D4 /* DailyFocusList.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DailyFocusList.swift; sourceTree = "<group>"; };
 		DFAA764278E2B2298E8B7404 /* ProjectItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProjectItem.swift; sourceTree = "<group>"; };
 		E04481BD7281408D0185E073 /* TaskStatusCycleTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskStatusCycleTests.swift; sourceTree = "<group>"; };
 		E23557EFB66C7C96C459D609 /* TaskReminder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskReminder.swift; sourceTree = "<group>"; };
@@ -335,6 +339,7 @@
 				FE284F0F5D1A8C4A4FC7E85D /* CaptureDraft.swift */,
 				BC96B5D0B933B1D93FA49970 /* DailyFocus.swift */,
 				9D910ABD0BF620F725F4A368 /* DailyFocusDemoFixture.swift */,
+				DCABA4D249E1C139623894D4 /* DailyFocusList.swift */,
 				6A16244EB7E87921909EB098 /* DefaultDeadlineReminders.swift */,
 				5DF9E28C5C320BE1EE73448A /* Enums.swift */,
 				3C9598E213C06616575B315C /* ModelContainer+Shared.swift */,
@@ -595,6 +600,7 @@
 			children = (
 				47A07329C04675C8DE9F5747 /* BoardColumnsTests.swift */,
 				4D0FC86B67D088170EF867CC /* CaptureDraftTests.swift */,
+				8532298A74EADB952DA3F03A /* DailyFocusListTests.swift */,
 				E6B474345709AE791A120D5E /* DailyFocusTests.swift */,
 				103C5ECE4EE59941E719538D /* DeadlineReminderTests.swift */,
 				F5885ED3AF7DB43EB8B6F093 /* DefaultDeadlineRemindersTests.swift */,
@@ -752,6 +758,7 @@
 				34F63FDAE9AF83CAA6DCA4AF /* BackendDataFlowIntegrationTests.swift in Sources */,
 				39847F1107F9705FC7417F0E /* BoardColumnsTests.swift in Sources */,
 				F8EDCF27645FBB12C8BB16A5 /* CaptureDraftTests.swift in Sources */,
+				85398EBC6C2006F18A65B6C5 /* DailyFocusListTests.swift in Sources */,
 				B89290F5A2A918135DCDD00D /* DailyFocusServiceTests.swift in Sources */,
 				90552E7DF1BCC9AD36EC10B5 /* DailyFocusTests.swift in Sources */,
 				2BEDD33B1145999055FFA724 /* DeadlineReminderTests.swift in Sources */,
@@ -832,6 +839,7 @@
 				CF8A36791A5B718F38271D6C /* DailyFocus.swift in Sources */,
 				3CFA67FC7F70638613BE6E15 /* DailyFocusDemoFixture.swift in Sources */,
 				725A44B99D704F9581AC1DCC /* DailyFocusHeading.swift in Sources */,
+				17159BC766B1D6C68A487C2D /* DailyFocusList.swift in Sources */,
 				BCC9C4338B5DC147BCB445A9 /* DailyFocusPickerView.swift in Sources */,
 				3D7437F43A28FAE17DBBD427 /* DailyFocusReplanningView.swift in Sources */,
 				F95D4E81DBCE8109F5CB43CC /* DailyFocusSection.swift in Sources */,
