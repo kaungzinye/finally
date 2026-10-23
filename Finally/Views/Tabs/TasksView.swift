@@ -86,19 +86,23 @@ struct TasksView: View {
 
     private var controls: some View {
         HStack(spacing: 8) {
-            Picker("Layout", selection: $layout) {
-                Text("List").tag(Layout.list)
-                Text("Board").tag(Layout.board)
-            }
-            .pickerStyle(.segmented)
-            .fixedSize()
-            .accessibilityIdentifier("tasks-layout")
+            layoutChip("List", .list)
+            layoutChip("Board", .board)
             FilterChip(title: "Unscheduled", isOn: $unscheduledOnly)
                 .accessibilityIdentifier("tasks-filter-unscheduled")
                 .shown(layout == .list)
             Spacer(minLength: 0)
         }
         .animation(.smooth(duration: 0.2), value: layout)
+    }
+
+    /// A layout as a chip, filled while it shows. Tapping the shown layout keeps it.
+    private func layoutChip(_ title: String, _ choice: Layout) -> some View {
+        FilterChip(title: title, isOn: Binding(
+            get: { layout == choice },
+            set: { isOn in if isOn { layout = choice } }
+        ))
+        .accessibilityIdentifier("tasks-layout-\(choice.rawValue)")
     }
 
     private var taskList: some View {
