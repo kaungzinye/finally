@@ -11,6 +11,8 @@ struct TodayView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.scenePhase) private var scenePhase
     @AppStorage(AppConstants.focusLimitKey) private var focusLimit = DailyFocus.defaultFocusLimit
+    /// Settings > Developer switches Today to the UIKit list while it is being built.
+    @AppStorage(AppConstants.uikitTodayKey) private var usesUIKitList = false
 
     @State private var day = Calendar.current.startOfDay(for: Date())
     @State private var dailyFocus: DailyFocus?
@@ -43,61 +45,14 @@ struct TodayView: View {
     var body: some View {
         let otherTasks = otherTasks
         NavigationStack {
-            List {
-                // A section header, unlike a row, draws outside its group's rounded clip, so
-                // the heading reaches the large-title inset.
-                Section {} header: { TodayHeader(day: day) }
-                    .listSectionSpacing(.compact)
-                if let dailyFocus {
-                    DailyFocusSection(
-                        focus: dailyFocus,
-                        onChange: { save(dailyFocus) },
-                        onSelectTask: { selectedTask = $0 },
-                        onAddPick: {
-                            // A new day reloads Today, and the user picks into the new day's focus.
-                            guard !moveToCurrentDay() else { return }
-                            showPicker = true
-                        },
-                        onReviewDay: DailyFocus.showsReviewTheDay(
-                            for: dailyFocus, hasUnfinishedEarlierDay: !unfinishedDays.isEmpty, at: Date()
-                        ) ? { replanningFocus = dailyFocus } : nil
-                    )
-                    .disabled(isSaving)
+            Group {
+                if usesUIKitList {
+                    TodayList(picks: focusPicks, otherTasks: otherTasks.map(\.task))
+                        .ignoresSafeArea(edges: .bottom)
                 } else {
-                    ProgressView()
-                        .frame(maxWidth: .infinity)
-                        .paperRow()
-                }
-                ForEach(unfinishedDays) { focus in
-                    Section {
-                        Button {
-                            replanningFocus = focus
-                        } label: {
-                            Label("Replan \(focus.day.formatted(.dateTime.weekday(.wide)))", systemImage: "arrow.triangle.branch")
-                        }
-                        .foregroundStyle(Palette.ink)
-                        .accessibilityIdentifier("daily-focus-unfinished-day")
-                        .cardRow()
-                    } footer: {
-                        SectionNote("Choose what happens to each unfinished task.")
-                    }
-                }
-                if !otherTasks.isEmpty {
-                    Section {
-                        ForEach(otherTasks, id: \.task.persistentModelID) { member in
-                            TaskRowView(task: member.task, focusAction: .pick { pickFromOtherTasks(member.task) }, layout: .compact)
-                                .contentShape(Rectangle())
-                                .onTapGesture { selectedTask = member.task }
-                        }
-                    } header: {
-                        SectionLabel(title: "Other tasks") {
-                            Text("\(otherTasks.count)")
-                        }
-                    }
+                    swiftUIList(otherTasks)
                 }
             }
-            .paperList(minRowHeight: 40)
-            .contentMargins(.top, 4, for: .scrollContent)
             .toolbar(.hidden, for: .navigationBar)
             .disabled(isSaving)
             .task(id: loadID) { await load() }
@@ -149,6 +104,71 @@ struct TodayView: View {
         .sheet(item: $replanningFocus) { focus in
             DailyFocusReplanningView(focus: focus)
         }
+    }
+
+
+
+    private var focusPicks: [TaskItem] {
+        guard let dailyFocus else { return [] }
+        return DailyFocusList(focus: dailyFocus, tasks: tasks).rows.compactMap(\.task)
+    }
+
+    private func swiftUIList(_ otherTasks: [Today.Member<TaskItem>]) -> some View {
+        List {
+            // A section header, unlike a row, draws outside its group's rounded clip, so
+            // the heading reaches the large-title inset.
+            Section {} header: { TodayHeader(day: day) }
+                .listSectionSpacing(.compact)
+            if let dailyFocus {
+                DailyFocusSection(
+                    focus: dailyFocus,
+                    onChange: { save(dailyFocus) },
+                    onSelectTask: { selectedTask = $0 },
+                    onAddPick: {
+                        // A new day reloads Today, and the user picks into the new day's focus.
+                        guard !moveToCurrentDay() else { return }
+                        showPicker = true
+                    },
+                    onReviewDay: DailyFocus.showsReviewTheDay(
+                        for: dailyFocus, hasUnfinishedEarlierDay: !unfinishedDays.isEmpty, at: Date()
+                    ) ? { replanningFocus = dailyFocus } : nil
+                )
+                .disabled(isSaving)
+            } else {
+                ProgressView()
+                    .frame(maxWidth: .infinity)
+                    .paperRow()
+            }
+            ForEach(unfinishedDays) { focus in
+                Section {
+                    Button {
+                        replanningFocus = focus
+                    } label: {
+                        Label("Replan \(focus.day.formatted(.dateTime.weekday(.wide)))", systemImage: "arrow.triangle.branch")
+                    }
+                    .foregroundStyle(Palette.ink)
+                    .accessibilityIdentifier("daily-focus-unfinished-day")
+                    .cardRow()
+                } footer: {
+                    SectionNote("Choose what happens to each unfinished task.")
+                }
+            }
+            if !otherTasks.isEmpty {
+                Section {
+                    ForEach(otherTasks, id: \.task.persistentModelID) { member in
+                        TaskRowView(task: member.task, focusAction: .pick { pickFromOtherTasks(member.task) }, layout: .compact)
+                            .contentShape(Rectangle())
+                            .onTapGesture { selectedTask = member.task }
+                    }
+                } header: {
+                    SectionLabel(title: "Other tasks") {
+                        Text("\(otherTasks.count)")
+                    }
+                }
+            }
+        }
+        .paperList(minRowHeight: 40)
+        .contentMargins(.top, 4, for: .scrollContent)
     }
 
     /// Moves Today to the current calendar day. Returns whether the day changed.

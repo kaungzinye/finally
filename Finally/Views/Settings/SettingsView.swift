@@ -8,6 +8,7 @@ struct SettingsView: View {
     @Environment(TaskProviderCoordinator.self) private var taskProvider
     @Environment(NotionAuthService.self) private var authService
     @AppStorage(AppConstants.focusLimitKey) private var focusLimit = DailyFocus.defaultFocusLimit
+    @AppStorage(AppConstants.uikitTodayKey) private var uikitToday = false
 
     private var notionSession: UserSession? {
         sessions.first { $0.providerIdentity == .notion }
@@ -133,6 +134,13 @@ struct SettingsView: View {
                 } header: {
                     SectionLabel("Account")
                 }
+                #if DEBUG
+                Section {
+                    Toggle("UIKit Today list", isOn: $uikitToday)
+                } header: {
+                    SectionLabel("Developer")
+                }
+                #endif
                 }
                 .cardRow()
             }

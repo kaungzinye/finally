@@ -36,6 +36,8 @@ enum AppConstants {
     // Daily Focus
     /// UserDefaults key for the focus limit applied to new Daily Focus records.
     static let focusLimitKey = "focusLimit"
+    /// Draws Today with the UIKit list while it is being built. A DEBUG setting.
+    static let uikitTodayKey = "uikitToday"
     static let defaultFocusLimit = 3
 
     // Widget
