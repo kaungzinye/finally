@@ -47,7 +47,11 @@ struct TodayView: View {
         NavigationStack {
             Group {
                 if usesUIKitList {
-                    TodayList(picks: focusPicks, otherTasks: otherTasks.map(\.task))
+                    TodayList(content: TodayListContent(
+                        focusHeading: DailyFocusHeading.text(focusLimit: dailyFocus?.focusLimit ?? focusLimit),
+                        focus: dailyFocus.map { DailyFocusList(focus: $0, tasks: tasks) },
+                        otherTasks: otherTasks.map(\.task)
+                    ))
                         .ignoresSafeArea(edges: .bottom)
                 } else {
                     swiftUIList(otherTasks)
@@ -107,11 +111,6 @@ struct TodayView: View {
     }
 
 
-
-    private var focusPicks: [TaskItem] {
-        guard let dailyFocus else { return [] }
-        return DailyFocusList(focus: dailyFocus, tasks: tasks).rows.compactMap(\.task)
-    }
 
     private func swiftUIList(_ otherTasks: [Today.Member<TaskItem>]) -> some View {
         List {

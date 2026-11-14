@@ -7,14 +7,22 @@ import SwiftUI
 /// changes, SwiftUI calls `updateUIViewController` with fresh values, and the controller decides
 /// what on screen has to change. SwiftUI owns the data and UIKit owns the drawing.
 struct TodayList: UIViewControllerRepresentable {
-    let picks: [TaskItem]
-    let otherTasks: [TaskItem]
+    let content: TodayListContent
 
     func makeUIViewController(context: Context) -> TodayListController {
         TodayListController()
     }
 
     func updateUIViewController(_ controller: TodayListController, context: Context) {
-        controller.show(picks: picks, otherTasks: otherTasks)
+        controller.show(content)
     }
+}
+
+/// Everything the list draws, worked out by TodayView from SwiftData.
+struct TodayListContent {
+    /// "3 things to do", over the numbered picks.
+    let focusHeading: String
+    /// The Daily Focus picks and open slots. Nil while the day's focus loads.
+    let focus: DailyFocusList?
+    let otherTasks: [TaskItem]
 }
