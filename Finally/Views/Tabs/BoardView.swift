@@ -2,9 +2,13 @@ import SwiftUI
 import SwiftData
 
 /// The Board: the Tasks tab's columns of Not started, In progress, and Complete.
-/// The status bar names every column with its count, jumps to it on tap, and takes dropped cards,
+/// The status bar is a segmented control naming every column with its count. Choosing a segment,
+/// by tap or by dragging across, jumps to its column, and a card dropped on a segment moves there,
 /// so each column stays reachable without scrolling sideways.
 struct BoardView: View {
+    /// The Board is the layout on screen. A hidden Board keeps its state and leaves the toolbar alone.
+    var isActive = true
+
     @Query(filter: #Predicate<TaskItem> { $0.isDeleted == false }) private var allTasks: [TaskItem]
     @Query private var sessions: [UserSession]
     @Environment(TaskProviderCoordinator.self) private var taskProvider
@@ -16,6 +20,7 @@ struct BoardView: View {
     @State private var filterPriorities: Set<String> = []
     @State private var visibleStatus: TaskStatus? = .notStarted
     @State private var targetedStatus: TaskStatus?
+    @State private var statusBarWidth: Double = 0
 
     private var board: BoardColumns {
         BoardColumns(
@@ -51,11 +56,13 @@ struct BoardView: View {
         }
         .background(Palette.paper)
         .toolbar {
-            ToolbarItem(placement: .topBarTrailing) {
-                Button { showFilterSheet = true } label: {
-                    Image(systemName: hasActiveFilters ? "line.3.horizontal.decrease.circle.fill" : "line.3.horizontal.decrease.circle")
+            if isActive {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button { showFilterSheet = true } label: {
+                        Image(systemName: hasActiveFilters ? "line.3.horizontal.decrease.circle.fill" : "line.3.horizontal.decrease.circle")
+                    }
+                    .accessibilityLabel("Filter")
                 }
-                .accessibilityLabel("Filter")
             }
         }
         .sheet(isPresented: $showFilterSheet) {
@@ -69,42 +76,24 @@ struct BoardView: View {
 
     // MARK: - Status bar
 
+    /// The native segmented control: on iOS 26 its glass thumb follows a finger dragged across
+    /// the segments, with selection haptics. A drop lands on the segment under the card.
     private func statusBar(_ board: BoardColumns) -> some View {
-        HStack(spacing: 4) {
+        Picker("Status", selection: Binding(
+            get: { visibleStatus ?? .notStarted },
+            set: { status in withAnimation(.snappy) { visibleStatus = status } }
+        )) {
             ForEach(board.columns) { column in
-                let isVisible = visibleStatus == column.status
-                let isTargeted = targetedStatus == column.status
-                Button {
-                    withAnimation(.snappy) { visibleStatus = column.status }
-                } label: {
-                    HStack(spacing: 6) {
-                        Text(column.title)
-                            .lineLimit(1)
-                            .minimumScaleFactor(0.8)
-                        Text("\(column.tasks.count)")
-                            .foregroundStyle(isVisible ? Palette.onInk.opacity(0.7) : Palette.muted)
-                    }
-                    .font(.chip)
-                    .foregroundStyle(isVisible ? Palette.onInk : Palette.ink)
-                    .frame(maxWidth: .infinity, minHeight: 36)
-                    .background(
-                        isVisible ? Palette.ink : (isTargeted ? Palette.selection : Color.clear),
-                        in: Capsule()
-                    )
-                    .contentShape(Capsule())
-                }
-                .buttonStyle(.plain)
-                .accessibilityIdentifier("board-status-\(Self.key(column.status))")
-                .accessibilityAddTraits(isVisible ? .isSelected : [])
-                .dropDestination(for: String.self) { ids, _ in
-                    drop(ids, on: column.status)
-                } isTargeted: { targeted in
-                    targetedStatus = targeted ? column.status : (targetedStatus == column.status ? nil : targetedStatus)
-                }
+                Text("\(column.title) \(column.tasks.count)").tag(column.status)
             }
         }
-        .padding(4)
-        .background(Palette.wash, in: Capsule())
+        .pickerStyle(.segmented)
+        .accessibilityIdentifier("board-status")
+        .onGeometryChange(for: Double.self) { $0.size.width } action: { statusBarWidth = $0 }
+        .dropDestination(for: String.self) { ids, location in
+            guard let status = BoardColumns.status(atX: location.x, inWidth: statusBarWidth) else { return false }
+            return drop(ids, on: status)
+        }
     }
 
     // MARK: - Columns

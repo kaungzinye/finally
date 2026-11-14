@@ -27,6 +27,15 @@ struct BoardColumns {
         }
     }
 
+    /// The status whose segment sits under `x` on a status bar of equal segments, one per column.
+    /// A point past either end lands on the end segment.
+    static func status(atX x: Double, inWidth width: Double) -> TaskStatus? {
+        let statuses = TaskStatus.allCases
+        guard width > 0, !statuses.isEmpty else { return nil }
+        let index = Int((x / width * Double(statuses.count)).rounded(.down))
+        return statuses[min(max(index, 0), statuses.count - 1)]
+    }
+
     /// The card a drop names, resolved within this board's workspace.
     func card(withID id: String) -> TaskItem? {
         for column in columns {

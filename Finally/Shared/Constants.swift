@@ -39,5 +39,11 @@ enum AppConstants {
     static let defaultFocusLimit = 3
 
     // Widget
-    static let widgetKind = "FinallyWidget"
+    /// One kind per widget in the gallery.
+    enum WidgetKind {
+        static let focus = "FinallyFocusWidget"
+        static let now = "FinallyNowWidget"
+        static let today = "FinallyTodayWidget"
+        static let todayRing = "FinallyTodayRingWidget"
+    }
 }

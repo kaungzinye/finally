@@ -92,7 +92,8 @@ struct TodayView: View {
                 }
             }
             .paperList()
-            .toolbar(.hidden, for: .navigationBar)
+            .navigationBarTitleDisplayMode(.inline)
+            .settingsButton()
             .disabled(isSaving)
             .task(id: loadID) { await load() }
             .onChange(of: scenePhase) { _, phase in

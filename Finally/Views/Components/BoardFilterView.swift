@@ -53,9 +53,7 @@ struct BoardFilterView: View {
                     }
                     .disabled(filterProjects.isEmpty && filterPriorities.isEmpty)
                 }
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Done") { dismiss() }
-                }
+                ConfirmToolbarButton("Done") { dismiss() }
             }
         }
         .presentationDetents([.medium])

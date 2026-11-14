@@ -76,9 +76,7 @@ struct TagPicker: View {
             .navigationTitle("Tags")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Done") { dismiss() }
-                }
+                ConfirmToolbarButton("Done") { dismiss() }
             }
         }
         .presentationDetents([.medium, .large])

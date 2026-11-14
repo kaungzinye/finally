@@ -56,6 +56,7 @@ struct UpcomingView: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .background(Palette.paper)
                 .navigationTitle("Upcoming")
+                .settingsButton()
             } else {
                 ScrollViewReader { proxy in
                     List {
@@ -98,6 +99,7 @@ struct UpcomingView: View {
                 .paperList()
                 }
                 .navigationTitle(isSelectionMode ? "\(selectedTasks.count) selected" : "Upcoming")
+                .settingsButton(isHidden: isSelectionMode)
                 .refreshable {
                     try? await taskProvider.synchronize(.launch, store: modelContext)
                 }
@@ -175,12 +177,7 @@ struct UpcomingView: View {
 
     @ViewBuilder
     private func taskRow(_ task: TaskItem) -> some View {
-        TaskRowView(task: task)
-        .listRowBackground(
-            isSelectionMode && selectedTasks.contains(task.externalTaskID)
-                ? Palette.selection
-                : Palette.card
-        )
+        TaskRowView(task: task, isSelected: isSelectionMode && selectedTasks.contains(task.externalTaskID))
         .contentShape(Rectangle())
         .onTapGesture {
             if isSelectionMode {

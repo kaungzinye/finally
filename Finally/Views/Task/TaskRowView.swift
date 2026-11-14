@@ -5,6 +5,7 @@ import SwiftData
 /// Every row has the same height whether or not the task carries a deadline or subtasks.
 struct TaskRowView: View {
     @Bindable var task: TaskItem
+    var isSelected = false
     @Environment(\.modelContext) private var modelContext
     @Environment(TaskProviderCoordinator.self) private var taskProvider
 
@@ -44,15 +45,12 @@ struct TaskRowView: View {
 
             trailing
         }
-        .frame(minHeight: 44)
-        .contentShape(Rectangle())
-        .cardRow()
-        .compactRowInsets()
+        .roundedCardRow(fill: isSelected ? Palette.selection : Palette.card)
         .swipeActions(edge: .leading) {
             Button(action: complete) {
                 Label("Complete", systemImage: "checkmark")
             }
-            .tint(Palette.ink)
+            .tint(Palette.done)
         }
         .swipeActions(edge: .trailing) {
             Button {
@@ -60,7 +58,7 @@ struct TaskRowView: View {
             } label: {
                 Label("Reschedule", systemImage: "calendar")
             }
-            .tint(Palette.high)
+            .tint(Palette.highFill)
         }
         .sheet(isPresented: $showDatePicker) {
             DatePickerSheet(scheduledDay: scheduledDayBinding, latest: task.deadline)

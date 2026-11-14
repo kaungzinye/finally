@@ -110,11 +110,8 @@ struct DatabasePickerView: View {
             .navigationTitle("Choose databases")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Continue") {
-                        Task { await validateAndContinue() }
-                    }
-                    .disabled(selectedTasksDb == nil || isLoading || isValidating || authService.isAuthenticating)
+                ConfirmToolbarButton("Continue", isDisabled: selectedTasksDb == nil || isLoading || isValidating || authService.isAuthenticating) {
+                    Task { await validateAndContinue() }
                 }
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Back", action: onChooseProvider)

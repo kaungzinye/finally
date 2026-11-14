@@ -140,9 +140,7 @@ struct SettingsView: View {
             .paperList()
             .navigationTitle("Settings")
             .toolbar {
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Done") { dismiss() }
-                }
+                ConfirmToolbarButton("Done") { dismiss() }
             }
         }
     }
@@ -198,5 +196,36 @@ struct SettingsView: View {
 
     private func workspaceChanged() {
         NotificationCenter.default.post(name: .providerWorkspaceChanged, object: nil)
+    }
+}
+
+/// The gear at the leading edge of every tab's toolbar. It opens Settings.
+private struct SettingsButton: ViewModifier {
+    var isHidden: Bool
+    @State private var showSettings = false
+
+    func body(content: Content) -> some View {
+        content
+            .toolbar {
+                if !isHidden {
+                    ToolbarItem(placement: .topBarLeading) {
+                        Button { showSettings = true } label: {
+                            Image(systemName: "gearshape")
+                        }
+                        .accessibilityLabel("Settings")
+                    }
+                }
+            }
+            .sheet(isPresented: $showSettings) {
+                SettingsView()
+            }
+    }
+}
+
+extension View {
+    /// Adds the Settings gear to the toolbar's leading edge. A tab hides it while its own
+    /// leading control, such as Cancel, takes the spot.
+    func settingsButton(isHidden: Bool = false) -> some View {
+        modifier(SettingsButton(isHidden: isHidden))
     }
 }

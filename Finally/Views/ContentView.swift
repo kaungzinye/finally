@@ -16,6 +16,8 @@ struct ContentView: View {
         var id: String { switch self { case .conflict(let task): "conflict-\(task.externalTaskID)"; case .detail(let task): "detail-\(task.externalTaskID)" } }
     }
     @State private var showCreator = false
+    /// The deferred reminder count whose note has shown and faded.
+    @State private var shownDeferredCount = 0
 
     private var inboxCount: Int {
         TasksList(tasks: tasks, projects: [], workspace: sessions.selectedProviderWorkspace).inbox.count
@@ -25,30 +27,24 @@ struct ContentView: View {
         @Bindable var router = router
 
         ZStack {
-            VStack(spacing: 8) {
-                callouts
-                    .padding(.horizontal, 16)
+            TabView(selection: $router.selectedTab) {
+                TodayView()
+                    .addTaskButton(isHidden: showCreator, action: openCreator)
+                    .tabItem { Label("Today", systemImage: "sun.max") }
+                    .tag(NavigationRouter.Tab.today)
 
-                TabView(selection: $router.selectedTab) {
-                    TodayView()
-                        .addTaskButton(isHidden: showCreator, action: openCreator)
-                        .tabItem { Label("Today", systemImage: "sun.max") }
-                        .tag(NavigationRouter.Tab.today)
+                UpcomingView()
+                    .addTaskButton(isHidden: showCreator, action: openCreator)
+                    .tabItem { Label("Upcoming", systemImage: "calendar") }
+                    .tag(NavigationRouter.Tab.upcoming)
 
-                    UpcomingView()
-                        .addTaskButton(isHidden: showCreator, action: openCreator)
-                        .tabItem { Label("Upcoming", systemImage: "calendar") }
-                        .tag(NavigationRouter.Tab.upcoming)
-
-                    TasksView()
-                        .addTaskButton(isHidden: showCreator, action: openCreator)
-                        .tabItem { Label("Tasks", systemImage: "checklist") }
-                        .badge(inboxCount)
-                        .tag(NavigationRouter.Tab.tasks)
-                }
+                TasksView()
+                    .addTaskButton(isHidden: showCreator, action: openCreator)
+                    .tabItem { Label("Tasks", systemImage: "checklist") }
+                    .badge(inboxCount)
+                    .tag(NavigationRouter.Tab.tasks)
             }
             .background(Palette.paper.ignoresSafeArea())
-            .animation(.spring(response: 0.32, dampingFraction: 0.82), value: networkService.isOnline)
 
             // Dismiss creator when tapping content area
             if showCreator {
@@ -58,6 +54,21 @@ struct ContentView: View {
                         withAnimation(.spring(response: 0.32, dampingFraction: 0.82)) { showCreator = false }
                     }
             }
+        }
+        // Callouts float over the screen as toasts, so they never move the content under them.
+        .overlay(alignment: .top) {
+            VStack(spacing: 8) {
+                callouts
+                    .shadow(color: .black.opacity(0.12), radius: 16, y: 6)
+                    .transition(.move(edge: .top).combined(with: .opacity))
+            }
+            .padding(.horizontal, 16)
+            .padding(.top, 4)
+            .animation(.snappy, value: networkService.isOnline)
+            .animation(.snappy, value: taskProvider.lastWarning)
+            .animation(.snappy, value: taskProvider.lastError)
+            .animation(.snappy, value: dailyFocusService.lastError)
+            .animation(.snappy, value: shownDeferredCount)
         }
         .safeAreaInset(edge: .bottom) {
             if showCreator {
@@ -81,7 +92,6 @@ struct ContentView: View {
     private var callouts: some View {
         if !networkService.isOnline {
             Callout(icon: "wifi.slash", message: "You're offline. Your changes save when you're back online.")
-                .transition(.move(edge: .top).combined(with: .opacity))
         }
 
         if let conflict = tasks.first(where: { $0.providerWorkspaceId == sessions.selectedProviderWorkspace?.workspaceId && ($0.serverConflictJSON != nil || $0.serverTaskMissing) }) {
@@ -99,8 +109,10 @@ struct ContentView: View {
         if let message = NotificationService.shared.schedulingError {
             Callout(message: message, onRetry: { NotificationService.shared.rescheduleAllReminders(modelContext: modelContext) })
         }
-        if NotificationService.shared.deferredCount > 0 {
-            Callout(icon: "bell.badge", message: "\(NotificationService.shared.deferredCount) more reminders are waiting. iPhone holds the nearest ones, and opening Finally adds the rest.")
+        let deferredCount = NotificationService.shared.deferredCount
+        if deferredCount > 0, deferredCount != shownDeferredCount {
+            Callout(icon: "bell.badge", message: "\(deferredCount) more reminders are waiting. iPhone holds the nearest ones, and opening Finally adds the rest.")
+                .dismissesItself(id: deferredCount) { shownDeferredCount = deferredCount }
         }
 
         if let message = taskProvider.lastError {
@@ -122,7 +134,8 @@ struct ContentView: View {
         }
 
         if let message = taskProvider.lastWarning {
-            Callout(message: message, onDismiss: { taskProvider.clearWarning() })
+            Callout(icon: "info.circle.fill", message: message, onDismiss: { taskProvider.clearWarning() })
+                .dismissesItself(id: message) { taskProvider.clearWarning() }
         }
     }
 
@@ -144,6 +157,15 @@ struct ContentView: View {
 }
 
 private extension View {
+    /// An informational toast fades after a few seconds. Errors leave this off and wait for the user.
+    func dismissesItself<ID: Equatable>(after seconds: Double = 4, id: ID, perform: @escaping () -> Void) -> some View {
+        task(id: id) {
+            try? await Task.sleep(for: .seconds(seconds))
+            guard !Task.isCancelled else { return }
+            withAnimation(.snappy) { perform() }
+        }
+    }
+
     /// The one floating add button, sitting above the tab bar in every tab.
     func addTaskButton(isHidden: Bool, action: @escaping () -> Void) -> some View {
         overlay(alignment: .bottomTrailing) {

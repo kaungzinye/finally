@@ -631,7 +631,7 @@ final class SyncService {
 
     private func reloadWidgetTimelines() {
 #if canImport(WidgetKit)
-        WidgetCenter.shared.reloadTimelines(ofKind: AppConstants.widgetKind)
+        WidgetCenter.shared.reloadAllTimelines()
 #endif
     }
 }

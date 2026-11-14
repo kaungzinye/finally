@@ -18,6 +18,20 @@ extension View {
         listRowBackground(Palette.card)
     }
 
+    /// A row drawn as its own rounded card, 44 points tall with a 4-point gap to the next, so it
+    /// keeps its corners while it slides under a swipe. Rows that share a section with task rows
+    /// use it too, so the section reads as one stack of cards.
+    func roundedCardRow(fill: Color = Palette.card) -> some View {
+        let shape = RoundedRectangle(cornerRadius: 14, style: .continuous)
+        return padding(.horizontal, 20)
+            .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+            .background(fill, in: shape)
+            .contentShape(shape)
+            .listRowBackground(Color.clear)
+            .listRowInsets(EdgeInsets(top: 2, leading: 0, bottom: 2, trailing: 0))
+            .listRowSeparator(.hidden)
+    }
+
     /// Insets that hold a 44-point row to the shared 48-point height.
     func compactRowInsets() -> some View {
         listRowInsets(EdgeInsets(top: 2, leading: 20, bottom: 2, trailing: 20))
@@ -104,6 +118,40 @@ extension ButtonStyle where Self == InkButtonStyle {
     static var ink: InkButtonStyle { InkButtonStyle() }
 }
 
+/// A sheet's confirming toolbar button, such as Done or Save. On iOS 26 it is prominent glass
+/// filled with ink, its label drawn in `onInk`, so it reads in both modes whatever label color
+/// the system would pick. Earlier systems draw it as bold ink text.
+struct ConfirmToolbarButton: ToolbarContent {
+    let title: String
+    var isDisabled = false
+    let action: () -> Void
+
+    init(_ title: String, isDisabled: Bool = false, action: @escaping () -> Void) {
+        self.title = title
+        self.isDisabled = isDisabled
+        self.action = action
+    }
+
+    var body: some ToolbarContent {
+        ToolbarItem(placement: .confirmationAction) {
+            if #available(iOS 26, *) {
+                Button(action: action) {
+                    Text(title)
+                        .fontWeight(.semibold)
+                        .foregroundStyle(Palette.onInk)
+                }
+                .buttonStyle(.glassProminent)
+                .tint(Palette.ink)
+                .disabled(isDisabled)
+            } else {
+                Button(title, action: action)
+                    .fontWeight(.semibold)
+                    .disabled(isDisabled)
+            }
+        }
+    }
+}
+
 // MARK: - Sheets
 
 extension View {
@@ -137,8 +185,8 @@ struct FilterChip: View {
             .foregroundStyle(isOn ? Palette.onInk : Palette.ink)
             .padding(.horizontal, 12)
             .frame(minHeight: 38)
-            .background(isOn ? Palette.ink : Palette.wash, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
-            .contentShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+            .background(isOn ? Palette.ink : Palette.wash, in: Capsule())
+            .contentShape(Capsule())
         }
         .buttonStyle(.plain)
         .accessibilityAddTraits(isOn ? .isSelected : [])
@@ -165,8 +213,8 @@ struct ChoiceChips<Value: Hashable>: View {
                         .foregroundStyle(isSelected ? Palette.onInk : Palette.ink)
                         .padding(.horizontal, 12)
                         .frame(minWidth: 38, minHeight: 34)
-                        .background(isSelected ? Palette.ink : Palette.wash, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
-                        .contentShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                        .background(isSelected ? Palette.ink : Palette.wash, in: Capsule())
+                        .contentShape(Capsule())
                 }
                 .buttonStyle(.plain)
                 .accessibilityAddTraits(isSelected ? .isSelected : [])

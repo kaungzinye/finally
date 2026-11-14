@@ -46,7 +46,7 @@ struct DatePickerSheet: View {
                     displayedComponents: hasTime ? [.date, .hourAndMinute] : [.date]
                 )
                 .datePickerStyle(.graphical)
-                .tint(Palette.ink)
+                .tint(Palette.inkControl)
                 .accessibilityLabel(field.title)
 
                 if field == .deadline {
@@ -69,11 +69,9 @@ struct DatePickerSheet: View {
                         dismiss()
                     }
                 }
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Done") {
-                        selectedDate = field == .deadline ? pickerDate : Calendar.current.startOfDay(for: pickerDate)
-                        dismiss()
-                    }
+                ConfirmToolbarButton("Done") {
+                    selectedDate = field == .deadline ? pickerDate : Calendar.current.startOfDay(for: pickerDate)
+                    dismiss()
                 }
             }
         }
