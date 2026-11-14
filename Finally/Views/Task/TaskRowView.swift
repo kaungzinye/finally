@@ -231,28 +231,8 @@ struct TaskRowView: View {
         if case .focus = layout { .spring(Self.focusSpring) } else { .snappy }
     }
 
-    /// Completing or reopening animates the row first. The reminder and provider work waits
-    /// until the animation ends, since fetching every task mid-animation drops frames.
     private func toggleCompletion() {
-        UIImpactFeedbackGenerator(style: .light).impactOccurred()
-        let wasDone = isDone
-        var completed = false
-        withAnimation(completionAnimation) {
-            if wasDone {
-                task.move(to: .notStarted)
-            } else {
-                completed = task.complete()
-            }
-        }
-        Task {
-            try? await Task.sleep(for: .milliseconds(400))
-            if wasDone || completed {
-                NotificationService.shared.rescheduleAllReminders(modelContext: modelContext)
-            } else {
-                NotificationService.shared.cancelRemindersForTask(task, modelContext: modelContext)
-            }
-            submitTaskMutation()
-        }
+        TaskCompletion.toggle(task, animation: completionAnimation, modelContext: modelContext, taskProvider: taskProvider)
     }
 
     // MARK: - Reschedule
@@ -261,17 +241,7 @@ struct TaskRowView: View {
     private var scheduledDayBinding: Binding<Date?> {
         Binding(
             get: { task.scheduledDay },
-            set: { day in
-                task.reschedule(to: day)
-                NotificationService.shared.rescheduleAllReminders(modelContext: modelContext)
-                submitTaskMutation()
-            }
+            set: { TaskCompletion.reschedule(task, to: $0, modelContext: modelContext, taskProvider: taskProvider) }
         )
-    }
-
-    private func submitTaskMutation() {
-        Task {
-            await taskProvider.submitPendingChangesReportingFailure(for: task.pendingEdits, store: modelContext)
-        }
     }
 }

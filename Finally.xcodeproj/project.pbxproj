@@ -61,6 +61,7 @@
 		5BFF0F024F1538934C7D9EFC /* SyncServiceNotionMappingIntegrationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 42B3711F01223345C22AC39D /* SyncServiceNotionMappingIntegrationTests.swift */; };
 		5D38206DAB3C2F743DAF14E9 /* MockFinallyServerAPIClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 92CF91D6E32CC4A8D97E20CC /* MockFinallyServerAPIClient.swift */; };
 		5E0CDA7D321610870C57B80D /* Phase6BSubtaskSchedulerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 51287207D87EE2EEC6133185 /* Phase6BSubtaskSchedulerTests.swift */; };
+		5F8FD3D1F635C9C5CF4D692E /* FocusPickCell.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4F536B706382D69868DEE10E /* FocusPickCell.swift */; };
 		62C4C65FA2A9FEAAD2E9AB36 /* StatusControl.swift in Sources */ = {isa = PBXBuildFile; fileRef = 38A922838C128BAA7BB9A80C /* StatusControl.swift */; };
 		653DD5FC78F9EA0846C23D5B /* TaskStatusAndPriority.swift in Sources */ = {isa = PBXBuildFile; fileRef = E62DDF7C4EFECF21D544B032 /* TaskStatusAndPriority.swift */; };
 		67ECB5F631E2F9E7C215AA6A /* TaskConflictReviewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A8FABBAD51C4FA108750E5D /* TaskConflictReviewView.swift */; };
@@ -90,6 +91,7 @@
 		89BF539107AC940B8EB9C141 /* FinallyWidgetViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0519FAB27D1D99141C414FB8 /* FinallyWidgetViews.swift */; };
 		8A4013637BD595F7018BBDCF /* TaskTitleParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = 142A6914DF4321AEE4F34A6F /* TaskTitleParser.swift */; };
 		8BEADA09B000D070B0722900 /* RecurrencePicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = 076DC8A4A8CF43403DD2050E /* RecurrencePicker.swift */; };
+		8ED30232ADEBEF92249329D9 /* TodayListReorderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 39374ABA9EDF1EB52DBA392C /* TodayListReorderTests.swift */; };
 		8FF945EA57E63C06DCC6AFE8 /* PropertyRoundtripE2ETests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7EE797E26B93C7083115D637 /* PropertyRoundtripE2ETests.swift */; };
 		90552E7DF1BCC9AD36EC10B5 /* DailyFocusTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E6B474345709AE791A120D5E /* DailyFocusTests.swift */; };
 		9255166257397CF0AE207DFD /* SortConfigView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 59DCDD8E8EB5F548CA2EC0AE /* SortConfigView.swift */; };
@@ -143,6 +145,7 @@
 		DB453A379E7D977BD172EEB4 /* WidgetDay.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54142DBF179EA5A5D0BFD910 /* WidgetDay.swift */; };
 		DB95E90E7E141155FF0FAB83 /* TaskStatusCycleTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E04481BD7281408D0185E073 /* TaskStatusCycleTests.swift */; };
 		DCA78CA7E0DC752FFBA0F504 /* E2EConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8875DF7703CDE08E6E96792D /* E2EConfig.swift */; };
+		DEC8D582A504FB8C4AA4BE14 /* TaskCompletion.swift in Sources */ = {isa = PBXBuildFile; fileRef = 44103711AEA5A7F2E87D0BE4 /* TaskCompletion.swift */; };
 		E4D20EA7E875EACE7C63A971 /* TodayList.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20DCB2BB658043DAA9A987E /* TodayList.swift */; };
 		E9954AF7B9F7D1DB3FBA82D9 /* TaskRowDate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 29566123700B36206EEE33C8 /* TaskRowDate.swift */; };
 		E9B73C07F7B1D3CA10A3A7E8 /* Constants.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7EAF47BA098BEE13C1604C57 /* Constants.swift */; };
@@ -216,6 +219,7 @@
 		34F6D7F2BE4279044D2B4131 /* DailyFocusHeading.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DailyFocusHeading.swift; sourceTree = "<group>"; };
 		35FC044E313696DD223BA41B /* PlanningDateLabelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlanningDateLabelTests.swift; sourceTree = "<group>"; };
 		38A922838C128BAA7BB9A80C /* StatusControl.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatusControl.swift; sourceTree = "<group>"; };
+		39374ABA9EDF1EB52DBA392C /* TodayListReorderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TodayListReorderTests.swift; sourceTree = "<group>"; };
 		399FC491C5FF02FB073A1BFE /* PlanningDateLabel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlanningDateLabel.swift; sourceTree = "<group>"; };
 		3AF8954557BC6A8854C1F5D7 /* Phase6BTaskItemTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Phase6BTaskItemTests.swift; sourceTree = "<group>"; };
 		3C603D9DD83AEBE3EBCFE5F8 /* NotificationServiceUnitTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationServiceUnitTests.swift; sourceTree = "<group>"; };
@@ -226,6 +230,7 @@
 		42B3711F01223345C22AC39D /* SyncServiceNotionMappingIntegrationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SyncServiceNotionMappingIntegrationTests.swift; sourceTree = "<group>"; };
 		432E1F70246CCDDAE110402D /* FinallyServerConnectionIntegrationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FinallyServerConnectionIntegrationTests.swift; sourceTree = "<group>"; };
 		43429282F4127A6EE9E811B5 /* TaskItem+Today.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "TaskItem+Today.swift"; sourceTree = "<group>"; };
+		44103711AEA5A7F2E87D0BE4 /* TaskCompletion.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskCompletion.swift; sourceTree = "<group>"; };
 		44103AAE1A055480E58A6F63 /* FieldNoticeLedgerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FieldNoticeLedgerTests.swift; sourceTree = "<group>"; };
 		4411D70BC941BFFC9D0B540D /* FinallyServerAPIClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FinallyServerAPIClient.swift; sourceTree = "<group>"; };
 		44DC53FF019C668FF0D59C8D /* FinallyServerWorkspaceConfiguration.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FinallyServerWorkspaceConfiguration.swift; sourceTree = "<group>"; };
@@ -238,6 +243,7 @@
 		4D6A9D885F54EDA96C38C007 /* Phase6BNotificationServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Phase6BNotificationServiceTests.swift; sourceTree = "<group>"; };
 		4DBCF7ABA6666B3B50A24B37 /* DailyFocusServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DailyFocusServiceTests.swift; sourceTree = "<group>"; };
 		4DF65C99D85D8706CD946C4D /* FinallyStyle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FinallyStyle.swift; sourceTree = "<group>"; };
+		4F536B706382D69868DEE10E /* FocusPickCell.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FocusPickCell.swift; sourceTree = "<group>"; };
 		51287207D87EE2EEC6133185 /* Phase6BSubtaskSchedulerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Phase6BSubtaskSchedulerTests.swift; sourceTree = "<group>"; };
 		54142DBF179EA5A5D0BFD910 /* WidgetDay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetDay.swift; sourceTree = "<group>"; };
 		5433380C376ADA260E8BAFA3 /* TaskStatusMappingUnitTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskStatusMappingUnitTests.swift; sourceTree = "<group>"; };
@@ -466,6 +472,7 @@
 			children = (
 				837D45B286A6CB5EEF5A4D27 /* InlineTaskCreator.swift */,
 				F983C2144C0E18B3B29542EA /* ReminderSection.swift */,
+				44103711AEA5A7F2E87D0BE4 /* TaskCompletion.swift */,
 				1A8FABBAD51C4FA108750E5D /* TaskConflictReviewView.swift */,
 				44FC30A47CA1D9B4F15234D2 /* TaskDetailView.swift */,
 				EAD355905598E97021A8F3AB /* TaskRowView.swift */,
@@ -611,6 +618,7 @@
 		D8EEC168E7E461C383AD0076 /* TodayList */ = {
 			isa = PBXGroup;
 			children = (
+				4F536B706382D69868DEE10E /* FocusPickCell.swift */,
 				A20DCB2BB658043DAA9A987E /* TodayList.swift */,
 				B942066AAC6AF0FB3B538788 /* TodayListController.swift */,
 			);
@@ -636,6 +644,7 @@
 				901BEC1DD18874DB21837902 /* TaskDetailEditTests.swift */,
 				A8C8BE82E40BF1889DB28C80 /* TasksListTests.swift */,
 				E04481BD7281408D0185E073 /* TaskStatusCycleTests.swift */,
+				39374ABA9EDF1EB52DBA392C /* TodayListReorderTests.swift */,
 				A81F533A87E0D934D76D4BBC /* TodayTests.swift */,
 				6393ADAF3784D84869409A86 /* UpcomingDaysTests.swift */,
 				41C4DB95518E923875AD69F5 /* WidgetCompletionTests.swift */,
@@ -820,6 +829,7 @@
 				052CF12915DE19D4E836E671 /* TaskStatusMappingUnitTests.swift in Sources */,
 				C7C32C1C2B40907D50C60ECF /* TaskTitleParserTests.swift in Sources */,
 				3809D308E324CDD057440E20 /* TasksListTests.swift in Sources */,
+				8ED30232ADEBEF92249329D9 /* TodayListReorderTests.swift in Sources */,
 				AC6E936FD5E5A3FCCF63332B /* TodayTests.swift in Sources */,
 				EB88BBFE734B8C488480861C /* UpcomingDaysTests.swift in Sources */,
 				59E66E52132F634459982366 /* WidgetCompletionTests.swift in Sources */,
@@ -884,6 +894,7 @@
 				A85B8C6B56396453AD68F782 /* FinallyServerTaskSnapshot.swift in Sources */,
 				3C2153D7726A70A8C8FA36D9 /* FinallyServerWorkspaceConfiguration.swift in Sources */,
 				77E5A5E02CC2F6EF149C682F /* FinallyStyle.swift in Sources */,
+				5F8FD3D1F635C9C5CF4D692E /* FocusPickCell.swift in Sources */,
 				743614B7C47D1C37E35131B8 /* InlineTaskCreator.swift in Sources */,
 				C0379921229816BF7E3D44E2 /* KeychainHelper.swift in Sources */,
 				70CEBBB29369C6826AFC9CB1 /* ModelContainer+Shared.swift in Sources */,
@@ -917,6 +928,7 @@
 				75C247FB0B0194F59F0C4E73 /* SubtaskScheduler.swift in Sources */,
 				CAAB2900354A6287A3F6EE19 /* SyncService.swift in Sources */,
 				57CE613AD4B410992C4696B8 /* TagPicker.swift in Sources */,
+				DEC8D582A504FB8C4AA4BE14 /* TaskCompletion.swift in Sources */,
 				67ECB5F631E2F9E7C215AA6A /* TaskConflictReviewView.swift in Sources */,
 				74C65A22FA4C6AEEF8B6E9EB /* TaskDetailView.swift in Sources */,
 				40B5167E5066C80FAD4D9D19 /* TaskItem+Today.swift in Sources */,

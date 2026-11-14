@@ -22,6 +22,8 @@ struct TodayView: View {
     @State private var showPicker = false
     /// A task picked from Other tasks while Daily Focus is full, waiting for the pick it swaps with.
     @State private var swapCandidate: TaskItem?
+    /// A task the UIKit list's Reschedule swipe opened the date picker for.
+    @State private var reschedulingTask: TaskItem?
 
     private var workspace: UserSession? { sessions.selectedProviderWorkspace }
     private var loadID: String { "\(workspace?.workspaceId ?? "")/\(DailyFocus.dayKey(for: day))" }
@@ -47,11 +49,7 @@ struct TodayView: View {
         NavigationStack {
             Group {
                 if usesUIKitList {
-                    TodayList(content: TodayListContent(
-                        focusHeading: DailyFocusHeading.text(focusLimit: dailyFocus?.focusLimit ?? focusLimit),
-                        focus: dailyFocus.map { DailyFocusList(focus: $0, tasks: tasks) },
-                        otherTasks: otherTasks.map(\.task)
-                    ))
+                    TodayList(content: uikitContent(otherTasks), actions: uikitActions)
                         .ignoresSafeArea(edges: .bottom)
                 } else {
                     swiftUIList(otherTasks)
@@ -108,6 +106,71 @@ struct TodayView: View {
         .sheet(item: $replanningFocus) { focus in
             DailyFocusReplanningView(focus: focus)
         }
+        .sheet(item: $reschedulingTask) { task in
+            DatePickerSheet(
+                scheduledDay: Binding(
+                    get: { task.scheduledDay },
+                    set: { TaskCompletion.reschedule(task, to: $0, modelContext: modelContext, taskProvider: taskProvider) }
+                ),
+                task: task
+            )
+        }
+    }
+
+    // MARK: - UIKit list
+
+    private func uikitContent(_ otherTasks: [Today.Member<TaskItem>]) -> TodayListContent {
+        TodayListContent(
+            day: day,
+            focusHeading: DailyFocusHeading.text(focusLimit: dailyFocus?.focusLimit ?? focusLimit),
+            focus: dailyFocus.map { DailyFocusList(focus: $0, tasks: tasks) },
+            needsConfirmation: dailyFocus.map { !$0.isConfirmed && !$0.picks.isEmpty } ?? false,
+            showsReviewTheDay: dailyFocus.map {
+                DailyFocus.showsReviewTheDay(for: $0, hasUnfinishedEarlierDay: !unfinishedDays.isEmpty, at: Date())
+            } ?? false,
+            unfinishedDays: unfinishedDays,
+            otherTasks: otherTasks.map(\.task),
+            isSaving: isSaving
+        )
+    }
+
+    private var uikitActions: TodayListActions {
+        TodayListActions(
+            select: { selectedTask = $0 },
+            toggleCompletion: { TaskCompletion.toggle($0, modelContext: modelContext, taskProvider: taskProvider) },
+            reschedule: { reschedulingTask = $0 },
+            removePick: { pick in
+                guard let dailyFocus else { return }
+                dailyFocus.remove(pick)
+                save(dailyFocus)
+            },
+            focus: { pickFromOtherTasks($0) },
+            movePick: { from, to in
+                guard let dailyFocus else { return }
+                DailyFocusList(focus: dailyFocus, tasks: tasks)
+                    .move(in: dailyFocus, fromOffsets: [from], toOffset: to > from ? to + 1 : to)
+                save(dailyFocus)
+            },
+            addPick: {
+                // A new day reloads Today, and the user picks into the new day's focus.
+                guard !moveToCurrentDay() else { return }
+                showPicker = true
+            },
+            reviewDay: {
+                if let dailyFocus { replanningFocus = dailyFocus }
+            },
+            replan: { replanningFocus = $0 },
+            confirm: {
+                guard let dailyFocus else { return }
+                dailyFocus.confirm()
+                save(dailyFocus)
+            },
+            refresh: {
+                moveToCurrentDay()
+                try? await taskProvider.synchronize(.launch, store: modelContext)
+                await load()
+            }
+        )
     }
 
 
@@ -241,9 +304,11 @@ struct TodayView: View {
 }
 
 /// The page heading: the weekday over the date, at the leading inset of the large titles on
-/// Upcoming and Tasks.
-private struct TodayHeader: View {
+/// Upcoming and Tasks. `leadingInset` reaches from where its container starts the text to that
+/// inset.
+struct TodayHeader: View {
     let day: Date
+    var leadingInset: CGFloat = -16
 
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
@@ -257,6 +322,6 @@ private struct TodayHeader: View {
         }
         .textCase(nil)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.leading, -16)
+        .padding(.leading, leadingInset)
     }
 }

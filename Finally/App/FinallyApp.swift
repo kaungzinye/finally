@@ -293,13 +293,3 @@ private extension View {
     func demoTab() -> some View { modifier(DemoTab()) }
 }
 #endif
-
-private extension UIFont {
-    /// SF Pro Rounded at a Dynamic Type text style.
-    static func rounded(_ style: UIFont.TextStyle, weight: UIFont.Weight) -> UIFont {
-        let base = UIFont.preferredFont(forTextStyle: style)
-        let weighted = base.fontDescriptor.addingAttributes([.traits: [UIFontDescriptor.TraitKey.weight: weight]])
-        let descriptor = weighted.withDesign(.rounded) ?? weighted
-        return UIFont(descriptor: descriptor, size: base.pointSize)
-    }
-}
