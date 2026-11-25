@@ -3,17 +3,29 @@ import Foundation
 // MARK: - Deadline reminder offsets
 
 /// How far ahead of a task's deadline a deadline reminder fires. Day-level offsets fire at the
-/// default reminder time on their computed day. `hourBefore` needs a timed deadline.
+/// default reminder time on their computed day. `hourBefore` and `minutesBefore` need a timed deadline.
 enum DeadlineReminderOffset: Codable, Hashable, Sendable {
     case morningOf
     case daysBefore(Int)
     case weeksBefore(Int)
     case hourBefore
+    case minutesBefore(Int)
 
     /// The short list the + chip offers, in order.
     static let menu: [DeadlineReminderOffset] = [
         .morningOf, .daysBefore(1), .daysBefore(2), .daysBefore(3), .weeksBefore(1), .weeksBefore(2), .hourBefore,
     ]
+
+    /// The minute choices, offered on a timed deadline only.
+    static let minuteMenu: [DeadlineReminderOffset] = stride(from: 5, through: 55, by: 5).map { .minutesBefore($0) }
+
+    /// Counts down from a clock time, so a date-only deadline leaves it inert.
+    var needsDeadlineTime: Bool {
+        switch self {
+        case .hourBefore, .minutesBefore: true
+        case .morningOf, .daysBefore, .weeksBefore: false
+        }
+    }
 
     var label: String {
         switch self {
@@ -21,15 +33,17 @@ enum DeadlineReminderOffset: Codable, Hashable, Sendable {
         case .daysBefore(let days): days == 1 ? "1 day before" : "\(days) days before"
         case .weeksBefore(let weeks): weeks == 1 ? "1 week before" : "\(weeks) weeks before"
         case .hourBefore: "1 hour before"
+        case .minutesBefore(let minutes): "\(minutes) minutes before"
         }
     }
 
-    /// Days before run from 1 to 30 and weeks before from 1 to 12.
+    /// Days before run from 1 to 30, weeks before from 1 to 12, and minutes before from 5 to 55 in steps of 5.
     var isValid: Bool {
         switch self {
         case .morningOf, .hourBefore: true
         case .daysBefore(let days): (1...30).contains(days)
         case .weeksBefore(let weeks): (1...12).contains(weeks)
+        case .minutesBefore(let minutes): (5...55).contains(minutes) && minutes.isMultiple(of: 5)
         }
     }
 }
@@ -107,6 +121,8 @@ enum TaskReminder: Codable, Equatable, Identifiable, Sendable {
             switch reminder.offset {
             case .hourBefore:
                 fire = deadlineHasTime ? deadline.addingTimeInterval(-3600) : nil
+            case .minutesBefore(let minutes):
+                fire = deadlineHasTime ? deadline.addingTimeInterval(TimeInterval(-60 * minutes)) : nil
             case .morningOf:
                 fire = Self.reminderTime(daysBefore: 0, deadline: deadline, minutes: reminderMinutes, calendar: calendar)
             case .daysBefore(let days):

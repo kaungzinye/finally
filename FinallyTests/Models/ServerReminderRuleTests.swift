@@ -24,6 +24,8 @@ final class ServerReminderRuleTests: XCTestCase {
                        ["id": id, "kind": "deadline", "offset": "daysBefore", "value": 1])
         XCTAssertEqual(try wireObject(.deadline(DeadlineReminder(id: ruleID, offset: .weeksBefore(1)))),
                        ["id": id, "kind": "deadline", "offset": "weeksBefore", "value": 1])
+        XCTAssertEqual(try wireObject(.deadline(DeadlineReminder(id: ruleID, offset: .minutesBefore(10)))),
+                       ["id": id, "kind": "deadline", "offset": "minutesBefore", "value": 10])
         XCTAssertEqual(try wireObject(.deadline(DeadlineReminder(id: ruleID, offset: .hourBefore))),
                        ["id": id, "kind": "deadline", "offset": "hourBefore"])
     }
@@ -59,6 +61,7 @@ final class ServerReminderRuleTests: XCTestCase {
             #"{"id":"\#(id)","kind":"deadline","offset":"weeksBefore","value":0}"#,
             #"{"id":"\#(id)","kind":"deadline","offset":"weeksBefore","value":13}"#,
             #"{"id":"\#(id)","kind":"deadline","offset":"morningOf","value":1}"#,
+            #"{"id":"\#(id)","kind":"deadline","offset":"minutesBefore","value":7}"#,
             #"{"id":"\#(id)","kind":"deadline","offset":"hourBefore","value":1}"#,
             #"{"id":"\#(id)","kind":"deadline","offset":"morningOf","at":"2026-10-20T15:00:00.000Z"}"#,
             #"{"id":"\#(id)","kind":"exact"}"#,

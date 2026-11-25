@@ -55,7 +55,7 @@ Finally presents one provider-independent task experience backed by a local Swif
 - SwiftUI owns the interface, SwiftData owns the local cache, WidgetKit owns widgets, and UserNotifications owns offline reminder delivery.
 - The canonical product vocabulary uses `scheduledDay` for an optional date-only intention and `deadline` for an optional date or date-time constraint. Providers read a remote scheduled day as its calendar day. The interface labels them "Scheduled" and "Deadline" and never says "due".
 - Reminder rules are canonical product data replicated to the phone. The phone schedules native local notifications in advance and replenishes the nearest notifications within iOS scheduling limits.
-- Deadline reminders carry an offset from the deadline: the morning of, a number of days or weeks before, or one hour before a timed deadline. Date-level offsets fire at the default reminder time. Exact reminders remain independent of task dates. Scheduled days never notify.
+- Deadline reminders carry an offset from the deadline: the morning of, a number of days or weeks before, one hour before a timed deadline, or 5 to 55 minutes before one in steps of 5. Date-level offsets fire at the default reminder time. Exact reminders remain independent of task dates. Scheduled days never notify.
 - Default deadline reminders live in Settings and apply when a task's deadline goes from empty to set. Moving the deadline keeps the task's own list, clearing it drops the deadline reminders, and a deadline gaining a time receives the one-hour default.
 - One pure Today query defines Today membership for the Today tab, the widgets, and the lock screen ring.
 - Recurrence and reminders remain separate concerns.

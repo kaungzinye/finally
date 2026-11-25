@@ -13,6 +13,7 @@ Default deadline reminders seed each new [[Deadline reminder]] set.
 
 ## Rules
 
+- Minute reminders stay out of the defaults. The user adds them per task.
 - Defaults apply when a deadline goes from empty to set. Moving the deadline keeps the task's own list, and removing a chip keeps it removed.
 - Clearing the deadline drops its deadline reminders, so setting it again starts from the defaults. Exact reminders stay.
 - A date-only deadline gaining a time receives the one-hour default when the defaults include it.

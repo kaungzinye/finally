@@ -13,9 +13,10 @@ A deadline reminder counts down to the task's deadline:
 { "id": "…", "kind": "deadline", "offset": "daysBefore", "value": 1 }
 { "id": "…", "kind": "deadline", "offset": "weeksBefore", "value": 1 }
 { "id": "…", "kind": "deadline", "offset": "hourBefore" }
+{ "id": "…", "kind": "deadline", "offset": "minutesBefore", "value": 10 }
 ```
 
-`daysBefore` takes a `value` from 1 to 30. `weeksBefore` takes a `value` from 1 to 12. `morningOf` and `hourBefore` carry no `value`. A task holds at most one deadline rule with the same offset and value. Exact rules may share an instant, since each has its own UUID.
+`daysBefore` takes a `value` from 1 to 30. `weeksBefore` takes a `value` from 1 to 12. `minutesBefore` takes a `value` from 5 to 55 in steps of 5. `morningOf` and `hourBefore` carry no `value`. A task holds at most one deadline rule with the same offset and value. Exact rules may share an instant, since each has its own UUID.
 
 An exact reminder fires once at a fixed instant:
 
@@ -35,6 +36,7 @@ The phone stores synchronized rules in SwiftData and resolves them locally again
 - `daysBefore` fires `value` calendar days before the deadline's day, at the default reminder time.
 - `weeksBefore` fires `7 × value` calendar days before the deadline's day, at the default reminder time.
 - `hourBefore` fires one hour before a timed deadline. It stays inert while the deadline has no time.
+- `minutesBefore` fires `value` minutes before a timed deadline. It stays inert while the deadline has no time.
 - A deadline rule whose fire time falls after a timed deadline stays inert, so `morningOf` never fires for an 08:00 deadline with a 09:00 default reminder time.
 - `exact` fires at `at` whatever happens to the task's dates.
 

@@ -63,6 +63,13 @@ final class TaskItem {
         }
     }
 
+    /// The minute offsets a timed deadline can still add.
+    var addableMinuteReminderOffsets: [DeadlineReminderOffset] {
+        guard deadline != nil, deadlineHasTime else { return [] }
+        let present = deadlineReminderOffsets
+        return DeadlineReminderOffset.minuteMenu.filter { !present.contains($0) }
+    }
+
     /// Sets the deadline from a local edit. A deadline going from empty to set receives the
     /// default deadline reminders, and clearing it drops its deadline reminders. A deadline
     /// gaining a time receives the default hour-before reminder. Moving a deadline keeps the

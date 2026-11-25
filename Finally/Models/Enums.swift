@@ -286,7 +286,9 @@ struct RecurrenceRule: Codable, Equatable {
     private func nextWeekdayOccurrence(from date: Date, calendar: Calendar) -> Date? {
         var next = date
 
-        for _ in 0..<(interval * 7 * 4 + 7) { // Search up to ~4 cycles
+        // Search past today, then far enough for one full interval.
+        let daysLate = max(calendar.dateComponents([.day], from: date, to: Date()).day ?? 0, 0)
+        for _ in 0..<(daysLate + interval * 14 + 7) {
             guard let candidate = calendar.date(byAdding: .day, value: 1, to: next) else { return nil }
             next = candidate
 
@@ -309,14 +311,15 @@ struct RecurrenceRule: Codable, Equatable {
 
     private func nextNthWeekdayOccurrence(from date: Date, calendar: Calendar) -> Date? {
         var next = date
-        for _ in 0..<(interval * 12 + 1) { // Search up to ~12 cycles
+        let monthsLate = max(calendar.dateComponents([.month], from: date, to: Date()).month ?? 0, 0)
+        for _ in 0..<(monthsLate / max(interval, 1) + 13) {
             guard let candidate = calendar.date(byAdding: .month, value: interval, to: next) else { return nil }
 
             // Find the nth weekday in that month
             let year = calendar.component(.year, from: candidate)
             let month = calendar.component(.month, from: candidate)
 
-            if let nthDate = findNthWeekday(ordinal: nthWeekdayOrdinal, weekday: nthWeekdayDay, month: month, year: year, calendar: calendar) {
+            if let nthDate = findNthWeekday(ordinal: nthWeekdayOrdinal, weekday: nthWeekdayDay, month: month, year: year, timeOf: date, calendar: calendar) {
                 if nthDate > Date() {
                     return nthDate
                 }
@@ -326,11 +329,15 @@ struct RecurrenceRule: Codable, Equatable {
         return nil
     }
 
-    private func findNthWeekday(ordinal: Int, weekday: Int, month: Int, year: Int, calendar: Calendar) -> Date? {
+    private func findNthWeekday(ordinal: Int, weekday: Int, month: Int, year: Int, timeOf date: Date, calendar: Calendar) -> Date? {
         var components = DateComponents()
         components.year = year
         components.month = month
         components.weekday = weekday
+        let time = calendar.dateComponents([.hour, .minute, .second], from: date)
+        components.hour = time.hour
+        components.minute = time.minute
+        components.second = time.second
 
         if ordinal == -1 {
             // Last occurrence

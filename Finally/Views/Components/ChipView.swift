@@ -78,12 +78,22 @@ struct AddChipMenu<Choice: Hashable>: View {
     let choices: [Choice]
     let title: (Choice) -> String
     let accessibilityLabel: String
+    /// Choices grouped one level down under `submenuTitle`.
+    var submenuTitle = ""
+    var submenuChoices: [Choice] = []
     let onPick: (Choice) -> Void
 
     var body: some View {
         Menu {
             ForEach(choices, id: \.self) { choice in
                 Button(title(choice)) { onPick(choice) }
+            }
+            if !submenuChoices.isEmpty {
+                Menu(submenuTitle) {
+                    ForEach(submenuChoices, id: \.self) { choice in
+                        Button(title(choice)) { onPick(choice) }
+                    }
+                }
             }
         } label: {
             Image(systemName: "plus")

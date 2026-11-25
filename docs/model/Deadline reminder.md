@@ -8,7 +8,7 @@ A date-only deadline reminder fires at the [[Default reminder time]].
 
 ## Fields
 
-- Offset: morning of, a number of days before, a number of weeks before, or one hour before a timed deadline
+- Offset: morning of, a number of days before, a number of weeks before, one hour before a timed deadline, or 5 to 55 minutes before one in steps of 5
 
 ## Rules
 
