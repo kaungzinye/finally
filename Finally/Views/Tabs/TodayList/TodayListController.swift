@@ -219,9 +219,12 @@ final class TodayListController: UIViewController, UICollectionViewDelegate {
             cell.backgroundConfiguration = .clear()
         }
         let pickCell = UICollectionView.CellRegistration<FocusPickCell, DailyFocusPick> { [weak self] cell, _, pick in
-            guard let row = self?.picks[pick], let task = row.task, let model = Self.pickModel(row) else { return }
+            guard let row = self?.picks[pick], let model = Self.pickModel(row) else { return }
             cell.show(model)
-            cell.onToggle = { [weak self] in self?.actions?.toggleCompletion(task) }
+            // The pick's task is read at the tap, since a picked parent moves on to its next subtask.
+            cell.onToggle = { [weak self] in
+                if let task = self?.picks[pick]?.task { self?.actions?.toggleCompletion(task) }
+            }
             cell.onMove = { [weak self] offset in self?.move(pick, by: offset) ?? false }
             Self.drawOnCard(cell)
         }

@@ -92,35 +92,30 @@ final class FocusPickCell: UICollectionViewListCell {
 
     /// Draws `model` at once.
     func show(_ model: Model) {
+        titleLabel.attributedText = Self.title(model)
+        apply(model)
+    }
+
+    /// Moves between open and done on the pick spring, and to the next subtask when the pick's
+    /// task changes with it. The caller lays out the collection view inside the same animation,
+    /// so the row's height eases with its content.
+    func setDone(_ model: Model) {
+        UIView.transition(with: titleLabel, duration: 0.3, options: .transitionCrossDissolve) {
+            self.titleLabel.attributedText = Self.title(model)
+        }
+        apply(model)
+    }
+
+    private func apply(_ model: Model) {
         self.model = model
         numberLabel.text = "\(model.number)"
         numberLabel.textColor = model.isNext ? UIColor(Palette.high) : UIColor(Palette.muted).withAlphaComponent(model.isDone ? 0.5 : 0.8)
         metaLabel.attributedText = model.meta
         ring.color = model.ringColor
+        ring.isDone = model.isDone
         accessibilityLabel = "Pick \(model.number), \(model.title)"
         accessibilityValue = model.isDone ? "Done" : model.meta?.string
-        applyDoneState(model)
-    }
-
-    /// Moves between open and done on the pick spring. The caller lays out the collection view
-    /// inside the same animation, so the row's height eases with its content.
-    func setDone(_ model: Model) {
-        self.model = model
-        UIView.transition(with: titleLabel, duration: 0.3, options: .transitionCrossDissolve) {
-            self.titleLabel.attributedText = Self.title(model)
-        }
-        numberLabel.text = "\(model.number)"
-        numberLabel.textColor = model.isNext ? UIColor(Palette.high) : UIColor(Palette.muted).withAlphaComponent(model.isDone ? 0.5 : 0.8)
-        metaLabel.attributedText = model.meta
-        accessibilityValue = model.isDone ? "Done" : model.meta?.string
         applyLayout(model)
-        ring.isDone = model.isDone
-    }
-
-    private func applyDoneState(_ model: Model) {
-        titleLabel.attributedText = Self.title(model)
-        applyLayout(model)
-        ring.isDone = model.isDone
     }
 
     private func applyLayout(_ model: Model) {
