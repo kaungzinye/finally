@@ -180,6 +180,8 @@ final class DailyFocus {
         move(picks, fromOffsets: source, toOffset: destination)
     }
 
+    static let reviewHour = 17
+
     /// Review the day shows for a day with picks from 17:00, and all day while an earlier day's
     /// Daily Focus still holds unfinished picks waiting for replanning.
     static func showsReviewTheDay(
@@ -189,7 +191,7 @@ final class DailyFocus {
         calendar: Calendar = .current
     ) -> Bool {
         guard !focus.picks.isEmpty else { return false }
-        return hasUnfinishedEarlierDay || calendar.component(.hour, from: now) >= 17
+        return hasUnfinishedEarlierDay || calendar.component(.hour, from: now) >= reviewHour
     }
 
     func confirm() {

@@ -294,12 +294,13 @@ struct RecurrenceRule: Codable, Equatable {
 
             let candidateWeekday = calendar.component(.weekday, from: next)
 
-            // For interval > 1, check week distance from start
+            // Every other week counts calendar weeks from the deadline's own week, which is
+            // always one the rule selects.
             if interval > 1 {
-                let weekDiff = calendar.dateComponents([.weekOfYear], from: date, to: next).weekOfYear ?? 0
-                if weekDiff > 0 && weekDiff % interval != 0 {
-                    continue
-                }
+                guard let firstWeek = calendar.dateInterval(of: .weekOfYear, for: date)?.start,
+                      let week = calendar.dateInterval(of: .weekOfYear, for: next)?.start else { return nil }
+                let weeksApart = (calendar.dateComponents([.day], from: firstWeek, to: week).day ?? 0) / 7
+                if weeksApart % interval != 0 { continue }
             }
 
             if weekdays.contains(candidateWeekday) && next > Date() {
@@ -312,7 +313,7 @@ struct RecurrenceRule: Codable, Equatable {
     private func nextNthWeekdayOccurrence(from date: Date, calendar: Calendar) -> Date? {
         var next = date
         let monthsLate = max(calendar.dateComponents([.month], from: date, to: Date()).month ?? 0, 0)
-        for _ in 0..<(monthsLate / max(interval, 1) + 13) {
+        for _ in 0..<(monthsLate / max(interval, 1) + 400) {
             guard let candidate = calendar.date(byAdding: .month, value: interval, to: next) else { return nil }
 
             // Find the nth weekday in that month
@@ -330,22 +331,18 @@ struct RecurrenceRule: Codable, Equatable {
     }
 
     private func findNthWeekday(ordinal: Int, weekday: Int, month: Int, year: Int, timeOf date: Date, calendar: Calendar) -> Date? {
-        var components = DateComponents()
+        guard let first = calendar.date(from: DateComponents(year: year, month: month, day: 1)),
+              let daysInMonth = calendar.range(of: .day, in: .month, for: first)?.count else { return nil }
+        let firstMatch = 1 + (weekday - calendar.component(.weekday, from: first) + 7) % 7
+        let day = ordinal == -1
+            ? firstMatch + (daysInMonth - firstMatch) / 7 * 7
+            : firstMatch + (ordinal - 1) * 7
+        // A month without a fifth one is skipped.
+        guard day <= daysInMonth else { return nil }
+        var components = calendar.dateComponents([.hour, .minute, .second], from: date)
         components.year = year
         components.month = month
-        components.weekday = weekday
-        let time = calendar.dateComponents([.hour, .minute, .second], from: date)
-        components.hour = time.hour
-        components.minute = time.minute
-        components.second = time.second
-
-        if ordinal == -1 {
-            // Last occurrence
-            components.weekdayOrdinal = -1
-        } else {
-            components.weekdayOrdinal = ordinal
-        }
-
+        components.day = day
         return calendar.date(from: components)
     }
 

@@ -232,6 +232,9 @@ final class TodayListController: UIViewController, UICollectionViewDelegate {
                     Button("Drop") { self?.actions?.removePick(pick) }
                         .buttonStyle(.borderless)
                 }
+                .accessibilityElement(children: .combine)
+                .accessibilityAction(named: "Move up") { _ = self?.move(pick, by: -1) }
+                .accessibilityAction(named: "Move down") { _ = self?.move(pick, by: 1) }
             }
             .margins(.horizontal, 20)
             .margins(.vertical, 0)

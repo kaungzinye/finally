@@ -15,6 +15,8 @@ struct TodayView: View {
     @AppStorage(AppConstants.uikitTodayKey) private var usesUIKitList = false
 
     @State private var day = Calendar.current.startOfDay(for: Date())
+    /// Today draws again when the evening starts, so Review the day appears on an open screen.
+    @State private var isEvening = false
     @State private var dailyFocus: DailyFocus?
     @State private var selectedTask: TaskItem?
     @State private var replanningFocus: DailyFocus?
@@ -46,6 +48,8 @@ struct TodayView: View {
 
     var body: some View {
         let otherTasks = otherTasks
+        // Read here so the body runs again when the evening starts.
+        let _ = isEvening
         NavigationStack {
             Group {
                 if usesUIKitList {
@@ -58,6 +62,7 @@ struct TodayView: View {
             .toolbar(.hidden, for: .navigationBar)
             .disabled(isSaving)
             .task(id: loadID) { await load() }
+            .task(id: day) { await watchForEvening() }
             .onChange(of: scenePhase) { _, phase in
                 if phase == .active && isIdle {
                     moveToCurrentDay()
@@ -239,6 +244,17 @@ struct TodayView: View {
         guard let current = Today.dayChange(from: day, at: Date()) else { return false }
         day = current
         return true
+    }
+
+    private func watchForEvening() async {
+        let calendar = Calendar.current
+        isEvening = false
+        guard let evening = calendar.date(bySettingHour: DailyFocus.reviewHour, minute: 0, second: 0, of: day) else { return }
+        let wait = evening.timeIntervalSinceNow
+        if wait > 0 {
+            do { try await Task.sleep(for: .seconds(wait)) } catch { return }
+        }
+        isEvening = true
     }
 
     private func load() async {

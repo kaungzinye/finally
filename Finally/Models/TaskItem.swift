@@ -229,8 +229,12 @@ final class TaskItem {
         let deadlineDay = calendar.startOfDay(for: deadline)
         guard newDay > deadlineDay else { return .fits }
         guard deadlineHasTime else { return .needsDeadlineMoved(to: newDay) }
-        let timeOfDay = calendar.dateComponents([.hour, .minute, .second], from: deadlineDay, to: deadline)
-        return .needsDeadlineMoved(to: calendar.date(byAdding: timeOfDay, to: newDay) ?? newDay)
+        // The clock time carries over, even across a daylight saving change.
+        let time = calendar.dateComponents([.hour, .minute, .second], from: deadline)
+        let moved = calendar.date(
+            bySettingHour: time.hour ?? 0, minute: time.minute ?? 0, second: time.second ?? 0, of: newDay
+        )
+        return .needsDeadlineMoved(to: moved ?? newDay)
     }
 
     /// Moves the scheduled day as a dirty edit and spreads the steps' suggested dates again.
@@ -314,8 +318,11 @@ final class TaskItem {
             if let nextDate {
                 self.deadline = nextDate
                 if let previousScheduledDay {
-                    let offset = previousDeadline.timeIntervalSince(previousScheduledDay)
-                    self.scheduledDay = nextDate.addingTimeInterval(-offset)
+                    let calendar = Calendar.current
+                    let daysAhead = calendar.dateComponents(
+                        [.day], from: calendar.startOfDay(for: previousScheduledDay), to: calendar.startOfDay(for: previousDeadline)
+                    ).day ?? 0
+                    self.scheduledDay = calendar.date(byAdding: .day, value: -daysAhead, to: calendar.startOfDay(for: nextDate))
                     validateScheduledDay()
                 }
                 self.status = .notStarted
