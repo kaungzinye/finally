@@ -1,83 +1,91 @@
 import XCTest
 @testable import Finally
 
-/// A recurring obligation finished long after its deadline moves to the next future date in its
-/// pattern, at the same time of day.
+/// A recurring obligation moves to the next date in its pattern after now, however late it is
+/// finished, at the same time of day.
 final class LateRecurrenceTests: XCTestCase {
-    private let calendar = Calendar.current
-
-    private func lateDeadline(days: Int) -> Date {
-        let day = calendar.date(byAdding: .day, value: -days, to: calendar.startOfDay(for: Date()))!
-        return calendar.date(bySettingHour: 17, minute: 30, second: 0, of: day)!
+    private func calendar(firstWeekday: Int = 1) -> Calendar {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(identifier: "America/New_York")!
+        calendar.firstWeekday = firstWeekday
+        return calendar
     }
 
-    func testWeekdayRuleReachesTheFutureAfterTwoMonths() throws {
-        var rule = RecurrenceRule()
-        rule.weekdays = [3]
-        let next = try XCTUnwrap(rule.nextDeadline(from: lateDeadline(days: 60)))
-        XCTAssertGreaterThan(next, Date())
-        XCTAssertEqual(calendar.component(.weekday, from: next), 3)
-        XCTAssertEqual(calendar.component(.hour, from: next), 17)
+    private func date(_ year: Int, _ month: Int, _ day: Int, _ hour: Int = 9, _ minute: Int = 0) -> Date {
+        calendar().date(from: DateComponents(year: year, month: month, day: day, hour: hour, minute: minute))!
     }
 
-    func testNthWeekdayRuleKeepsTheDeadlinesTimeAfterTwoYears() throws {
+    private func nthWeekday(_ ordinal: Int, _ weekday: Int) -> RecurrenceRule {
         var rule = RecurrenceRule()
         rule.frequency = .monthly
         rule.monthlyMode = .nthWeekday
-        rule.nthWeekdayOrdinal = 2
-        rule.nthWeekdayDay = 3
-        let next = try XCTUnwrap(rule.nextDeadline(from: lateDeadline(days: 730)))
-        XCTAssertGreaterThan(next, Date())
-        XCTAssertEqual(calendar.component(.hour, from: next), 17)
-        XCTAssertEqual(calendar.component(.minute, from: next), 30)
+        rule.nthWeekdayOrdinal = ordinal
+        rule.nthWeekdayDay = weekday
+        return rule
     }
 
-    /// Dates far enough ahead that the rule never has to skip past today.
-    private func future(_ year: Int, _ month: Int, _ day: Int, hour: Int = 9) -> Date {
-        calendar.date(from: DateComponents(year: year, month: month, day: day, hour: hour))!
+    func testWeekdayRuleReachesTheNextTuesdayAfterTwoMonths() {
+        var rule = RecurrenceRule()
+        rule.weekdays = [3]
+        XCTAssertEqual(rule.nextDeadline(from: date(2026, 6, 2, 17, 30), after: date(2026, 8, 5), calendar: calendar()),
+                       date(2026, 8, 11, 17, 30))
     }
 
-    func testEveryOtherWeekStaysOnItsOwnWeeks() throws {
+    func testNthWeekdayRuleReachesTheNextSecondTuesdayAfterTwoYears() {
+        XCTAssertEqual(nthWeekday(2, 3).nextDeadline(from: date(2024, 6, 11, 17, 30), after: date(2026, 6, 10), calendar: calendar()),
+                       date(2026, 7, 14, 17, 30))
+    }
+
+    func testEveryOtherWeekStaysOnItsOwnWeeks() {
         var rule = RecurrenceRule()
         rule.interval = 2
         rule.weekdays = [2, 4]
-        let monday = future(2099, 6, 1)
-        XCTAssertEqual(calendar.component(.weekday, from: monday), 2)
-        let wednesday = try XCTUnwrap(rule.nextDeadline(from: monday))
-        XCTAssertEqual(wednesday, future(2099, 6, 3))
-        XCTAssertEqual(rule.nextDeadline(from: wednesday), future(2099, 6, 15))
+        for firstWeekday in [1, 2] {
+            let calendar = calendar(firstWeekday: firstWeekday)
+            XCTAssertEqual(rule.nextDeadline(from: date(2026, 6, 1), after: date(2026, 6, 1), calendar: calendar), date(2026, 6, 3))
+            XCTAssertEqual(rule.nextDeadline(from: date(2026, 6, 3), after: date(2026, 6, 3), calendar: calendar), date(2026, 6, 15))
+        }
     }
 
-    func testFifthWeekdaySkipsMonthsWithoutOne() throws {
-        var rule = RecurrenceRule()
-        rule.frequency = .monthly
-        rule.monthlyMode = .nthWeekday
-        rule.nthWeekdayOrdinal = 5
-        rule.nthWeekdayDay = 2
-        // June 29 is the fifth Monday, and July has four.
-        let next = try XCTUnwrap(rule.nextDeadline(from: future(2099, 6, 29)))
-        XCTAssertEqual(next, future(2099, 8, 31))
+    func testFifthWeekdaySkipsMonthsWithoutOne() {
+        XCTAssertEqual(nthWeekday(5, 2).nextDeadline(from: date(2026, 6, 29), after: date(2026, 6, 29), calendar: calendar()),
+                       date(2026, 8, 31))
     }
 
     func testLastWeekdayIsTheMonthsLast() {
-        var rule = RecurrenceRule()
-        rule.frequency = .monthly
-        rule.monthlyMode = .nthWeekday
-        rule.nthWeekdayOrdinal = -1
-        rule.nthWeekdayDay = 2
-        XCTAssertEqual(rule.nextDeadline(from: future(2099, 6, 29)), future(2099, 7, 27))
+        XCTAssertEqual(nthWeekday(-1, 2).nextDeadline(from: date(2026, 6, 29), after: date(2026, 6, 29), calendar: calendar()),
+                       date(2026, 7, 27))
     }
 
-    func testMovingTheDeadlineKeepsItsClockTimeAcrossDaylightSaving() throws {
-        var newYork = Calendar(identifier: .gregorian)
-        newYork.timeZone = try XCTUnwrap(TimeZone(identifier: "America/New_York"))
+    func testLateFinishPastASpringClockChangeKeepsTheTimeOfDay() {
+        var rule = RecurrenceRule()
+        rule.frequency = .daily
+        let deadline = date(2027, 3, 13, 2)
+        XCTAssertEqual(rule.nextDeadline(from: deadline, after: date(2027, 3, 14, 12), calendar: calendar()), date(2027, 3, 15, 2))
+        XCTAssertEqual(Recurrence.daily.nextDeadline(from: deadline, after: date(2027, 3, 14, 12), calendar: calendar()), date(2027, 3, 15, 2))
+        rule.frequency = .weekly
+        rule.weekdays = Set(1...7)
+        XCTAssertEqual(rule.nextDeadline(from: deadline, after: date(2027, 3, 14, 12), calendar: calendar()), date(2027, 3, 15, 2))
+    }
+
+    func testEveryWeekdaySkipsTheWeekendAndKeepsTheTimeOfDay() {
+        // Friday March 12, finished during the clock change weekend.
+        XCTAssertEqual(Recurrence.everyWeekday.nextDeadline(from: date(2027, 3, 12, 2, 30), after: date(2027, 3, 14, 12), calendar: calendar()),
+                       date(2027, 3, 15, 2, 30))
+    }
+
+    func testLateFinishPastAShortMonthKeepsTheDay() {
+        XCTAssertEqual(Recurrence.monthly.nextDeadline(from: date(2027, 1, 31), after: date(2027, 3, 1), calendar: calendar()),
+                       date(2027, 3, 31))
+    }
+
+    func testMovingTheDeadlineKeepsItsClockTimeAcrossDaylightSaving() {
         for (from, to) in [((3, 13), (3, 14)), ((11, 6), (11, 7))] {
             let task = TaskItem(externalTaskID: "dst", title: "Submit")
-            task.deadline = newYork.date(from: DateComponents(year: 2027, month: from.0, day: from.1, hour: 17, minute: 30))
+            task.deadline = date(2027, from.0, from.1, 17, 30)
             task.deadlineHasTime = true
-            let day = newYork.date(from: DateComponents(year: 2027, month: to.0, day: to.1))
-            let moved = newYork.date(from: DateComponents(year: 2027, month: to.0, day: to.1, hour: 17, minute: 30))!
-            XCTAssertEqual(task.scheduledDayFit(for: day, calendar: newYork), .needsDeadlineMoved(to: moved))
+            XCTAssertEqual(task.scheduledDayFit(for: date(2027, to.0, to.1, 0), calendar: calendar()),
+                           .needsDeadlineMoved(to: date(2027, to.0, to.1, 17, 30)))
         }
     }
 }

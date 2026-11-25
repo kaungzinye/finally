@@ -135,43 +135,42 @@ enum Recurrence: String, Codable, CaseIterable {
 
     /// Compute the next deadline from the given date.
     /// For simple presets only — custom rules use RecurrenceRule.nextDeadline.
-    func nextDeadline(from date: Date) -> Date? {
+    func nextDeadline(from date: Date, after now: Date = Date(), calendar: Calendar = .current) -> Date? {
         guard self != .none, self != .custom else { return nil }
-
-        let calendar = Calendar.current
-        var next = date
 
         switch self {
         case .none, .custom:
             return nil
         case .daily:
-            return advanceUntilFuture(date: next, calendar: calendar, component: .day, value: 1)
+            return nextDate(from: date, after: now, calendar: calendar, component: .day, value: 1)
         case .weekly:
-            return advanceUntilFuture(date: next, calendar: calendar, component: .day, value: 7)
+            return nextDate(from: date, after: now, calendar: calendar, component: .day, value: 7)
         case .biweekly:
-            return advanceUntilFuture(date: next, calendar: calendar, component: .day, value: 14)
+            return nextDate(from: date, after: now, calendar: calendar, component: .day, value: 14)
         case .everyWeekday:
-            // Skip to next weekday
-            repeat {
-                guard let advanced = calendar.date(byAdding: .day, value: 1, to: next) else { return nil }
-                next = advanced
-            } while next <= Date() || calendar.isDateInWeekend(next)
-            return next
+            var days = 1
+            while let next = calendar.date(byAdding: .day, value: days, to: date) {
+                if next > now, !calendar.isDateInWeekend(next) { return next }
+                days += 1
+            }
+            return nil
         case .monthly:
-            return advanceUntilFuture(date: next, calendar: calendar, component: .month, value: 1)
+            return nextDate(from: date, after: now, calendar: calendar, component: .month, value: 1)
         case .yearly:
-            return advanceUntilFuture(date: next, calendar: calendar, component: .year, value: 1)
+            return nextDate(from: date, after: now, calendar: calendar, component: .year, value: 1)
         }
     }
+}
 
-    private func advanceUntilFuture(date: Date, calendar: Calendar, component: Calendar.Component, value: Int) -> Date? {
-        var next = date
-        repeat {
-            guard let advanced = calendar.date(byAdding: component, value: value, to: next) else { return nil }
-            next = advanced
-        } while next <= Date()
-        return next
+/// The first date in a repeating pattern after both `date` and `now`. Every step counts from
+/// `date`, so a short month or a clock change skipped on the way leaves later dates alone.
+private func nextDate(from date: Date, after now: Date, calendar: Calendar, component: Calendar.Component, value: Int) -> Date? {
+    var step = 1
+    while let next = calendar.date(byAdding: component, value: value * step, to: date) {
+        if next > now { return next }
+        step += 1
     }
+    return nil
 }
 
 // MARK: - RecurrenceRule (Google Calendar-style advanced patterns)
@@ -234,29 +233,27 @@ struct RecurrenceRule: Codable, Equatable {
 
     // MARK: - Next Deadline
 
-    func nextDeadline(from date: Date) -> Date? {
-        let calendar = Calendar.current
-
+    func nextDeadline(from date: Date, after now: Date = Date(), calendar: Calendar = .current) -> Date? {
         switch frequency {
         case .daily:
-            return advanceByInterval(from: date, component: .day, value: interval)
+            return nextDate(from: date, after: now, calendar: calendar, component: .day, value: interval)
 
         case .weekly:
             if weekdays.isEmpty {
-                return advanceByInterval(from: date, component: .day, value: 7 * interval)
+                return nextDate(from: date, after: now, calendar: calendar, component: .day, value: 7 * interval)
             }
-            return nextWeekdayOccurrence(from: date, calendar: calendar)
+            return nextWeekdayOccurrence(from: date, after: now, calendar: calendar)
 
         case .monthly:
             switch monthlyMode {
             case .dayOfMonth:
-                return advanceByInterval(from: date, component: .month, value: interval)
+                return nextDate(from: date, after: now, calendar: calendar, component: .month, value: interval)
             case .nthWeekday:
-                return nextNthWeekdayOccurrence(from: date, calendar: calendar)
+                return nextNthWeekdayOccurrence(from: date, after: now, calendar: calendar)
             }
 
         case .yearly:
-            return advanceByInterval(from: date, component: .year, value: interval)
+            return nextDate(from: date, after: now, calendar: calendar, component: .year, value: interval)
         }
     }
 
@@ -273,24 +270,11 @@ struct RecurrenceRule: Codable, Equatable {
 
     // MARK: - Helpers
 
-    private func advanceByInterval(from date: Date, component: Calendar.Component, value: Int) -> Date? {
-        let calendar = Calendar.current
-        var next = date
-        repeat {
-            guard let advanced = calendar.date(byAdding: component, value: value, to: next) else { return nil }
-            next = advanced
-        } while next <= Date()
-        return next
-    }
-
-    private func nextWeekdayOccurrence(from date: Date, calendar: Calendar) -> Date? {
-        var next = date
-
+    private func nextWeekdayOccurrence(from date: Date, after now: Date, calendar: Calendar) -> Date? {
         // Search past today, then far enough for one full interval.
-        let daysLate = max(calendar.dateComponents([.day], from: date, to: Date()).day ?? 0, 0)
-        for _ in 0..<(daysLate + interval * 14 + 7) {
-            guard let candidate = calendar.date(byAdding: .day, value: 1, to: next) else { return nil }
-            next = candidate
+        let daysLate = max(calendar.dateComponents([.day], from: date, to: now).day ?? 0, 0)
+        for days in 1...(daysLate + interval * 14 + 7) {
+            guard let next = calendar.date(byAdding: .day, value: days, to: date) else { return nil }
 
             let candidateWeekday = calendar.component(.weekday, from: next)
 
@@ -303,29 +287,27 @@ struct RecurrenceRule: Codable, Equatable {
                 if weeksApart % interval != 0 { continue }
             }
 
-            if weekdays.contains(candidateWeekday) && next > Date() {
+            if weekdays.contains(candidateWeekday) && next > now {
                 return next
             }
         }
         return nil
     }
 
-    private func nextNthWeekdayOccurrence(from date: Date, calendar: Calendar) -> Date? {
-        var next = date
-        let monthsLate = max(calendar.dateComponents([.month], from: date, to: Date()).month ?? 0, 0)
-        for _ in 0..<(monthsLate / max(interval, 1) + 400) {
-            guard let candidate = calendar.date(byAdding: .month, value: interval, to: next) else { return nil }
+    private func nextNthWeekdayOccurrence(from date: Date, after now: Date, calendar: Calendar) -> Date? {
+        let monthsLate = max(calendar.dateComponents([.month], from: date, to: now).month ?? 0, 0)
+        for step in 1...(monthsLate / max(interval, 1) + 400) {
+            guard let candidate = calendar.date(byAdding: .month, value: interval * step, to: date) else { return nil }
 
             // Find the nth weekday in that month
             let year = calendar.component(.year, from: candidate)
             let month = calendar.component(.month, from: candidate)
 
             if let nthDate = findNthWeekday(ordinal: nthWeekdayOrdinal, weekday: nthWeekdayDay, month: month, year: year, timeOf: date, calendar: calendar) {
-                if nthDate > Date() {
+                if nthDate > now {
                     return nthDate
                 }
             }
-            next = candidate
         }
         return nil
     }
