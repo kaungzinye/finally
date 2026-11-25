@@ -222,7 +222,7 @@ final class TodayListController: UIViewController, UICollectionViewDelegate {
             guard let row = self?.picks[pick], let task = row.task, let model = Self.pickModel(row) else { return }
             cell.show(model)
             cell.onToggle = { [weak self] in self?.actions?.toggleCompletion(task) }
-            cell.backgroundConfiguration = Self.cardBackground()
+            Self.drawOnCard(cell)
         }
         let deletedPickCell = UICollectionView.CellRegistration<UICollectionViewListCell, DailyFocusPick> { [weak self] cell, _, pick in
             let number = self?.picks[pick]?.number ?? 0
@@ -234,7 +234,7 @@ final class TodayListController: UIViewController, UICollectionViewDelegate {
             }
             .margins(.horizontal, 20)
             .margins(.vertical, 0)
-            cell.backgroundConfiguration = Self.cardBackground()
+            Self.drawOnCard(cell)
         }
         let emptySlotCell = UICollectionView.CellRegistration<UICollectionViewListCell, Int> { cell, _, number in
             cell.contentConfiguration = UIHostingConfiguration {
@@ -246,7 +246,7 @@ final class TodayListController: UIViewController, UICollectionViewDelegate {
             }
             .margins(.horizontal, 20)
             .margins(.vertical, 0)
-            cell.backgroundConfiguration = Self.cardBackground()
+            Self.drawOnCard(cell)
             cell.accessibilityIdentifier = "daily-focus-add-pick"
         }
         let reviewDayCell = UICollectionView.CellRegistration<UICollectionViewListCell, Row> { cell, _, _ in
@@ -255,7 +255,7 @@ final class TodayListController: UIViewController, UICollectionViewDelegate {
                     .foregroundStyle(Palette.ink)
                     .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
             }
-            cell.backgroundConfiguration = Self.cardBackground()
+            Self.drawOnCard(cell)
         }
         let confirmCell = UICollectionView.CellRegistration<UICollectionViewListCell, Row> { [weak self] cell, _, _ in
             cell.contentConfiguration = UIHostingConfiguration {
@@ -273,7 +273,7 @@ final class TodayListController: UIViewController, UICollectionViewDelegate {
                     .foregroundStyle(Palette.ink)
                     .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
             }
-            cell.backgroundConfiguration = Self.cardBackground()
+            Self.drawOnCard(cell)
         }
         let otherTaskCell = UICollectionView.CellRegistration<UICollectionViewListCell, PersistentIdentifier> { [weak self] cell, _, id in
             guard let task = self?.otherTasks[id] else { return }
@@ -282,7 +282,7 @@ final class TodayListController: UIViewController, UICollectionViewDelegate {
             }
             .margins(.horizontal, 20)
             .margins(.vertical, 0)
-            cell.backgroundConfiguration = Self.cardBackground()
+            Self.drawOnCard(cell)
         }
 
         let dataSource = UICollectionViewDiffableDataSource<Section, Row>(collectionView: collectionView) { [weak self] collectionView, indexPath, row in
@@ -418,15 +418,20 @@ final class TodayListController: UIViewController, UICollectionViewDelegate {
         return line
     }
 
-    private static func cardBackground() -> UIBackgroundConfiguration {
-        var background: UIBackgroundConfiguration
-        if #available(iOS 18, *) {
-            background = .listCell()
-        } else {
-            background = .listGroupedCell()
+    /// Draws a row on its group's card. A swiped row rounds its corners, so they show against
+    /// the revealed action, and a pressed row darkens.
+    private static func drawOnCard(_ cell: UICollectionViewListCell) {
+        cell.configurationUpdateHandler = { cell, state in
+            var background: UIBackgroundConfiguration
+            if #available(iOS 18, *) {
+                background = .listCell()
+            } else {
+                background = .listGroupedCell()
+            }
+            background.backgroundColor = UIColor(state.isHighlighted ? Palette.selection : Palette.card)
+            if state.isSwiped { background.cornerRadius = PaperGroup.cornerRadius }
+            cell.backgroundConfiguration = background
         }
-        background.backgroundColor = UIColor(Palette.card)
-        return background
     }
 
     // MARK: - Taps
@@ -640,6 +645,8 @@ private struct OtherTaskRow: View {
                 .foregroundStyle(isDone || isMissed ? Palette.muted : Palette.ink)
                 .frame(maxWidth: .infinity, alignment: .leading)
 
+            trailing
+
             Button(action: toggle) {
                 PriorityRing(color: task.priority?.color ?? Palette.low, isDone: isDone, diameter: 22)
                     .frame(width: 44, height: 40)
@@ -650,6 +657,25 @@ private struct OtherTaskRow: View {
             .accessibilityLabel(isDone ? "Reopen" : "Complete")
         }
         .frame(minHeight: 40)
+    }
+
+    /// A subtask's parent, and a parent's subtask progress.
+    private var trailing: some View {
+        HStack(spacing: 8) {
+            if task.isSubtask, let parentTitle = task.parent?.title {
+                Label(parentTitle, systemImage: "arrow.turn.down.right")
+                    .frame(maxWidth: 96, alignment: .trailing)
+            }
+            if task.hasSubtasks {
+                let progress = task.subtaskProgress
+                Label("\(progress.done)/\(progress.total)", systemImage: "checkmark")
+            }
+        }
+        .labelStyle(.titleAndIcon)
+        .font(.meta)
+        .foregroundStyle(Palette.muted)
+        .lineLimit(1)
+        .fixedSize(horizontal: true, vertical: false)
     }
 
     private func color(for date: TaskRowDate) -> Color {

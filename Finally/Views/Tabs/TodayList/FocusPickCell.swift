@@ -67,6 +67,19 @@ final class FocusPickCell: UICollectionViewListCell {
             ring.heightAnchor.constraint(equalToConstant: 40),
         ])
         isAccessibilityElement = true
+        accessibilityTraits = .button
+    }
+
+    /// VoiceOver reads the pick as one element, and its ring is an action on that element.
+    override var accessibilityCustomActions: [UIAccessibilityCustomAction]? {
+        get {
+            let toggle = UIAccessibilityCustomAction(name: model?.isDone == true ? "Reopen" : "Complete") { [weak self] _ in
+                self?.onToggle?()
+                return true
+            }
+            return [toggle] + (super.accessibilityCustomActions ?? [])
+        }
+        set { super.accessibilityCustomActions = newValue }
     }
 
     @available(*, unavailable)
