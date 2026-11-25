@@ -17,6 +17,8 @@ struct TodayView: View {
     @State private var day = Calendar.current.startOfDay(for: Date())
     /// Today draws again when the evening starts, so Review the day appears on an open screen.
     @State private var isEvening = false
+    /// Counts clock changes and returns to the foreground, which restart the wait for the evening.
+    @State private var clockChecks = 0
     @State private var dailyFocus: DailyFocus?
     @State private var selectedTask: TaskItem?
     @State private var replanningFocus: DailyFocus?
@@ -62,8 +64,9 @@ struct TodayView: View {
             .toolbar(.hidden, for: .navigationBar)
             .disabled(isSaving)
             .task(id: loadID) { await load() }
-            .task(id: day) { await watchForEvening() }
+            .task(id: EveningWatch(day: day, clockChecks: clockChecks)) { await watchForEvening() }
             .onChange(of: scenePhase) { _, phase in
+                if phase == .active { clockChecks += 1 }
                 if phase == .active && isIdle {
                     moveToCurrentDay()
                     Task { await load() }
@@ -72,6 +75,7 @@ struct TodayView: View {
             // Midnight passing while the app stays open moves Today to the new day. A sheet or
             // save open across midnight defers the move until it finishes.
             .onReceive(NotificationCenter.default.publisher(for: UIApplication.significantTimeChangeNotification)) { _ in
+                clockChecks += 1
                 if isIdle { moveToCurrentDay() }
             }
             .onChange(of: isIdle) { _, idle in
@@ -244,6 +248,11 @@ struct TodayView: View {
         guard let current = Today.dayChange(from: day, at: Date()) else { return false }
         day = current
         return true
+    }
+
+    private struct EveningWatch: Hashable {
+        let day: Date
+        let clockChecks: Int
     }
 
     private func watchForEvening() async {
