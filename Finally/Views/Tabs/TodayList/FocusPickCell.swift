@@ -18,6 +18,8 @@ final class FocusPickCell: UICollectionViewListCell {
 
     /// Tapping the ring completes an open pick and reopens a finished one.
     var onToggle: (() -> Void)?
+    /// Moves the pick one place up (-1) or down (1). Returns false at either end.
+    var onMove: ((Int) -> Bool)?
 
     private let numberLabel = UILabel()
     private let titleLabel = UILabel()
@@ -70,14 +72,17 @@ final class FocusPickCell: UICollectionViewListCell {
         accessibilityTraits = .button
     }
 
-    /// VoiceOver reads the pick as one element, and its ring is an action on that element.
+    /// VoiceOver reads the pick as one element, and its ring and its place in
+    /// the list are actions on that element.
     override var accessibilityCustomActions: [UIAccessibilityCustomAction]? {
         get {
             let toggle = UIAccessibilityCustomAction(name: model?.isDone == true ? "Reopen" : "Complete") { [weak self] _ in
                 self?.onToggle?()
                 return true
             }
-            return [toggle] + (super.accessibilityCustomActions ?? [])
+            let up = UIAccessibilityCustomAction(name: "Move up") { [weak self] _ in self?.onMove?(-1) ?? false }
+            let down = UIAccessibilityCustomAction(name: "Move down") { [weak self] _ in self?.onMove?(1) ?? false }
+            return [toggle, up, down] + (super.accessibilityCustomActions ?? [])
         }
         set { super.accessibilityCustomActions = newValue }
     }

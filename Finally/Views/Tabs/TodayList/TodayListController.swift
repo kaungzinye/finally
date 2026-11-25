@@ -222,6 +222,7 @@ final class TodayListController: UIViewController, UICollectionViewDelegate {
             guard let row = self?.picks[pick], let task = row.task, let model = Self.pickModel(row) else { return }
             cell.show(model)
             cell.onToggle = { [weak self] in self?.actions?.toggleCompletion(task) }
+            cell.onMove = { [weak self] offset in self?.move(pick, by: offset) ?? false }
             Self.drawOnCard(cell)
         }
         let deletedPickCell = UICollectionView.CellRegistration<UICollectionViewListCell, DailyFocusPick> { [weak self] cell, _, pick in
@@ -557,6 +558,15 @@ final class TodayListController: UIViewController, UICollectionViewDelegate {
             contentWaitingForDrop = nil
             show(waiting)
         }
+    }
+
+    /// VoiceOver's Move up and Move down. The new order saves as a drag's does.
+    private func move(_ pick: DailyFocusPick, by offset: Int) -> Bool {
+        let rows = content.focus?.rows ?? []
+        guard let from = rows.firstIndex(where: { $0.pick == pick }), rows.indices.contains(from + offset) else { return false }
+        actions?.movePick(from, from + offset)
+        UIAccessibility.post(notification: .announcement, argument: "Pick \(from + offset + 1) of \(rows.count)")
+        return true
     }
 
     /// A dragged pick stays among the picks, above the open slots.
