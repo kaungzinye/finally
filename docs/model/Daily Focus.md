@@ -21,4 +21,4 @@ Daily Focus never grows past its [[Focus limit]].
 - A long press and drag reorders the picks, done ones included, and saves the new pick order.
 - A pick whose task was deleted shows as "Deleted" in muted text.
 - One counter only: "1 of 3 done". With nothing picked it reads "Pick from Today".
-- Remove takes a pick out of the day and leaves the task open with its dates. Picking into a full day swaps out the pick the user chooses.
+- Remove takes a pick out of the day and leaves the task open with its dates. A full day takes a task from Other tasks in place of the pick the user chooses. A task outside Today is scheduled for today first.
