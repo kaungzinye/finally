@@ -33,6 +33,37 @@ final class DailyFocusTests: XCTestCase {
         XCTAssertEqual(focus.picks.map(\.externalTaskID), ["d", "a", "c"])
     }
 
+    func testDraggingAShownPickReordersOnlyTheShownPicks() throws {
+        let focus = DailyFocus(day: day, focusLimit: 5)
+        focus.picks = [pick("done"), pick("b"), pick("c"), pick("d")]
+
+        focus.move([pick("b"), pick("c"), pick("d")], fromOffsets: IndexSet(integer: 2), toOffset: 0)
+
+        XCTAssertEqual(focus.picks.map(\.externalTaskID), ["done", "d", "b", "c"])
+    }
+
+    func testReviewTheDayShowsFromFiveInTheEvening() {
+        let focus = DailyFocus(day: day)
+        focus.picks = [pick("a")]
+
+        XCTAssertFalse(DailyFocus.showsReviewTheDay(for: focus, hasUnfinishedEarlierDay: false, at: at(hour: 16, minute: 59)))
+        XCTAssertTrue(DailyFocus.showsReviewTheDay(for: focus, hasUnfinishedEarlierDay: false, at: at(hour: 17)))
+        XCTAssertTrue(DailyFocus.showsReviewTheDay(for: focus, hasUnfinishedEarlierDay: false, at: at(hour: 23, minute: 30)))
+    }
+
+    func testReviewTheDayShowsAllDayWhileAnEarlierDayAwaitsReplanning() {
+        let focus = DailyFocus(day: day)
+        focus.picks = [pick("a")]
+
+        XCTAssertTrue(DailyFocus.showsReviewTheDay(for: focus, hasUnfinishedEarlierDay: true, at: at(hour: 9)))
+    }
+
+    func testReviewTheDayStaysHiddenWithNothingPicked() {
+        let focus = DailyFocus(day: day)
+
+        XCTAssertFalse(DailyFocus.showsReviewTheDay(for: focus, hasUnfinishedEarlierDay: true, at: at(hour: 20)))
+    }
+
     func testDailyFocusIgnoresAPickItAlreadyHolds() throws {
         let focus = DailyFocus(day: day)
         try focus.add(pick("a"))
@@ -226,25 +257,24 @@ final class DailyFocusTests: XCTestCase {
         XCTAssertFalse(task.isDirty)
     }
 
-    func testScheduleAndDeferEditOnlyTheScheduledDay() throws {
+    func testSchedulePastTheDeadlineMovesBothAndDeferEditsOnlyTheScheduledDay() throws {
         let task = TaskItem(externalTaskID: "unfinished", title: "Draft the brief")
         task.providerWorkspaceId = "notion-workspace"
-        let deadline = day.addingTimeInterval(86_400 * 2)
-        task.deadline = deadline
+        task.deadline = day.addingTimeInterval(86_400 * 2)
         let focus = DailyFocus(day: day)
         try focus.add(task.dailyFocusPick)
-        let scheduled = day.addingTimeInterval(86_400 * 5)
+        let scheduled = Calendar.current.startOfDay(for: day.addingTimeInterval(86_400 * 5))
 
         try focus.replan(task.dailyFocusPick, decision: .schedule(scheduled), task: task)
-        XCTAssertEqual(task.scheduledDay, Calendar.current.startOfDay(for: deadline))
-        XCTAssertEqual(task.deadline, deadline)
+        XCTAssertEqual(task.scheduledDay, scheduled)
+        XCTAssertEqual(task.deadline, scheduled)
         XCTAssertTrue(task.isDirty)
         XCTAssertTrue(focus.picks.isEmpty)
 
         try focus.add(task.dailyFocusPick)
         try focus.replan(task.dailyFocusPick, decision: .deferTask, task: task)
         XCTAssertNil(task.scheduledDay)
-        XCTAssertEqual(task.deadline, deadline)
+        XCTAssertEqual(task.deadline, scheduled)
         XCTAssertFalse(task.isDeleted)
         XCTAssertTrue(focus.picks.isEmpty)
     }
@@ -299,6 +329,10 @@ final class DailyFocusTests: XCTestCase {
         let configuration = ModelConfiguration(isStoredInMemoryOnly: true)
         let container = try ModelContainer(for: schema, configurations: [configuration])
         return ModelContext(container)
+    }
+
+    private func at(hour: Int, minute: Int = 0) -> Date {
+        Calendar.current.date(bySettingHour: hour, minute: minute, second: 0, of: day)!
     }
 
     private func pick(_ taskID: String, workspace: String = "notion-workspace") -> DailyFocusPick {

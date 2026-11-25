@@ -1,237 +1,133 @@
 import SwiftData
 import SwiftUI
 
-/// The Daily Focus at the top of Today, headed "3 things to do" with one counter. A day the
-/// personal agent proposed lists its picks with a Confirm button. A confirmed day shows the first
-/// unfinished pick as a larger card and the rest below it.
+/// The Daily Focus at the top of Today: "3 things to do" as a numbered list, with one counter on
+/// the right. Each pick is a numbered row that keeps its place when it is done and collapses to
+/// one short line. Each open slot up to the focus limit keeps its number and reads "Pick a task".
+/// The number of the first open pick is orange, marking where to start. A long press and drag
+/// reorders the picks, open or done. A day the personal agent proposed shows a Confirm button.
 struct DailyFocusSection: View {
     let focus: DailyFocus
     let onChange: () -> Void
     let onSelectTask: (TaskItem) -> Void
     let onAddPick: () -> Void
-    let onEditPicks: () -> Void
     var onReviewDay: (() -> Void)?
 
     @Query private var tasks: [TaskItem]
 
-    private var resolved: [ResolvedDailyFocusPick] { focus.resolvedPicks(among: tasks) }
-    private var deleted: [ResolvedDailyFocusPick] { resolved.filter { $0.task == nil } }
-    private var actionable: [ResolvedDailyFocusPick] { focus.executionPicks(among: tasks) }
-
     var body: some View {
-        if focus.isConfirmed {
-            Section {
-                if let item = actionable.first, let task = item.task {
-                    CurrentPickCard(task: task, onOpen: { onSelectTask(task) })
-                        .accessibilityIdentifier("daily-focus-current-task")
-                } else if resolved.isEmpty {
-                    emptyHint
-                } else if deleted.isEmpty {
-                    Label("All done for today", systemImage: "checkmark.seal")
-                        .foregroundStyle(Palette.ink)
-                        .cardRow()
-                }
-            } header: {
-                header
-            }
-            Section {
-                ForEach(Array(actionable.dropFirst())) { item in
-                    if let task = item.task { taskRow(task) }
-                }
-                ForEach(deleted) { item in deletedRow(item) }
-                actions
-            }
-        } else {
-            Section {
-                ForEach(resolved) { item in
-                    if let task = item.task { taskRow(task) } else { deletedRow(item) }
-                }
-                if resolved.isEmpty { emptyHint }
-                actions
-            } header: {
-                header
-            }
-            if !focus.picks.isEmpty {
-                Section {
-                    Button("Confirm") {
-                        focus.confirm()
-                        onChange()
-                    }
-                    .buttonStyle(.ink)
-                    .accessibilityIdentifier("daily-focus-confirm")
-                    .listRowBackground(Color.clear)
-                    .listRowInsets(EdgeInsets())
+        let list = DailyFocusList(focus: focus, tasks: tasks)
+        Section {
+            ForEach(list.rows) { row in
+                if let task = row.task {
+                    TaskRowView(
+                        task: task,
+                        focusAction: .remove { remove(row.pick) },
+                        layout: .focus(number: row.number, isNext: row.isNext)
+                    )
+                    .contentShape(Rectangle())
+                    .onTapGesture { onSelectTask(task) }
+                    .accessibilityIdentifier(row.isNext ? "daily-focus-current-task" : "daily-focus-pick")
+                } else {
+                    unavailableRow(row)
                 }
             }
-        }
-    }
-
-    private var header: some View {
-        HStack(alignment: .firstTextBaseline) {
-            Text(DailyFocusHeading.text(focusLimit: focus.focusLimit))
-                .font(.cardTitle)
-                .foregroundStyle(Palette.ink)
-            Spacer()
-            if !resolved.isEmpty {
-                Text("\(resolved.filter { $0.task?.status == .done }.count) of \(resolved.count) done")
-                    .font(.meta)
-                    .foregroundStyle(Palette.muted)
-                    .accessibilityIdentifier("daily-focus-progress")
+            .onMove { source, destination in
+                list.move(in: focus, fromOffsets: source, toOffset: destination)
+                onChange()
             }
-        }
-        .textCase(nil)
-        .padding(.bottom, 4)
-    }
-
-    private var emptyHint: some View {
-        Text("Pick a few tasks from Today.")
-            .foregroundStyle(Palette.muted)
-            .roundedCardRow()
-    }
-
-    @ViewBuilder
-    private var actions: some View {
-        Button(action: onAddPick) {
-            Label(focus.isFull ? "Add an urgent task" : "Pick a task", systemImage: "plus.circle")
-        }
-        .accessibilityIdentifier("daily-focus-add-pick")
-        .roundedCardRow()
-        if !focus.picks.isEmpty {
-            Button("Edit", action: onEditPicks)
-                .accessibilityIdentifier("daily-focus-edit-picks")
-                .roundedCardRow()
+            ForEach(list.emptySlotNumbers, id: \.self) { number in
+                emptySlot(number)
+            }
             if let onReviewDay {
                 Button(action: onReviewDay) {
                     Label("Review the day", systemImage: "arrow.triangle.branch")
                 }
                 .accessibilityIdentifier("daily-focus-review-day")
-                .roundedCardRow()
+                .cardRow()
+            }
+        } header: {
+            header(list)
+        }
+        if !focus.isConfirmed && !focus.picks.isEmpty {
+            Section {
+                Button("Confirm") {
+                    focus.confirm()
+                    onChange()
+                }
+                .buttonStyle(.ink)
+                .accessibilityIdentifier("daily-focus-confirm")
+                .listRowBackground(Color.clear)
+                .listRowInsets(EdgeInsets())
             }
         }
     }
 
-    private func taskRow(_ task: TaskItem) -> some View {
-        TaskRowView(task: task)
-            .contentShape(Rectangle())
-            .onTapGesture { onSelectTask(task) }
+    private func header(_ list: DailyFocusList) -> some View {
+        HStack(alignment: .firstTextBaseline) {
+            Text(DailyFocusHeading.text(focusLimit: focus.focusLimit))
+                .font(.focusHeading)
+                .foregroundStyle(Palette.ink)
+            Spacer()
+            Text(list.status)
+                .font(.meta)
+                .foregroundStyle(Palette.muted)
+                .accessibilityIdentifier("daily-focus-progress")
+        }
+        .textCase(nil)
+        .padding(.bottom, 4)
     }
 
-    private func deletedRow(_ item: ResolvedDailyFocusPick) -> some View {
-        HStack {
+    /// An open slot keeps its faint number. Tapping it opens the picker.
+    private func emptySlot(_ number: Int) -> some View {
+        Button(action: onAddPick) {
+            HStack(spacing: 14) {
+                slotNumber(number)
+                Text("Pick a task")
+                    .foregroundStyle(Palette.muted)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                Image(systemName: "plus")
+                    .font(.body.weight(.semibold))
+                    .foregroundStyle(Palette.muted)
+            }
+            .frame(minHeight: 48)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityIdentifier("daily-focus-add-pick")
+        .listRowInsets(EdgeInsets(top: 0, leading: 20, bottom: 0, trailing: 20))
+        .cardRow()
+        .moveDisabled(true)
+    }
+
+    /// A pick whose task is gone keeps its number and waits for Drop.
+    private func unavailableRow(_ row: DailyFocusList.Row) -> some View {
+        HStack(spacing: 14) {
+            slotNumber(row.number)
             Text("Deleted")
                 .foregroundStyle(Palette.muted)
-            Spacer()
-            Button("Drop") {
-                focus.remove(item.pick)
-                onChange()
-            }
-            .buttonStyle(.borderless)
+                .frame(maxWidth: .infinity, alignment: .leading)
+            Button("Drop") { remove(row.pick) }
+                .buttonStyle(.borderless)
         }
-        .roundedCardRow()
+        .frame(minHeight: 48)
+        .listRowInsets(EdgeInsets(top: 0, leading: 20, bottom: 0, trailing: 20))
+        .cardRow()
         .accessibilityIdentifier("daily-focus-deleted-pick")
     }
-}
 
-/// The task to work on now, drawn larger than the rest with its own Done button.
-private struct CurrentPickCard: View {
-    @Bindable var task: TaskItem
-    let onOpen: () -> Void
-
-    @Environment(\.modelContext) private var modelContext
-    @Environment(TaskProviderCoordinator.self) private var taskProvider
-
-    private var details: [String] {
-        var parts: [String] = []
-        if let date = TaskRowDate(for: task, at: Date()), date.kind == .deadline {
-            parts.append("Deadline \(date.text)")
-        }
-        if let project = task.project?.title {
-            parts.append(project)
-        }
-        if task.hasSubtasks {
-            let progress = task.subtaskProgress
-            parts.append("\(progress.done) of \(progress.total) subtasks")
-        }
-        return parts
+    private func slotNumber(_ number: Int) -> some View {
+        Text("\(number)")
+            .font(.focusNumber)
+            .monospacedDigit()
+            .foregroundStyle(Palette.muted.opacity(0.4))
+            .frame(width: 26)
+            .accessibilityHidden(true)
     }
 
-    var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack(alignment: .center, spacing: 12) {
-                PriorityRing(color: task.priority?.color ?? Palette.low, isDone: false)
-                    .accessibilityLabel(task.priority.map { "\($0.rawValue) priority" } ?? "No priority")
-                Text(task.title)
-                    .font(.cardTitle)
-                    .foregroundStyle(Palette.ink)
-                    .lineLimit(3)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-            }
-
-            if !details.isEmpty {
-                Text(details.joined(separator: " · "))
-                    .font(.meta)
-                    .foregroundStyle(task.isOverdue ? Palette.urgent : Palette.muted)
-            }
-
-            Button(action: complete) {
-                Label("Done", systemImage: "checkmark")
-            }
-            .buttonStyle(.ink)
-            .padding(.top, 6)
-        }
-        .padding(.vertical, 14)
-        .contentShape(Rectangle())
-        .onTapGesture(perform: onOpen)
-        .cardRow()
-    }
-
-    private func complete() {
-        UIImpactFeedbackGenerator(style: .light).impactOccurred()
-        withAnimation(.snappy) {
-            let recycled = task.complete()
-            if recycled {
-                NotificationService.shared.rescheduleAllReminders(modelContext: modelContext)
-            } else {
-                NotificationService.shared.cancelRemindersForTask(task, modelContext: modelContext)
-            }
-        }
-        Task {
-            await taskProvider.submitPendingChangesReportingFailure(for: task.pendingEdits, store: modelContext)
-        }
-    }
-}
-
-struct DailyFocusEditorView: View {
-    let focus: DailyFocus
-    let onChange: () -> Void
-    @Query private var tasks: [TaskItem]
-    @Environment(\.dismiss) private var dismiss
-
-    var body: some View {
-        NavigationStack {
-            List {
-                ForEach(focus.resolvedPicks(among: tasks)) { item in
-                    Text(item.task?.title ?? "Deleted")
-                        .foregroundStyle(item.task == nil ? Palette.muted : Palette.ink)
-                        .cardRow()
-                }
-                .onMove { source, destination in
-                    focus.move(fromOffsets: source, toOffset: destination)
-                    onChange()
-                }
-                .onDelete { offsets in
-                    focus.remove(atOffsets: offsets)
-                    onChange()
-                }
-            }
-            .paperList(background: Palette.sheet)
-            .navigationTitle(DailyFocusHeading.text(focusLimit: focus.focusLimit))
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .topBarLeading) { EditButton() }
-                ConfirmToolbarButton("Done") { dismiss() }
-            }
-        }
-        .paperSheet()
+    /// Takes the task out of the day's picks. The task keeps its dates and stays open.
+    private func remove(_ pick: DailyFocusPick) {
+        focus.remove(pick)
+        onChange()
     }
 }

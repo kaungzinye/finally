@@ -34,16 +34,22 @@ struct TasksList {
             .map { project in
                 ProjectGroup(
                     project: project,
-                    tasks: (byProject[project.externalProjectID] ?? []).sorted(by: Self.isNearer)
+                    tasks: Self.nearestFirst(byProject[project.externalProjectID] ?? [])
                 )
             }
             .filter { !unscheduledOnly || !$0.tasks.isEmpty }
     }
 
-    /// Earlier deadline first, then earlier scheduled day. A missing date sorts last.
-    static func isNearer(_ a: TaskItem, _ b: TaskItem) -> Bool {
-        if a.deadline != b.deadline { return a.deadline ?? .distantFuture < b.deadline ?? .distantFuture }
-        if a.scheduledDay != b.scheduledDay { return a.scheduledDay ?? .distantFuture < b.scheduledDay ?? .distantFuture }
-        return a.title.localizedCompare(b.title) == .orderedAscending
+    /// Earlier deadline first, then earlier scheduled day, then title. A missing date sorts last.
+    /// Each task's dates and title are read once, since every read goes through the model store.
+    static func nearestFirst(_ tasks: [TaskItem]) -> [TaskItem] {
+        tasks
+            .map { (task: $0, deadline: $0.deadline ?? .distantFuture, scheduledDay: $0.scheduledDay ?? .distantFuture, title: $0.title) }
+            .sorted { a, b in
+                if a.deadline != b.deadline { return a.deadline < b.deadline }
+                if a.scheduledDay != b.scheduledDay { return a.scheduledDay < b.scheduledDay }
+                return a.title.localizedCompare(b.title) == .orderedAscending
+            }
+            .map(\.task)
     }
 }

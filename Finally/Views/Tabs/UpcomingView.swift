@@ -40,7 +40,9 @@ struct UpcomingView: View {
         let date = day.formatted(.dateTime.weekday(.abbreviated).day())
         if calendar.isDateInToday(day) { return "Today · \(date)" }
         if calendar.isDateInTomorrow(day) { return "Tomorrow · \(date)" }
-        return day.formatted(.dateTime.weekday(.abbreviated).day().month(.abbreviated))
+        let style = Date.FormatStyle.dateTime.weekday(.abbreviated).day().month(.abbreviated)
+        let isAnotherYear = calendar.component(.year, from: day) != calendar.component(.year, from: Date())
+        return day.formatted(isAnotherYear ? style.year() : style)
     }
 
     var body: some View {
@@ -56,7 +58,6 @@ struct UpcomingView: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .background(Palette.paper)
                 .navigationTitle("Upcoming")
-                .settingsButton()
             } else {
                 ScrollViewReader { proxy in
                     List {
@@ -99,7 +100,6 @@ struct UpcomingView: View {
                 .paperList()
                 }
                 .navigationTitle(isSelectionMode ? "\(selectedTasks.count) selected" : "Upcoming")
-                .settingsButton(isHidden: isSelectionMode)
                 .refreshable {
                     try? await taskProvider.synchronize(.launch, store: modelContext)
                 }
@@ -131,18 +131,16 @@ struct UpcomingView: View {
                         }
                     }
                 } else {
-                    ToolbarItem(placement: .topBarTrailing) {
-                        HStack(spacing: 12) {
-                            Button { showSortConfig = true } label: {
-                                Image(systemName: "arrow.up.arrow.down")
-                            }
-                            .accessibilityLabel("Sort")
-
-                            Button { showSearch = true } label: {
-                                Image(systemName: "magnifyingglass")
-                            }
-                            .accessibilityLabel("Search")
+                    ToolbarItemGroup(placement: .topBarTrailing) {
+                        Button { showSortConfig = true } label: {
+                            Image(systemName: "arrow.up.arrow.down")
                         }
+                        .accessibilityLabel("Sort")
+
+                        Button { showSearch = true } label: {
+                            Image(systemName: "magnifyingglass")
+                        }
+                        .accessibilityLabel("Search")
                     }
                 }
             }

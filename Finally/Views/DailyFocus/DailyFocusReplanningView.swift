@@ -18,6 +18,7 @@ struct DailyFocusReplanningView: View {
     @State private var keepPick: DailyFocusPick?
     @State private var scheduleTask: TaskItem?
     @State private var scheduleDay = Calendar.current.startOfDay(for: Date())
+    @State private var pastDeadlineDay: Date?
     @State private var breakdownTask: TaskItem?
     @State private var showTaskDetail = false
 
@@ -107,7 +108,7 @@ struct DailyFocusReplanningView: View {
                         DatePicker("Scheduled", selection: $scheduleDay, in: Calendar.current.startOfDay(for: Date())..., displayedComponents: .date)
                             .datePickerStyle(.graphical)
                             .tint(Palette.inkControl)
-                        SectionNote("The deadline stays where it is.")
+                        SectionNote("A day after the deadline asks to move the deadline too.")
                         Spacer(minLength: 0)
                     }
                     .padding(.horizontal, 20)
@@ -119,9 +120,15 @@ struct DailyFocusReplanningView: View {
                             Button("Cancel") { scheduleTask = nil }
                         }
                         ConfirmToolbarButton("Schedule") {
-                            decide(ResolvedDailyFocusPick(pick: task.dailyFocusPick, task: task), .schedule(scheduleDay))
-                            scheduleTask = nil
+                            if task.scheduledDayFit(for: scheduleDay) == .fits {
+                                schedule(task, on: scheduleDay)
+                            } else {
+                                pastDeadlineDay = scheduleDay
+                            }
                         }
+                    }
+                    .deadlineMoveConfirmation(for: task, day: $pastDeadlineDay) { day in
+                        schedule(task, on: day)
                     }
                 }
                 .paperSheet()
@@ -168,6 +175,12 @@ struct DailyFocusReplanningView: View {
             }
         }
         .paperSheet()
+    }
+
+    /// Schedule moves the scheduled day, and the deadline with it when the day falls after it.
+    private func schedule(_ task: TaskItem, on day: Date) {
+        decide(ResolvedDailyFocusPick(pick: task.dailyFocusPick, task: task), .schedule(day))
+        scheduleTask = nil
     }
 
     private func prepareKeep(_ pick: DailyFocusPick) {

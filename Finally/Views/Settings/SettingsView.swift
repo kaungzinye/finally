@@ -1,13 +1,14 @@
 import SwiftUI
 import SwiftData
 
+/// The Settings tab. Its subpages push inside the tab's own navigation stack.
 struct SettingsView: View {
     @Query private var sessions: [UserSession]
     @Environment(\.modelContext) private var modelContext
-    @Environment(\.dismiss) private var dismiss
     @Environment(TaskProviderCoordinator.self) private var taskProvider
     @Environment(NotionAuthService.self) private var authService
     @AppStorage(AppConstants.focusLimitKey) private var focusLimit = DailyFocus.defaultFocusLimit
+    @AppStorage(AppConstants.uikitTodayKey) private var uikitToday = false
 
     private var notionSession: UserSession? {
         sessions.first { $0.providerIdentity == .notion }
@@ -133,15 +134,19 @@ struct SettingsView: View {
                 } header: {
                     SectionLabel("Account")
                 }
+                #if DEBUG
+                Section {
+                    Toggle("UIKit Today list", isOn: $uikitToday)
+                } header: {
+                    SectionLabel("Developer")
+                }
+                #endif
                 }
                 .cardRow()
             }
             .foregroundStyle(Palette.ink)
             .paperList()
             .navigationTitle("Settings")
-            .toolbar {
-                ConfirmToolbarButton("Done") { dismiss() }
-            }
         }
     }
 
@@ -196,36 +201,5 @@ struct SettingsView: View {
 
     private func workspaceChanged() {
         NotificationCenter.default.post(name: .providerWorkspaceChanged, object: nil)
-    }
-}
-
-/// The gear at the leading edge of every tab's toolbar. It opens Settings.
-private struct SettingsButton: ViewModifier {
-    var isHidden: Bool
-    @State private var showSettings = false
-
-    func body(content: Content) -> some View {
-        content
-            .toolbar {
-                if !isHidden {
-                    ToolbarItem(placement: .topBarLeading) {
-                        Button { showSettings = true } label: {
-                            Image(systemName: "gearshape")
-                        }
-                        .accessibilityLabel("Settings")
-                    }
-                }
-            }
-            .sheet(isPresented: $showSettings) {
-                SettingsView()
-            }
-    }
-}
-
-extension View {
-    /// Adds the Settings gear to the toolbar's leading edge. A tab hides it while its own
-    /// leading control, such as Cancel, takes the spot.
-    func settingsButton(isHidden: Bool = false) -> some View {
-        modifier(SettingsButton(isHidden: isHidden))
     }
 }

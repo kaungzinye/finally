@@ -12,13 +12,51 @@ final class TaskDetailEditTests: XCTestCase {
         calendar.date(from: DateComponents(year: 2026, month: 6, day: value))!
     }
 
-    func testReschedule_PastTheDeadlineStopsOnTheDeadlineDay() {
+    func testScheduledDayFit_OnOrBeforeTheDeadlineDayFits() {
+        let task = TaskItem(externalTaskID: "fit", title: "Ship the release notes")
+        task.deadline = calendar.date(byAdding: .hour, value: 17, to: day(12))
+        task.deadlineHasTime = true
+
+        XCTAssertEqual(task.scheduledDayFit(for: day(12), calendar: calendar), .fits)
+        XCTAssertEqual(task.scheduledDayFit(for: day(9), calendar: calendar), .fits)
+        XCTAssertEqual(task.scheduledDayFit(for: nil, calendar: calendar), .fits)
+    }
+
+    func testScheduledDayFit_AnyDayFitsATaskWithNoDeadline() {
+        let task = TaskItem(externalTaskID: "open", title: "Read the novel")
+
+        XCTAssertEqual(task.scheduledDayFit(for: day(30), calendar: calendar), .fits)
+    }
+
+    func testScheduledDayFit_PastADeadlineDayNeedsTheDeadlineMovedToThatDay() {
         let task = TaskItem(externalTaskID: "late", title: "Ship the release notes")
         task.deadline = day(12)
 
+        XCTAssertEqual(task.scheduledDayFit(for: day(15), calendar: calendar), .needsDeadlineMoved(to: day(15)))
+    }
+
+    func testScheduledDayFit_PastATimedDeadlineKeepsItsTimeOfDay() {
+        let task = TaskItem(externalTaskID: "late", title: "Ship the release notes")
+        task.deadline = calendar.date(byAdding: DateComponents(hour: 17, minute: 30), to: day(12))
+        task.deadlineHasTime = true
+
+        XCTAssertEqual(
+            task.scheduledDayFit(for: day(15), calendar: calendar),
+            .needsDeadlineMoved(to: calendar.date(byAdding: DateComponents(hour: 17, minute: 30), to: day(15))!)
+        )
+    }
+
+    func testReschedule_PastTheDeadlineMovesTheDeadlineAndKeepsItsReminders() {
+        let task = TaskItem(externalTaskID: "late", title: "Ship the release notes")
+        task.setDeadline(calendar.date(byAdding: .hour, value: 9, to: day(12)), hasTime: true, defaults: .standard)
+        let reminders = task.taskReminders
+
         task.reschedule(to: day(15), calendar: calendar)
 
-        XCTAssertEqual(task.scheduledDay, day(12))
+        XCTAssertEqual(task.scheduledDay, day(15))
+        XCTAssertEqual(task.deadline, calendar.date(byAdding: .hour, value: 9, to: day(15)))
+        XCTAssertTrue(task.deadlineHasTime)
+        XCTAssertEqual(task.taskReminders, reminders)
         XCTAssertTrue(task.isDirty)
     }
 

@@ -20,8 +20,8 @@ struct ReminderSection: View {
 
     private var note: String? {
         if task.deadline == nil { return "Deadline reminders start when the task has a deadline." }
-        if !task.deadlineHasTime, task.deadlineReminderOffsets.contains(.hourBefore) {
-            return "1 hour before waits for a deadline time."
+        if !task.deadlineHasTime, let waiting = task.deadlineReminderOffsets.first(where: \.needsDeadlineTime) {
+            return "\(waiting.label) waits for a deadline time."
         }
         return nil
     }
@@ -35,11 +35,13 @@ struct ReminderSection: View {
                             edit { task.removeReminder(id: rule.id) }
                         }
                     }
-                    if !task.addableDeadlineReminderOffsets.isEmpty {
+                    if !task.addableDeadlineReminderOffsets.isEmpty || !task.addableMinuteReminderOffsets.isEmpty {
                         AddChipMenu(
                             choices: task.addableDeadlineReminderOffsets,
                             title: \.label,
-                            accessibilityLabel: "Add deadline reminder"
+                            accessibilityLabel: "Add deadline reminder",
+                            submenuTitle: "Minutes before",
+                            submenuChoices: task.addableMinuteReminderOffsets
                         ) { offset in
                             edit(asksPermission: true) { task.addDeadlineReminder(offset) }
                         }
@@ -66,7 +68,7 @@ struct ReminderSection: View {
     }
 
     private func isInert(_ offset: DeadlineReminderOffset) -> Bool {
-        task.deadline == nil || (offset == .hourBefore && !task.deadlineHasTime)
+        task.deadline == nil || (offset.needsDeadlineTime && !task.deadlineHasTime)
     }
 
     private func edit(asksPermission: Bool = false, _ change: () -> Void) {

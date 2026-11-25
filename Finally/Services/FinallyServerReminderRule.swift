@@ -18,6 +18,7 @@ struct FinallyServerReminderRule: Codable, Sendable {
             case .daysBefore(let days): offset = "daysBefore"; value = days
             case .weeksBefore(let weeks): offset = "weeksBefore"; value = weeks
             case .hourBefore: offset = "hourBefore"
+            case .minutesBefore(let minutes): offset = "minutesBefore"; value = minutes
             }
         case .exact(let rule):
             kind = "exact"
@@ -45,6 +46,7 @@ struct FinallyServerReminderRule: Codable, Sendable {
         case ("hourBefore", nil): .hourBefore
         case ("daysBefore", let days?): .daysBefore(days)
         case ("weeksBefore", let weeks?): .weeksBefore(weeks)
+        case ("minutesBefore", let minutes?): .minutesBefore(minutes)
         default: nil
         }
         return decoded.flatMap { $0.isValid ? $0 : nil }

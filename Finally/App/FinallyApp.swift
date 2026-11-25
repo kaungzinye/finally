@@ -40,31 +40,19 @@ struct FinallyApp: App {
     var body: some Scene {
         WindowGroup {
             Group {
+#if DEBUG
                 if isDeadlineDemoMode {
                     DeadlineDemoView()
                 } else if isDailyFocusDemoMode {
                     DailyFocusDemoView()
                 } else if isTasksDemoMode {
                     TasksDemoView()
-                } else if isLoading {
-                    ProgressView("Loading...")
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                        .background(Palette.paper.ignoresSafeArea())
                 } else {
-                    switch sessionRoute {
-                    case .connect:
-                        ProviderConnectView(onConnected: {
-                            Task { await checkSession() }
-                        })
-                    case .databaseSetup:
-                        DatabasePickerView(
-                            onComplete: { Task { await checkSession() } },
-                            onChooseProvider: { sessionRoute = .connect }
-                        )
-                    case .tasks:
-                        ContentView()
-                    }
+                    appContent
                 }
+#else
+                appContent
+#endif
             }
             .environment(router)
             .environment(taskProvider)
@@ -98,7 +86,9 @@ struct FinallyApp: App {
                 Task { await checkSession() }
             }
             .task {
+#if DEBUG
                 if isDeadlineDemoMode || isDailyFocusDemoMode || isTasksDemoMode { return }
+#endif
                 await checkSession()
                 await startForegroundSyncLoop()
             }
@@ -116,29 +106,36 @@ struct FinallyApp: App {
         }
     }
 
-    private var isDeadlineDemoMode: Bool {
-#if DEBUG
-        ProcessInfo.processInfo.arguments.contains("-deadline-demo")
-#else
-        false
-#endif
+    // MARK: - Content
+
+    @ViewBuilder
+    private var appContent: some View {
+        if isLoading {
+            ProgressView("Loading...")
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .background(Palette.paper.ignoresSafeArea())
+        } else {
+            switch sessionRoute {
+            case .connect:
+                ProviderConnectView(onConnected: {
+                    Task { await checkSession() }
+                })
+            case .databaseSetup:
+                DatabasePickerView(
+                    onComplete: { Task { await checkSession() } },
+                    onChooseProvider: { sessionRoute = .connect }
+                )
+            case .tasks:
+                ContentView()
+            }
+        }
     }
 
-    private var isDailyFocusDemoMode: Bool {
 #if DEBUG
-        ProcessInfo.processInfo.arguments.contains("-daily-focus-demo")
-#else
-        false
+    private var isDeadlineDemoMode: Bool { ProcessInfo.processInfo.arguments.contains("-deadline-demo") }
+    private var isDailyFocusDemoMode: Bool { ProcessInfo.processInfo.arguments.contains("-daily-focus-demo") }
+    private var isTasksDemoMode: Bool { ProcessInfo.processInfo.arguments.contains("-tasks-demo") }
 #endif
-    }
-
-    private var isTasksDemoMode: Bool {
-#if DEBUG
-        ProcessInfo.processInfo.arguments.contains("-tasks-demo")
-#else
-        false
-#endif
-    }
 
     // MARK: - Session Check
 
@@ -254,6 +251,7 @@ private struct DailyFocusDemoView: View {
     var body: some View {
         ContentView()
             .modelContainer(container)
+            .demoTab()
             .onChange(of: scenePhase, initial: true) { _, phase in
                 guard phase == .active else { return }
                 try? WidgetPublisher.applyPendingCompletions(store: container.mainContext)
@@ -269,16 +267,29 @@ private struct TasksDemoView: View {
     var body: some View {
         ContentView()
             .modelContainer(container)
+            .demoTab()
     }
+}
+
+/// A demo opens on the tab its `-demo-tab today|upcoming|tasks|settings` launch argument names.
+private struct DemoTab: ViewModifier {
+    @Environment(NavigationRouter.self) private var router
+
+    func body(content: Content) -> some View {
+        content.onAppear {
+            let arguments = ProcessInfo.processInfo.arguments
+            guard let index = arguments.firstIndex(of: "-demo-tab"), arguments.indices.contains(index + 1) else { return }
+            switch arguments[index + 1] {
+            case "upcoming": router.selectedTab = .upcoming
+            case "tasks": router.selectedTab = .tasks
+            case "settings": router.selectedTab = .settings
+            default: router.selectedTab = .today
+            }
+        }
+    }
+}
+
+private extension View {
+    func demoTab() -> some View { modifier(DemoTab()) }
 }
 #endif
-
-private extension UIFont {
-    /// SF Pro Rounded at a Dynamic Type text style.
-    static func rounded(_ style: UIFont.TextStyle, weight: UIFont.Weight) -> UIFont {
-        let base = UIFont.preferredFont(forTextStyle: style)
-        let weighted = base.fontDescriptor.addingAttributes([.traits: [UIFontDescriptor.TraitKey.weight: weight]])
-        let descriptor = weighted.withDesign(.rounded) ?? weighted
-        return UIFont(descriptor: descriptor, size: base.pointSize)
-    }
-}

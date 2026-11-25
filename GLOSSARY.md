@@ -29,10 +29,10 @@ _Avoid_: backlog
 
 **Suggested date**: A locally computed date for a subtask, derived from its parent's scheduled window.
 
-**Recurring obligation**: A task whose outcome repeats and retains one stable task identity across cycles.
+**Recurring obligation**: A task whose outcome repeats and retains one stable task identity across cycles. Each cycle's deadline follows from the deadline before it, whatever day the user finishes. Finishing late moves it to the next future date in the pattern.
 _Avoid_: recurring task
 
-**Cycle**: One completed instance of a recurring obligation. Cycle history is the append-only record of finished cycles, kept as completion evidence.
+**Cycle**: One completed instance of a recurring obligation. Skipped dates are not cycles. Finishing a cycle reopens every subtask for the next one. Cycle history is the append-only record of finished cycles, kept as completion evidence.
 
 ### Providers and sync
 
@@ -86,7 +86,7 @@ _Avoid_: calendar marker
 
 **Reminder rule**: Canonical notification intent stored with the task and replicated to each iPhone for offline scheduling.
 
-**Deadline reminder**: A reminder rule resolved relative to a task's deadline: the morning of, a number of days or weeks before, or an hour before a timed deadline. It moves when the deadline moves. A task carries any number of them.
+**Deadline reminder**: A reminder rule resolved relative to a task's deadline: the morning of, a number of days or weeks before, or, for a timed deadline, an hour or 5 to 55 minutes before it. It moves when the deadline moves. A task carries any number of them.
 _Avoid_: anchored reminder
 
 **Default deadline reminders**: The deadline reminders a task receives when its deadline goes from empty to set, configured in Settings. They default to the morning of, one day before, and one week before, plus one hour before for a timed deadline. A deadline gaining a time receives the one-hour default, and clearing a deadline drops its deadline reminders. The user edits them per task afterwards.
@@ -115,7 +115,7 @@ _Avoid_: kanban
 - One provider owns each task, and one workspace belongs to one mode.
 - Provider workspaces remain separate even when a Daily Focus references tasks from more than one provider.
 - Scheduled days, deadlines, Daily Focus picks, and work sessions remain distinct concepts.
-- A scheduled day never falls after its deadline's day. Rescheduling stops at the deadline day and never moves the deadline.
+- A scheduled day never falls after its deadline's day. Rescheduling past the deadline asks to move the deadline to the new day too, keeping its time of day.
 - Deadlines are facts. The personal agent proposes scheduled days and work sessions freely and never invents a deadline.
 - Today and every widget read the same definition of Today.
 - Only a missed deadline is overdue. A missed scheduled day stays visible without alarm.

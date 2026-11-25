@@ -1,7 +1,8 @@
 import SwiftUI
 
 /// Picks a task's scheduled day or its deadline. A deadline offers an optional time, and a
-/// scheduled day is always a whole day. The sheet's title and VoiceOver label name the field.
+/// scheduled day is always a whole day. A scheduled day after the task's deadline day asks to
+/// move the deadline too. The sheet's title and VoiceOver label name the field.
 struct DatePickerSheet: View {
     enum Field {
         case scheduled, deadline
@@ -17,11 +18,14 @@ struct DatePickerSheet: View {
     @Binding var selectedDate: Date?
     @Binding var hasTime: Bool
     private let field: Field
-    /// The last day a scheduled day may take: its task's deadline.
+    /// The task a scheduled day belongs to, whose deadline a later day asks to move.
+    private var task: TaskItem?
+    /// The last day the picker offers. A draft has no task to ask about, so it stops at its deadline.
     private var latest: Date?
     @Environment(\.dismiss) private var dismiss
 
     @State private var pickerDate = Date()
+    @State private var pastDeadlineDay: Date?
 
     init(deadline: Binding<Date?>, hasTime: Binding<Bool>) {
         _selectedDate = deadline
@@ -29,11 +33,12 @@ struct DatePickerSheet: View {
         field = .deadline
     }
 
-    init(scheduledDay: Binding<Date?>, latest: Date? = nil) {
+    init(scheduledDay: Binding<Date?>, task: TaskItem? = nil, latest: Date? = nil) {
         _selectedDate = scheduledDay
         _hasTime = .constant(false)
         field = .scheduled
-        self.latest = latest
+        self.task = task
+        self.latest = latest.flatMap { Calendar.current.dateInterval(of: .day, for: $0)?.end.addingTimeInterval(-1) }
     }
 
     var body: some View {
@@ -70,17 +75,67 @@ struct DatePickerSheet: View {
                     }
                 }
                 ConfirmToolbarButton("Done") {
-                    selectedDate = field == .deadline ? pickerDate : Calendar.current.startOfDay(for: pickerDate)
-                    dismiss()
+                    guard field == .scheduled else {
+                        selectedDate = pickerDate
+                        dismiss()
+                        return
+                    }
+                    let day = Calendar.current.startOfDay(for: pickerDate)
+                    if (task?.scheduledDayFit(for: day) ?? .fits) == .fits {
+                        selectedDate = day
+                        dismiss()
+                    } else {
+                        pastDeadlineDay = day
+                    }
                 }
+            }
+            .deadlineMoveConfirmation(for: task, day: $pastDeadlineDay) { day in
+                selectedDate = day
+                dismiss()
             }
         }
         .onAppear {
             if let selectedDate {
                 pickerDate = selectedDate
             }
+            if let latest { pickerDate = min(pickerDate, latest) }
         }
         .presentationDetents([.large])
         .paperSheet()
+    }
+}
+
+extension View {
+    /// Asks before a scheduled day after the task's deadline day moves the deadline too, such as
+    /// "Monday is after the deadline (Fri). Move the deadline to Monday too?". Move both hands the
+    /// day on, and Cancel changes nothing.
+    func deadlineMoveConfirmation(for task: TaskItem?, day: Binding<Date?>, onMoveBoth: @escaping (Date) -> Void) -> some View {
+        let now = Date()
+        let dayName = day.wrappedValue.map { DeadlineMovePrompt.dayName($0, at: now) } ?? ""
+        let deadlineName = task.flatMap { TaskRowDate(for: $0, at: now) }.map(\.text) ?? ""
+        return alert(
+            "Move the deadline to \(dayName) too?",
+            isPresented: Binding(get: { day.wrappedValue != nil }, set: { if !$0 { day.wrappedValue = nil } }),
+            presenting: day.wrappedValue
+        ) { chosen in
+            Button("Move both") { onMoveBoth(chosen) }
+            Button("Cancel", role: .cancel) {}
+        } message: { _ in
+            Text("\(dayName) is after the deadline (\(deadlineName)).")
+        }
+    }
+}
+
+/// How the deadline-move question names a day: "Today", "Tomorrow", a weekday within the week,
+/// or its date further out.
+enum DeadlineMovePrompt {
+    static func dayName(_ date: Date, at referenceDate: Date, calendar: Calendar = .current, locale: Locale = .current) -> String {
+        let offset = calendar.dateComponents([.day], from: calendar.startOfDay(for: referenceDate), to: calendar.startOfDay(for: date)).day ?? 0
+        switch offset {
+        case 0: return "Today"
+        case 1: return "Tomorrow"
+        case 2...6: return date.formatted(Date.FormatStyle(locale: locale, calendar: calendar, timeZone: calendar.timeZone).weekday(.wide))
+        default: return DayMonth.text(for: date, at: referenceDate, calendar: calendar, locale: locale)
+        }
     }
 }

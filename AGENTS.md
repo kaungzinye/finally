@@ -41,14 +41,7 @@ The project defines two schemes, `Finally` and `FinallyWidgetExtension`. `Finall
 
 For runtime verification, run the app on a booted simulator and inspect the launched UI and logs, then run the relevant tests on that simulator.
 
-Maestro drives UI flows on the booted simulator for behavioural verification. Flows live in `maestro/`. Build and install the app on the simulator first, then:
-
-```bash
-export JAVA_HOME=/opt/homebrew/opt/openjdk/libexec/openjdk.jdk/Contents/Home
-maestro test maestro/<flow>.yaml
-```
-
-The `-deadline-demo` launch argument (DEBUG builds) opens a populated task detail screen with no OAuth, giving flows deterministic UI. The `-daily-focus-demo` launch argument opens the app over an in-memory store seeded with a full Daily Focus that mixes providers and holds one unavailable pick.
+The `-deadline-demo` launch argument (DEBUG builds) opens a populated task detail screen with no OAuth. The `-daily-focus-demo` launch argument opens the app over an in-memory store seeded with a full Daily Focus that mixes providers and holds one unavailable pick.
 
 ## No compatibility burden
 
@@ -66,7 +59,7 @@ The app has not shipped. There are no released data contracts and no user vaults
 - Priority colors: Urgent is red, High is orange, Medium is blue, Low is default.
 - The look is warm ink on paper. Take colors from `Palette` in `Finally/Shared/FinallyStyle.swift`, which the widget also compiles. Ink is the accent, so color only carries priority, deadlines, and warnings.
 - Chrome speaks in SF Pro Rounded (`.pageTitle`, `.eyebrow`, `.chip`, `.meta`) and task text stays in SF Pro.
-- Lists use `.paperList()` with `.cardRow()` rows, and every task row is one line at the shared 48-point height. `PaperChrome.swift` holds these, `InkButtonStyle`, `SectionLabel`, and the glass helper.
+- Lists use `.paperList()` with `.cardRow()` rows, and every task row is one line at the shared 48-point height. Today is the exception: Other tasks rows are 40 points, and a Daily Focus pick is taller while open. `PaperChrome.swift` holds these, `InkButtonStyle`, `SectionLabel`, and the glass helper.
 
 ## Architecture planning in Enso
 

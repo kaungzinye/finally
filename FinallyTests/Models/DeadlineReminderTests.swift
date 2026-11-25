@@ -85,6 +85,25 @@ final class DeadlineReminderTests: XCTestCase {
         XCTAssertEqual(DeadlineReminderOffset.hourBefore.label, "1 hour before")
     }
 
+    func testMinutesBeforeCountDownToATimedDeadlineOnly() {
+        let friday = date(2026, 10, 23, 17)
+        XCTAssertEqual(fire(.minutesBefore(15), deadline: friday, hasTime: true), date(2026, 10, 23, 16, 45))
+        XCTAssertNil(fire(.minutesBefore(15), deadline: date(2026, 10, 23), hasTime: false))
+        XCTAssertEqual(DeadlineReminderOffset.minutesBefore(15).label, "15 minutes before")
+        for invalid in [0, 7, 60] { XCTAssertFalse(DeadlineReminderOffset.minutesBefore(invalid).isValid) }
+    }
+
+    func testMinuteMenuNeedsATimedDeadlineAndLeavesTheDefaultsAlone() {
+        let task = TaskItem(externalTaskID: "minutes", title: "Join the call")
+        task.setDeadline(date(2026, 10, 23), hasTime: false, defaults: .standard)
+        XCTAssertTrue(task.addableMinuteReminderOffsets.isEmpty)
+        task.setDeadline(date(2026, 10, 23, 17), hasTime: true, defaults: .standard)
+        XCTAssertEqual(task.addableMinuteReminderOffsets.count, 11)
+        task.addDeadlineReminder(.minutesBefore(10))
+        XCTAssertFalse(task.addableMinuteReminderOffsets.contains(.minutesBefore(10)))
+        XCTAssertTrue(DefaultDeadlineReminders.standard.addableOffsets.allSatisfy { !DeadlineReminderOffset.minuteMenu.contains($0) })
+    }
+
     func testAddMenuOffersTheShortListMinusTheTasksChips() {
         let task = TaskItem(externalTaskID: "menu", title: "Submit the grant")
         task.setDeadline(date(2026, 10, 23), hasTime: false, defaults: .standard)

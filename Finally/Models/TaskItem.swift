@@ -63,6 +63,13 @@ final class TaskItem {
         }
     }
 
+    /// The minute offsets a timed deadline can still add.
+    var addableMinuteReminderOffsets: [DeadlineReminderOffset] {
+        guard deadline != nil, deadlineHasTime else { return [] }
+        let present = deadlineReminderOffsets
+        return DeadlineReminderOffset.minuteMenu.filter { !present.contains($0) }
+    }
+
     /// Sets the deadline from a local edit. A deadline going from empty to set receives the
     /// default deadline reminders, and clearing it drops its deadline reminders. A deadline
     /// gaining a time receives the default hour-before reminder. Moving a deadline keeps the
@@ -209,11 +216,35 @@ final class TaskItem {
 
     // MARK: - Actions
 
+    /// Whether a scheduled day fits before the deadline. A day after the deadline's day needs the
+    /// deadline moved to that day, at the deadline's own time of day when it has one.
+    enum ScheduledDayFit: Equatable {
+        case fits
+        case needsDeadlineMoved(to: Date)
+    }
+
+    func scheduledDayFit(for day: Date?, calendar: Calendar = .current) -> ScheduledDayFit {
+        guard let day, let deadline else { return .fits }
+        let newDay = calendar.startOfDay(for: day)
+        let deadlineDay = calendar.startOfDay(for: deadline)
+        guard newDay > deadlineDay else { return .fits }
+        guard deadlineHasTime else { return .needsDeadlineMoved(to: newDay) }
+        // The clock time carries over, even across a daylight saving change.
+        let time = calendar.dateComponents([.hour, .minute, .second], from: deadline)
+        let moved = calendar.date(
+            bySettingHour: time.hour ?? 0, minute: time.minute ?? 0, second: time.second ?? 0, of: newDay
+        )
+        return .needsDeadlineMoved(to: moved ?? newDay)
+    }
+
     /// Moves the scheduled day as a dirty edit and spreads the steps' suggested dates again.
-    /// A day after the deadline stops on the deadline's day, and nil clears the scheduled day.
+    /// A day after the deadline's day moves the deadline to that day too, keeping its time of day
+    /// and the task's own reminders. Nil clears the scheduled day.
     func reschedule(to day: Date?, calendar: Calendar = .current) {
+        if case .needsDeadlineMoved(let deadline) = scheduledDayFit(for: day, calendar: calendar) {
+            setDeadline(deadline, hasTime: deadlineHasTime, defaults: .current())
+        }
         scheduledDay = day.map { calendar.startOfDay(for: $0) }
-        validateScheduledDay(calendar: calendar)
         isDirty = true
         SubtaskScheduler.distributeSubtaskDates(parent: self)
     }
@@ -287,8 +318,11 @@ final class TaskItem {
             if let nextDate {
                 self.deadline = nextDate
                 if let previousScheduledDay {
-                    let offset = previousDeadline.timeIntervalSince(previousScheduledDay)
-                    self.scheduledDay = nextDate.addingTimeInterval(-offset)
+                    let calendar = Calendar.current
+                    let daysAhead = calendar.dateComponents(
+                        [.day], from: calendar.startOfDay(for: previousScheduledDay), to: calendar.startOfDay(for: previousDeadline)
+                    ).day ?? 0
+                    self.scheduledDay = calendar.date(byAdding: .day, value: -daysAhead, to: calendar.startOfDay(for: nextDate))
                     validateScheduledDay()
                 }
                 self.status = .notStarted

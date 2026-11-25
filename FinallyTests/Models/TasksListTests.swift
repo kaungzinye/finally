@@ -73,6 +73,23 @@ final class TasksListTests: XCTestCase {
         XCTAssertEqual(list.projects[0].moreCount, 0)
     }
 
+    func testNearestFirstOrdersByDeadlineThenScheduledDayThenTitle() {
+        let late = makeTask("late", "Book the venue")
+        late.deadline = day(5)
+        let soonB = makeTask("soon-b", "Send invites")
+        soonB.deadline = day(1)
+        let soonA = makeTask("soon-a", "Order banners")
+        soonA.deadline = day(1)
+        let scheduled = makeTask("scheduled", "Draft the speech")
+        scheduled.scheduledDay = day(0)
+        let undatedB = makeTask("undated-b", "Pick a playlist")
+        let undatedA = makeTask("undated-a", "Choose a font")
+
+        let sorted = TasksList.nearestFirst([undatedB, late, scheduled, soonB, undatedA, soonA])
+
+        XCTAssertEqual(sorted.map(\.externalTaskID), ["soon-a", "soon-b", "late", "scheduled", "undated-a", "undated-b"])
+    }
+
     // MARK: - Fixtures
 
     @discardableResult

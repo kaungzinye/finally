@@ -1,6 +1,6 @@
 # Tasks tab
 
-The third tab, formerly Browse. Every task in the workspace, plus Settings behind the gear, search, and sort.
+The third tab. Every task in the workspace, with search and sort. Settings is the fourth tab.
 
 The Tasks tab opens with the [[Inbox]] and its count.
 

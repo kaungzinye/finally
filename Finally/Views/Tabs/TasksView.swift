@@ -3,13 +3,16 @@ import SwiftUI
 
 /// The Tasks tab: every open task in the workspace, as a list or as the Board.
 /// The list opens with the Inbox, then each project with its nearest tasks.
-/// Both layouts stay mounted under fixed controls, so switching crossfades without rebuilding either.
+/// The Board mounts the first time it shows and then stays mounted beside the list under fixed
+/// controls, so switching crossfades without rebuilding either. One query feeds both and the
+/// project pages.
 struct TasksView: View {
     enum Layout: String {
         case list, board
     }
 
-    @Query(filter: #Predicate<TaskItem> { $0.isDeleted == false }) private var tasks: [TaskItem]
+    /// Every task in the store. TasksList and BoardColumns drop deleted ones.
+    @Query private var tasks: [TaskItem]
     @Query private var projects: [ProjectItem]
     @Query private var sessions: [UserSession]
     @Environment(TaskProviderCoordinator.self) private var taskProvider
@@ -22,6 +25,8 @@ struct TasksView: View {
     @State private var selectedTask: TaskItem?
     @State private var showSearch = false
     @State private var showSortConfig = false
+    /// The Board mounts the first time it shows, then stays mounted.
+    @State private var hasShownBoard = false
 
     private var sortStack: SortStack { SortStack.from(sortStackJSON) }
 
@@ -34,17 +39,19 @@ struct TasksView: View {
                 ZStack {
                     taskList
                         .shown(layout == .list)
-                    BoardView(isActive: layout == .board)
-                        .shown(layout == .board)
+                    if hasShownBoard || layout == .board {
+                        BoardView(isActive: layout == .board, allTasks: tasks)
+                            .shown(layout == .board)
+                            .onAppear { hasShownBoard = true }
+                    }
                 }
                 .animation(.smooth(duration: 0.2), value: layout)
             }
             .background(Palette.paper)
             .navigationTitle("Tasks")
             .navigationDestination(for: ProjectItem.self) { project in
-                ProjectTasksView(project: project, unscheduledOnly: $unscheduledOnly)
+                ProjectTasksView(project: project, tasks: tasks, unscheduledOnly: $unscheduledOnly)
             }
-            .settingsButton()
             .toolbar {
                 ToolbarItemGroup(placement: .topBarTrailing) {
                     if layout == .list {
@@ -79,19 +86,23 @@ struct TasksView: View {
 
     private var controls: some View {
         HStack(spacing: 8) {
-            Picker("Layout", selection: $layout) {
-                Text("List").tag(Layout.list)
-                Text("Board").tag(Layout.board)
-            }
-            .pickerStyle(.segmented)
-            .fixedSize()
-            .accessibilityIdentifier("tasks-layout")
+            layoutChip("List", .list)
+            layoutChip("Board", .board)
             FilterChip(title: "Unscheduled", isOn: $unscheduledOnly)
                 .accessibilityIdentifier("tasks-filter-unscheduled")
                 .shown(layout == .list)
             Spacer(minLength: 0)
         }
         .animation(.smooth(duration: 0.2), value: layout)
+    }
+
+    /// A layout as a chip, filled while it shows. Tapping the shown layout keeps it.
+    private func layoutChip(_ title: String, _ choice: Layout) -> some View {
+        FilterChip(title: title, isOn: Binding(
+            get: { layout == choice },
+            set: { isOn in if isOn { layout = choice } }
+        ))
+        .accessibilityIdentifier("tasks-layout-\(choice.rawValue)")
     }
 
     private var taskList: some View {
@@ -131,7 +142,7 @@ struct TasksView: View {
                             .contentShape(Rectangle())
                         }
                         .buttonStyle(.plain)
-                        .roundedCardRow()
+                        .cardRow()
                         .accessibilityIdentifier("tasks-more-\(group.id)")
                     }
                     if group.tasks.isEmpty {
@@ -165,7 +176,7 @@ struct TasksView: View {
         Text(message)
             .font(.meta)
             .foregroundStyle(Palette.muted)
-            .roundedCardRow()
+            .cardRow()
     }
 
     private func projectTitle(_ project: ProjectItem) -> String {
@@ -178,9 +189,10 @@ struct TasksView: View {
 /// One project's open tasks in the user's sort order, opened from Tasks.
 struct ProjectTasksView: View {
     let project: ProjectItem
+    /// The Tasks tab's tasks, from its one query.
+    let tasks: [TaskItem]
     @Binding var unscheduledOnly: Bool
 
-    @Query(filter: #Predicate<TaskItem> { $0.isDeleted == false }) private var tasks: [TaskItem]
     @Query private var sessions: [UserSession]
     @Environment(TaskProviderCoordinator.self) private var taskProvider
     @Environment(NavigationRouter.self) private var router

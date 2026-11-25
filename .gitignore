@@ -20,3 +20,6 @@ vercel-notion-auth/.vercel/
 
 # Enso canvas outlines
 Canvases/
+
+# Coverage output
+*.profraw
