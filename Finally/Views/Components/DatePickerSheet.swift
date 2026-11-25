@@ -20,6 +20,8 @@ struct DatePickerSheet: View {
     private let field: Field
     /// The task a scheduled day belongs to, whose deadline a later day asks to move.
     private var task: TaskItem?
+    /// The last day the picker offers. A draft has no task to ask about, so it stops at its deadline.
+    private var latest: Date?
     @Environment(\.dismiss) private var dismiss
 
     @State private var pickerDate = Date()
@@ -31,11 +33,12 @@ struct DatePickerSheet: View {
         field = .deadline
     }
 
-    init(scheduledDay: Binding<Date?>, task: TaskItem? = nil) {
+    init(scheduledDay: Binding<Date?>, task: TaskItem? = nil, latest: Date? = nil) {
         _selectedDate = scheduledDay
         _hasTime = .constant(false)
         field = .scheduled
         self.task = task
+        self.latest = latest.flatMap { Calendar.current.dateInterval(of: .day, for: $0)?.end.addingTimeInterval(-1) }
     }
 
     var body: some View {
@@ -44,6 +47,7 @@ struct DatePickerSheet: View {
                 DatePicker(
                     field.title,
                     selection: $pickerDate,
+                    in: Date.distantPast...(latest ?? .distantFuture),
                     displayedComponents: hasTime ? [.date, .hourAndMinute] : [.date]
                 )
                 .datePickerStyle(.graphical)
@@ -94,6 +98,7 @@ struct DatePickerSheet: View {
             if let selectedDate {
                 pickerDate = selectedDate
             }
+            if let latest { pickerDate = min(pickerDate, latest) }
         }
         .presentationDetents([.large])
         .paperSheet()

@@ -234,7 +234,7 @@ struct InlineTaskCreator: View {
             )
         }
         .sheet(isPresented: $showScheduledDayPicker) {
-            DatePickerSheet(scheduledDay: Binding(get: { draft.scheduledDay }, set: { draft.pick(scheduledDay: $0) }))
+            DatePickerSheet(scheduledDay: Binding(get: { draft.scheduledDay }, set: { draft.pick(scheduledDay: $0) }), latest: draft.deadline)
         }
         .sheet(isPresented: $showPriorityPicker) {
             PriorityPicker(selection: Binding(get: { draft.priority }, set: { draft.pick(priority: $0) }))
