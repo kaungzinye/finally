@@ -8,6 +8,6 @@ Task detail adds an [[Exact reminder]] through "Remind me at".
 
 ## Rules
 
-- Status is one chip that cycles on each tap.
+- Status is one control with three segments. A tap or a drag across it picks the status.
 - Chips read "Scheduled" and "Deadline". A Scheduled day after the deadline asks to move the deadline too.
 - The "…" menu holds "Delete task", which asks first. Deleting takes the task out of every Daily Focus.

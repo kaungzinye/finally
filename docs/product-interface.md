@@ -23,7 +23,7 @@ Finally presents one provider-independent task experience backed by a local Swif
 9. As a user, I want priority, labels, and projects, so that I can organize and filter work.
 10. As a user, I want parent tasks and actionable subtasks, so that large outcomes break into manageable work.
 11. As a user, I want the interface to surface actionable subtasks ahead of non-actionable parents, so that I know what to do next.
-12. As a user, I want a three-state workflow whose status chip cycles on each tap, and a row ring that completes a task in one tap, so that not-started, in-progress, and completed work stay distinct without slowing completion.
+12. As a user, I want a three-state workflow that task detail sets on one control and a Board card cycles on each tap, and a row ring that completes a task in one tap, so that not-started, in-progress, and completed work stay distinct without slowing completion.
 13. As a user, I want to move tasks across Board columns, so that workflow changes feel direct.
 14. As a user, I want every new deadline to receive my default deadline reminders automatically, editable per task as chips, so that real deadlines count down without setup and reminders move when the deadline moves.
 15. As a user, I want a "Remind me at" exact-time reminder, so that some notifications remain fixed even when task dates change.
@@ -47,7 +47,7 @@ Finally presents one provider-independent task experience backed by a local Swif
 32. As a user, I want a confirmed Daily Focus to show one current pick ahead of the rest, so that I know what to do now.
 34. As a user, I want task detail to save as I type and close with a swipe, so that editing has one model everywhere.
 35. As a user, I want every screen, settings pages included, drawn in warm ink on paper with normal-language copy, so that the app feels like one thing.
-33. As a user, I want every row the same height whether or not a task carries a deadline or subtasks, so that lists stay calm to scan.
+33. As a user, I want every row in a list the same height whether or not a task carries a deadline or subtasks, so that lists stay calm to scan.
 
 ## Implementation Decisions
 

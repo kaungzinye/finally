@@ -59,7 +59,7 @@ The app has not shipped. There are no released data contracts and no user vaults
 - Priority colors: Urgent is red, High is orange, Medium is blue, Low is default.
 - The look is warm ink on paper. Take colors from `Palette` in `Finally/Shared/FinallyStyle.swift`, which the widget also compiles. Ink is the accent, so color only carries priority, deadlines, and warnings.
 - Chrome speaks in SF Pro Rounded (`.pageTitle`, `.eyebrow`, `.chip`, `.meta`) and task text stays in SF Pro.
-- Lists use `.paperList()` with `.cardRow()` rows, and every task row is one line at the shared 48-point height. `PaperChrome.swift` holds these, `InkButtonStyle`, `SectionLabel`, and the glass helper.
+- Lists use `.paperList()` with `.cardRow()` rows, and every task row is one line at the shared 48-point height. Today is the exception: Other tasks rows are 40 points, and a Daily Focus pick is taller while open. `PaperChrome.swift` holds these, `InkButtonStyle`, `SectionLabel`, and the glass helper.
 
 ## Architecture planning in Enso
 
